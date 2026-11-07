@@ -1,0 +1,497 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  SCHOOL_ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+  COMMUNITY_USER
+  ADMIN
+  COMMUNITY
+}
+
+enum AssignmentType {
+  INDIVIDUAL
+  GROUP
+  PROJECT
+  PRACTICE
+  EXAM
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  LATE
+  RETURNED
+  GRADED
+}
+
+enum SyncStatus {
+  NONE
+  PENDING
+  SYNCED
+  SYNC_ERROR
+}
+
+enum CommunityZone {
+  CURATED
+  STUDENT_SHOWCASE
+}
+
+enum PostStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  PUBLISHED
+  NEEDS_REVISION
+  REJECTED
+}
+
+model User {
+  id               String                @id @default(uuid())
+  email            String                @unique
+  googleSub        String?               @unique // Stable Google OpenID Connect 'sub' identifier
+  googleId         String?
+  passwordHash     String?
+  fullName         String
+  role             String                @default("STUDENT") // SUPER_ADMIN, SCHOOL_ADMIN, TEACHER, STUDENT, PARENT, COMMUNITY_USER
+  avatarUrl        String?
+  emailVerified    Boolean               @default(false)
+  accountStatus    String                @default("ACTIVE") // PENDING_ACTIVATION, ACTIVE, SUSPENDED, LOCKED
+  isVerified       Boolean               @default(true)
+  isActive         Boolean               @default(true)
+  mfaRecommended   Boolean               @default(false)
+  lastLoginAt      DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  studentProfile   StudentProfile?
+  teacherProfile   TeacherProfile?
+  parentProfile    ParentProfile?
+  userRoles        UserRoleAssignment[]
+  sessions         AuthSession[]
+  auditLogs        AuditLog[]
+  communityPosts   CommunityPost[]
+  promptsAuthored  PromptTemplate[]
+  syncLogs         SyncLog[]
+  googleConnection GoogleConnection?
+}
+
+model RoleDefinition {
+  id              String                @id @default(uuid())
+  code            String                @unique // SUPER_ADMIN, SCHOOL_ADMIN, TEACHER, STUDENT, PARENT, COMMUNITY_USER
+  name            String
+  description     String
+  isSystem        Boolean               @default(true)
+  createdAt       DateTime              @default(now())
+
+  rolePermissions RolePermission[]
+  userRoles       UserRoleAssignment[]
+}
+
+model Permission {
+  id              String                @id @default(uuid())
+  code            String                @unique // e.g., "users:manage", "assignments:create", "grades:write"
+  resource        String
+  action          String
+  description     String
+  createdAt       DateTime              @default(now())
+
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id           String         @id @default(uuid())
+  roleId       String
+  role         RoleDefinition @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionId String
+  permission   Permission     @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model UserRoleAssignment {
+  id         String         @id @default(uuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId     String
+  role       RoleDefinition @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  assignedBy String?
+  assignedAt DateTime       @default(now())
+
+  @@unique([userId, roleId])
+}
+
+model AuthSession {
+  id             String   @id @default(uuid())
+  sessionToken   String   @unique
+  csrfToken      String
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeViewRole String?  // For SUPER_ADMIN Multi-View Switcher: ADMIN, TEACHER, STUDENT, PARENT
+  authMethod     String   @default("GOOGLE_OIDC")
+  ipAddress      String?
+  userAgent      String?
+  isRevoked      Boolean  @default(false)
+  expiresAt      DateTime
+  lastActiveAt   DateTime @default(now())
+  createdAt      DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorEmail String
+  actorRole  String
+  action     String   // e.g., "AUTH_LOGIN_SUCCESS", "ROLE_VIEW_SWITCH", "RBAC_ACCESS_DENIED", "STUDENT_IMPORT"
+  resource   String   // e.g., "AUTH", "USER", "ASSIGNMENT", "GRADE", "GOOGLE_WORKSPACE"
+  resourceId String?
+  status     String   @default("SUCCESS") // SUCCESS, DENIED, FAILED
+  ipAddress  String?
+  details    String?  // JSON string
+  createdAt  DateTime @default(now())
+}
+
+model StudentProfile {
+  id              String             @id @default(uuid())
+  userId          String             @unique
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentCode     String             @unique
+  gradeLevel      Int                // 6, 7, 8, 9
+  dateOfBirth     String?
+  gender          String?
+  classId         String?
+  schoolClass     SchoolClass?       @relation(fields: [classId], references: [id])
+  aiConfig        String?            // JSON string for personalized AI instructions
+  learningGoals   String?
+  createdAt       DateTime           @default(now())
+
+  enrollments     Enrollment[]
+  submissions     Submission[]
+  grades          Grade[]
+  progressRecords LearningProgress[]
+  selfAssessments SelfAssessment[]
+  peerReviews     PeerReview[]
+  learningRecords LearningRecord[]
+  parents         ParentStudent[]
+}
+
+model TeacherProfile {
+  id              String        @id @default(uuid())
+  userId          String        @unique
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teacherCode     String        @unique
+  specialization  String        // "Tin học", "Toán", "Ngữ văn"...
+  createdAt       DateTime      @default(now())
+
+  homeroomClasses SchoolClass[]
+  lessonsCreated  Lesson[]
+  assignments     Assignment[]
+}
+
+model ParentProfile {
+  id        String          @id @default(uuid())
+  userId    String          @unique
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone     String?
+  createdAt DateTime        @default(now())
+
+  children  ParentStudent[]
+}
+
+model ParentStudent {
+  id           String         @id @default(uuid())
+  parentId     String
+  parent       ParentProfile  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  relationship String         @default("PHU_HUYNH")
+  isVerified   Boolean        @default(true)
+
+  @@unique([parentId, studentId])
+}
+
+model AcademicYear {
+  id          String        @id @default(uuid())
+  name        String        @unique // "2026-2027"
+  startYear   Int
+  endYear     Int
+  isCurrent   Boolean       @default(true)
+
+  classes     SchoolClass[]
+  enrollments Enrollment[]
+  grades      Grade[]
+}
+
+model SchoolClass {
+  id                String           @id @default(uuid())
+  name              String           // "6A1", "7A2", "8A1"
+  gradeLevel        Int              // 6, 7, 8
+  academicYearId    String
+  academicYear      AcademicYear     @relation(fields: [academicYearId], references: [id])
+  homeroomTeacherId String?
+  homeroomTeacher   TeacherProfile?  @relation(fields: [homeroomTeacherId], references: [id])
+
+  students          StudentProfile[]
+  enrollments       Enrollment[]
+  assignments       Assignment[]
+
+  @@unique([name, academicYearId])
+}
+
+model Enrollment {
+  id             String         @id @default(uuid())
+  studentId      String
+  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classId        String
+  schoolClass    SchoolClass    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  academicYearId String
+  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  status         String         @default("ACTIVE") // ACTIVE, TRANSFERRED, COMPLETED
+  enrolledAt     DateTime       @default(now())
+
+  @@unique([studentId, classId, academicYearId])
+}
+
+model Subject {
+  id              String             @id @default(uuid())
+  name            String             // "Tin học", "Toán", "Ngữ văn"...
+  code            String             @unique // "TIN7", "TOAN7", "VAN7"
+  gradeLevel      Int                // 6, 7, 8
+  topics          Topic[]
+  assignments     Assignment[]
+  grades          Grade[]
+  progressRecords LearningProgress[]
+  promptTemplates PromptTemplate[]
+  communityPosts  CommunityPost[]
+}
+
+model Topic {
+  id         String   @id @default(uuid())
+  subjectId  String
+  subject    Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  name       String   // "Chủ đề A: Máy tính và cộng đồng"
+  orderIndex Int      @default(0)
+
+  lessons    Lesson[]
+}
+
+model Lesson {
+  id              String           @id @default(uuid())
+  topicId         String
+  topic           Topic            @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  teacherId       String
+  teacher         TeacherProfile   @relation(fields: [teacherId], references: [id])
+  title           String
+  contentBlocks   String           // JSON array of content blocks (text, video, embed, etc.)
+  status          String           @default("PUBLISHED") // DRAFT, PUBLISHED, ARCHIVED
+  googleDocId     String?
+  driveFileLinks  String?          // JSON array of linked Google Drive files
+  publishedAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  selfAssessments SelfAssessment[]
+}
+
+model Assignment {
+  id                    String         @id @default(uuid())
+  subjectId             String
+  subject               Subject        @relation(fields: [subjectId], references: [id])
+  teacherId             String
+  teacher               TeacherProfile @relation(fields: [teacherId], references: [id])
+  classId               String
+  schoolClass           SchoolClass    @relation(fields: [classId], references: [id])
+  title                 String
+  description           String
+  instructions          String?
+  type                  String         @default("INDIVIDUAL") // INDIVIDUAL, GROUP, PROJECT, PRACTICE, EXAM
+  maxScore              Float          @default(10.0)
+  rubric                String?        // JSON string defining rubric criteria
+  assignedAt            DateTime       @default(now())
+  dueAt                 DateTime
+  maxSubmissions        Int            @default(3)
+  submissionType        String         @default("MIXED") // TEXT, FILE, LINK, MIXED
+  status                String         @default("ASSIGNED") // DRAFT, PUBLISHED, ASSIGNED, CLOSED
+  classroomCourseworkId String?
+  calendarEventId       String?
+  driveFolderId         String?
+  syncStatus            String         @default("NONE") // NONE, PENDING, SYNCED, SYNC_ERROR
+  syncErrorMessage      String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  submissions           Submission[]
+  grades                Grade[]
+}
+
+model Submission {
+  id                   String         @id @default(uuid())
+  assignmentId         String
+  assignment           Assignment     @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  studentId            String
+  student              StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  attemptNumber        Int            @default(1)
+  content              String?        // Text content or reflection
+  attachments          String?        // JSON array of attachments (drive links, uploaded files, links)
+  status               String         @default("SUBMITTED") // DRAFT, SUBMITTED, LATE, RETURNED, GRADED
+  score                Float?
+  teacherComment       String?
+  aiSuggestion         String?        // AI proposed feedback draft
+  aiSuggestionAccepted Boolean        @default(false)
+  rubricScores         String?        // JSON breakdown of points per criterion
+  gradedBy             String?
+  submittedAt          DateTime       @default(now())
+  gradedAt             DateTime?
+
+  peerReviews          PeerReview[]
+  grades               Grade[]
+}
+
+model Grade {
+  id             String         @id @default(uuid())
+  studentId      String
+  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectId      String
+  subject        Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  academicYearId String
+  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  assignmentId   String?
+  assignment     Assignment?    @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  submissionId   String?
+  submission     Submission?    @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  score          Float
+  maxScore       Float          @default(10.0)
+  gradeType      String         @default("PROJECT") // REGULAR, MIDTERM, FINAL, PROJECT
+  gradedBy       String?
+  feedback       String?
+  recordedAt     DateTime       @default(now())
+}
+
+model LearningProgress {
+  id                   String         @id @default(uuid())
+  studentId            String
+  student              StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectId            String
+  subject              Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  masteryPercent       Float          @default(0.0)
+  completedLessons     Int            @default(0)
+  completedAssignments Int            @default(0)
+  strengths            String?
+  gaps                 String?
+  nextStepSuggestion   String?
+  updatedAt            DateTime       @updatedAt
+
+  @@unique([studentId, subjectId])
+}
+
+model PeerReview {
+  id             String         @id @default(uuid())
+  submissionId   String
+  submission     Submission     @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  reviewerId     String
+  reviewer       StudentProfile @relation(fields: [reviewerId], references: [id])
+  criteriaScores String?        // JSON breakdown
+  comment        String
+  status         String         @default("SUBMITTED") // PENDING, SUBMITTED, MODERATED, HIDDEN
+  createdAt      DateTime       @default(now())
+}
+
+model SelfAssessment {
+  id           String         @id @default(uuid())
+  studentId    String
+  student      StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lessonId     String?
+  lesson       Lesson?        @relation(fields: [lessonId], references: [id])
+  assignmentId String?
+  responses    String         // JSON: questions and self scores
+  reflection   String?
+  createdAt    DateTime       @default(now())
+}
+
+model PromptTemplate {
+  id            String   @id @default(uuid())
+  title         String
+  subjectId     String?
+  subject       Subject? @relation(fields: [subjectId], references: [id])
+  gradeLevel    Int?     // 6, 7, 8
+  difficulty    String   @default("BASIC") // BASIC, INTERMEDIATE, ADVANCED
+  promptContent String
+  usageGuide    String?
+  exampleInput  String?
+  exampleOutput String?
+  aiUsageNotes  String?
+  authorId      String
+  author        User     @relation(fields: [authorId], references: [id])
+  status        String   @default("PUBLISHED") // DRAFT, PENDING, APPROVED, PUBLISHED
+  useCount      Int      @default(0)
+  createdAt     DateTime @default(now())
+}
+
+model CommunityPost {
+  id                 String   @id @default(uuid())
+  authorId           String
+  author             User     @relation(fields: [authorId], references: [id])
+  title              String
+  description        String
+  processDescription String?
+  selfEvaluation     String?
+  references         String?
+  subjectId          String?
+  subject            Subject? @relation(fields: [subjectId], references: [id])
+  category           String   // "Dự án học sinh", "Sáng tạo AI", "Góc Tin học"...
+  attachments        String?  // JSON
+  toolsUsed          String?  // JSON
+  status             String   @default("PUBLISHED") // DRAFT, PENDING, APPROVED, PUBLISHED, NEEDS_REVISION, REJECTED
+  zone               String   @default("STUDENT_SHOWCASE") // CURATED, STUDENT_SHOWCASE
+  viewCount          Int      @default(0)
+  createdAt          DateTime @default(now())
+}
+
+model LearningRecord {
+  id               String         @id @default(uuid())
+  studentId        String
+  student          StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectId        String
+  activityType     String         // "LESSON_VIEW", "PRACTICE", "ASSIGNMENT", "AI_CHAT"
+  score            Float?
+  accuracyRate     Float?
+  timeSpentSeconds Int            @default(0)
+  detailData       String?        // JSON
+  recordedAt       DateTime       @default(now())
+}
+
+model GoogleConnection {
+  id               String    @id @default(uuid())
+  userId           String    @unique
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  googleEmail      String
+  googleSub        String?
+  scopesGranted    String    // JSON array
+  accessTokenHash  String?
+  refreshTokenHash String?
+  status           String    @default("CONNECTED") // CONNECTED, EXPIRED, REVOKED
+  lastSyncAt       DateTime?
+  createdAt        DateTime  @default(now())
+}
+
+model SyncLog {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  service      String   // "DRIVE", "DOCS", "SHEETS", "CLASSROOM", "CALENDAR", "OAUTH"
+  action       String   // "CREATE", "SYNC", "UPDATE"
+  resourceId   String?
+  status       String   // "SUCCESS", "FAILED"
+  errorMessage String?
+  createdAt    DateTime @default(now())
+}
