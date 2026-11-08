@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Slide Thuyết trình EDUCARE AI – Ngày hội Giáo viên Sáng tạo 2026–2027</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #090d16;
+      color: #f8fafc;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    header {
+      height: 54px;
+      background: #0f172a;
+      border-bottom: 1px solid #1e293b;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand {
+      font-size: 14px;
+      font-weight: 700;
+      color: #5eead4;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    button, select {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #0d9488; border-color: #14b8a6; }
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      position: relative;
+    }
+    #slideImg {
+      max-width: 100%;
+      max-height: calc(100vh - 86px);
+      border-radius: 12px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.65);
+      border: 1px solid #334155;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">EDUCARE AI • BỘ SLIDE THUYẾT TRÌNH HỘI THẢO NHÀ TRƯỜNG SÁNG TẠO (21/11/2026) – TỔ THCS UNIGO</div>
+    <div class="controls">
+      <button onclick="prevSlide()">◀ Slide trước (←)</button>
+      <select id="slideSelect" onchange="goToSlide(Number(this.value))">
+        <option value="1">Slide 1: Trang bìa Hồ sơ Dự thi EDUCARE AI</option>
+        <option value="2">Slide 2: Lý do chọn đề tài & 4 Bài toán thực tiễn (20đ)</option>
+        <option value="3">Slide 3: Mục tiêu & Đáp ứng Kế hoạch Thi đua Đợt 2</option>
+        <option value="4">Slide 4: Mô hình 4 Không gian Vai trò & 4 Trợ lý AI</option>
+        <option value="5">Slide 5: Kiến trúc 3 Tầng: Supabase + Sheets 6 Tabs + Drive (25đ)</option>
+        <option value="6">Slide 6: Quy trình Sư phạm 5 Bước & Cô lập Sandbox HTML</option>
+        <option value="7">Slide 7: Xưởng Sáng tạo Trò chơi HTML & 8 Khung Prompt Mẫu</option>
+        <option value="8">Slide 8: AI Phân tích 4 Nhóm Năng lực & Bảng Tracking 6 Tabs</option>
+        <option value="9">Slide 9: Cổng Phụ huynh & Bảo vệ Tâm lý Học sinh</option>
+        <option value="10">Slide 10: Tính Khả thi, Chi phí Thấp & Hỗ trợ Kép Tài khoản (10đ)</option>
+        <option value="11">Slide 11: Kế hoạch Thực nghiệm (11/2026–05/2027) & Đo lường (30đ)</option>
+        <option value="12">Slide 12: Kịch bản Demo Sống 4 Phút & Kết luận (15đ)</option>
+      </select>
+      <button onclick="nextSlide()">Slide tiếp (→) ▶</button>
+      <button onclick="toggleFull()">Toàn màn hình (F11)</button>
+    </div>
+  </header>
+  <main>
+    <img id="slideImg" src="slides_img/slide_01.png" alt="Slide EDUCARE AI" />
+  </main>
+  <script>
+    let current = 1;
+    const total = 12;
+    function updateView() {
+      const num = String(current).padStart(2, '0');
+      document.getElementById('slideImg').src = 'slides_img/slide_' + num + '.png';
+      document.getElementById('slideSelect').value = String(current);
+    }
+    function prevSlide() { if (current > 1) { current--; updateView(); } }
+    function nextSlide() { if (current < total) { current++; updateView(); } }
+    function goToSlide(n) { current = n; updateView(); }
+    function toggleFull() {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') nextSlide();
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') prevSlide();
+    });
+  </script>
+</body>
+</html>
