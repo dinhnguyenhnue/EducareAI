@@ -1,6 +1,7 @@
 import React from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "@/lib/auth";
 import {
   Award,
   Sparkles,
@@ -12,8 +13,13 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function ParentDashboardPage() {
+  const session = await getServerSession();
+  const isParentSession = session?.user.role === "PARENT" && !session.isSuperAdmin;
+
   const parentUser = await prisma.user.findFirst({
-    where: { email: "ph.minhanh@gmail.com" },
+    where: isParentSession
+      ? { id: session.user.id }
+      : { email: "ph.minhanh@gmail.com" },
     include: {
       parentProfile: {
         include: {

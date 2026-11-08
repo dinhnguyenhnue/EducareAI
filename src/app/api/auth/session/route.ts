@@ -16,24 +16,26 @@ import {
 import { getGoogleOAuthConfig } from "@/lib/google-workspace";
 
 export async function GET() {
-  const session = await getServerSession();
   const oauthConfig = getGoogleOAuthConfig();
 
-  // Check Super Admin DB status even when unauthenticated so UI can show activation status accurately
-  const superAdminRecord = await prisma.user.findUnique({
-    where: { email: SUPER_ADMIN_EMAIL },
-    select: {
-      id: true,
-      email: true,
-      fullName: true,
-      role: true,
-      accountStatus: true,
-      emailVerified: true,
-      googleSub: true,
-      mfaRecommended: true,
-      lastLoginAt: true,
-    },
-  });
+  // Execute session verification and Super Admin status check in parallel
+  const [session, superAdminRecord] = await Promise.all([
+    getServerSession(),
+    prisma.user.findUnique({
+      where: { email: SUPER_ADMIN_EMAIL },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        accountStatus: true,
+        emailVerified: true,
+        googleSub: true,
+        mfaRecommended: true,
+        lastLoginAt: true,
+      },
+    }),
+  ]);
 
   if (!session) {
     return NextResponse.json(

@@ -24,6 +24,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   X,
+  Gamepad2,
+  FileCheck2,
 } from "lucide-react";
 
 interface NavItem {
@@ -45,6 +47,9 @@ export function AppSidebar({
 
   const studentNav: NavItem[] = [
     { label: "Tổng quan học tập", href: "/hoc-sinh/tong-quan", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { label: "Xưởng Trò Chơi HTML", href: "/hoc-sinh/xuong-tro-choi", icon: <Gamepad2 className="w-4 h-4 text-brand-teal" />, badge: "Mới" },
+    { label: "Luyện tập & Kiểm tra", href: "/hoc-sinh/kiem-tra", icon: <FileCheck2 className="w-4 h-4 text-brand-teal" /> },
+    { label: "Sáng tạo cùng AI (8 Prompt)", href: "/hoc-sinh/sang-tao-cung-ai", icon: <Sparkles className="w-4 h-4 text-brand-teal" /> },
     { label: "Lớp học & Môn học", href: "/hoc-sinh/mon-hoc", icon: <BookOpen className="w-4 h-4" /> },
     { label: "Bài tập & Nộp bài", href: "/hoc-sinh/bai-tap", icon: <ClipboardList className="w-4 h-4" /> },
     { label: "AI Tutor (Gia sư)", href: "/hoc-sinh/ai-tutor", icon: <Sparkles className="w-4 h-4 text-brand-teal" /> },
@@ -57,6 +62,8 @@ export function AppSidebar({
 
   const teacherNav: NavItem[] = [
     { label: "Bàn làm việc sư phạm", href: "/giao-vien/tong-quan", icon: <LayoutDashboard className="w-4 h-4" /> },
+    { label: "Ngân hàng câu hỏi & Đề", href: "/giao-vien/ngan-hang-cau-hoi", icon: <Database className="w-4 h-4 text-brand-teal" />, badge: "Mới" },
+    { label: "Duyệt Trò chơi HTML", href: "/giao-vien/duyet-tro-choi", icon: <Gamepad2 className="w-4 h-4 text-brand-teal" />, badge: "Sandbox" },
     { label: "Quản lý Lớp & HS", href: "/giao-vien/lop-hoc", icon: <Users className="w-4 h-4" /> },
     { label: "Bài giảng & Học liệu", href: "/giao-vien/bai-giang", icon: <BookOpen className="w-4 h-4" /> },
     { label: "Giao bài & Bài tập", href: "/giao-vien/bai-tap", icon: <FileEdit className="w-4 h-4" /> },

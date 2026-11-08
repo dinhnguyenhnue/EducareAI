@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { seedTinHocDemoData } from "../src/lib/tin-hoc-seed";
 
 const prisma = new PrismaClient();
 
@@ -563,6 +564,10 @@ async function main() {
       },
     });
   }
+
+  // 14. Seed CỔNG HỌC TẬP TIN HỌC – XƯỞNG SÁNG TẠO TRÒ CHƠI (TIN HỌC SÁNG TẠO) Pilot Class 7A1 Demo Data
+  const tinHocResult = await seedTinHocDemoData(prisma);
+  console.log("Tin Hoc Sang Tao pilot seed:", tinHocResult);
 
   console.log("Seed completed successfully! Super Admin dinhnguyenhnue@gmail.com & RBAC ready.");
 }

@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "@/lib/auth";
 import {
   CheckSquare,
   Users,
@@ -14,39 +15,43 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function TeacherDashboardPage() {
-  const teacher = await prisma.user.findFirst({
-    where: { email: "thay.tuan@unigo.edu.vn" },
-    include: {
-      teacherProfile: {
-        include: {
-          homeroomClasses: {
-            include: { students: { include: { user: true, submissions: true } } },
-          },
-          assignments: {
-            include: {
-              submissions: { include: { student: { include: { user: true } } } },
-              schoolClass: true,
-              subject: true,
+  const session = await getServerSession();
+  const isTeacherSession = session?.user.role === "TEACHER" && !session.isSuperAdmin;
+
+  const [teacher, pendingSubmissions] = await Promise.all([
+    prisma.user.findFirst({
+      where: isTeacherSession
+        ? { id: session.user.id }
+        : { email: "thay.tuan@unigo.edu.vn" },
+      include: {
+        teacherProfile: {
+          include: {
+            homeroomClasses: {
+              include: {
+                students: {
+                  select: { id: true, _count: { select: { submissions: true } } },
+                },
+              },
             },
+            _count: { select: { assignments: true } },
           },
         },
+        googleConnection: { select: { status: true } },
       },
-      googleConnection: true,
-    },
-  });
-
-  const pendingSubmissions = await prisma.submission.findMany({
-    where: { status: "SUBMITTED" },
-    include: {
-      student: { include: { user: true, schoolClass: true } },
-      assignment: { include: { subject: true } },
-    },
-  });
+    }),
+    prisma.submission.findMany({
+      where: { status: "SUBMITTED" },
+      include: {
+        student: { include: { user: { select: { fullName: true } }, schoolClass: { select: { name: true } } } },
+        assignment: { select: { title: true } },
+      },
+    }),
+  ]);
 
   const homeroomClass = teacher?.teacherProfile?.homeroomClasses[0];
   const classStudentCount = homeroomClass?.students.length || 0;
   const studentsWithoutSubmissions =
-    homeroomClass?.students.filter((s) => s.submissions.length === 0).length || 0;
+    homeroomClass?.students.filter((s) => s._count.submissions === 0).length || 0;
 
   return (
     <AppShell>
@@ -68,7 +73,7 @@ export default async function TeacherDashboardPage() {
               </strong>{" "}
               và lớp {homeroomClass?.name || "7A1"} đang có{" "}
               <strong className="text-ink">
-                {teacher?.teacherProfile?.assignments.length || 0} nhiệm vụ
+                {teacher?.teacherProfile?._count.assignments || 0} nhiệm vụ
               </strong>{" "}
               trong CSDL.
             </p>

@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { cache } from "react";
 import crypto from "crypto";
 import { prisma } from "./prisma";
 import {
@@ -334,6 +335,13 @@ export async function createAuthenticatedSession(params: {
       ? params.initialViewRole
       : mapSystemRoleToDefaultViewRole(user.role);
 
+  // Automatically purge expired or revoked sessions so AuthSession table stays compact and fast
+  await prisma.authSession.deleteMany({
+    where: {
+      OR: [{ isRevoked: true }, { expiresAt: { lte: new Date() } }],
+    },
+  });
+
   const dbSession = await prisma.authSession.create({
     data: {
       sessionToken,
@@ -371,8 +379,9 @@ export async function createAuthenticatedSession(params: {
 
 /**
  * Reads and verifies the current session from cookies + SQLite database.
+ * Memoized per-request via React cache() to prevent duplicate database queries during SSR.
  */
-export async function getServerSession() {
+export const getServerSession = cache(async function getServerSessionImpl() {
   try {
     const cookieStore = await cookies();
     const rawCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -381,27 +390,35 @@ export async function getServerSession() {
     const tokenPayload = await verifySessionToken(rawCookie);
     if (!tokenPayload) return null;
 
+    const isParent = tokenPayload.role === "PARENT" || tokenPayload.role === "SUPER_ADMIN";
+
     const dbSession = await prisma.authSession.findUnique({
       where: { id: tokenPayload.sessionId },
       include: {
         user: {
           include: {
-            studentProfile: { include: { schoolClass: true } },
-            teacherProfile: { include: { homeroomClasses: true } },
-            parentProfile: {
-              include: {
-                children: {
-                  include: {
-                    student: { include: { user: true, schoolClass: true } },
-                  },
-                },
-              },
+            studentProfile: {
+              include: { schoolClass: { select: { id: true, name: true, gradeLevel: true } } },
             },
+            teacherProfile: {
+              include: { homeroomClasses: { select: { id: true, name: true, gradeLevel: true } } },
+            },
+            parentProfile: isParent
+              ? {
+                  include: {
+                    children: {
+                      include: {
+                        student: { include: { user: true, schoolClass: true } },
+                      },
+                    },
+                  },
+                }
+              : false,
             userRoles: {
               include: {
                 role: {
                   include: {
-                    rolePermissions: { include: { permission: true } },
+                    rolePermissions: { include: { permission: { select: { code: true } } } },
                   },
                 },
               },
@@ -442,7 +459,7 @@ export async function getServerSession() {
   } catch {
     return null;
   }
-}
+});
 
 /**
  * Switches the activeViewRole for SUPER_ADMIN (dinhnguyenhnue@gmail.com) only.

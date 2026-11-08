@@ -4,10 +4,18 @@ import { getServerSession } from "@/lib/auth";
 import {
   getGoogleOAuthConfig,
   UNIGO_DRIVE_FOLDERS,
+  EDUCARE_DRIVE_FOLDER_TREE,
+  UNIGO_SYNC_CADENCE_POLICY,
+  provisionEducareDriveTree,
+  syncClassTrackingSheet,
+  stageOrConfirmSheetTeacherNotes,
+  createEncryptedDatabaseBackup,
+  verifyBackupRestoreDrill,
   syncDatabaseToGoogleSheets,
   syncAssignmentToClassroom,
   createGoogleDocFromTemplate,
   syncAssignmentDeadlineToCalendar,
+  type GoogleAccountMode,
 } from "@/lib/google-workspace";
 
 export async function GET() {
@@ -20,21 +28,38 @@ export async function GET() {
       );
     }
 
-    const teacher = await prisma.user.findFirst({
-      where: { email: "thay.tuan@unigo.edu.vn" },
-      include: { googleConnection: true },
-    });
-
-    const assignments = await prisma.assignment.findMany({
-      include: { subject: true, schoolClass: true, submissions: true },
-      orderBy: { dueAt: "asc" },
-    });
-
-    const syncLogs = await prisma.syncLog.findMany({
-      include: { user: true },
-      orderBy: { createdAt: "desc" },
-      take: 25,
-    });
+    const [
+      teacher,
+      assignments,
+      syncLogs,
+      driveFolderNodes,
+      classTrackingSheets,
+      backupRecords,
+    ] = await Promise.all([
+      prisma.user.findFirst({
+        where: { email: "thay.tuan@unigo.edu.vn" },
+        include: { googleConnection: true },
+      }),
+      prisma.assignment.findMany({
+        include: { subject: true, schoolClass: true, submissions: true },
+        orderBy: { dueAt: "asc" },
+      }),
+      prisma.syncLog.findMany({
+        include: { user: true },
+        orderBy: { createdAt: "desc" },
+        take: 25,
+      }),
+      prisma.driveFolderNode.findMany({
+        orderBy: { folderPath: "asc" },
+      }),
+      prisma.classTrackingSheet.findMany({
+        orderBy: { className: "asc" },
+      }),
+      prisma.systemBackupRecord.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      }),
+    ]);
 
     const oauthConfig = getGoogleOAuthConfig();
 
@@ -45,6 +70,11 @@ export async function GET() {
       },
       connection: session.user.googleConnection || teacher?.googleConnection || null,
       driveFolders: UNIGO_DRIVE_FOLDERS,
+      driveFolderTreeTemplate: EDUCARE_DRIVE_FOLDER_TREE,
+      driveFolderNodes,
+      classTrackingSheets,
+      backupRecords,
+      syncCadencePolicy: UNIGO_SYNC_CADENCE_POLICY,
       assignments,
       syncLogs,
     });
@@ -69,7 +99,10 @@ export async function POST(req: Request) {
       session.role !== "SUPER_ADMIN"
     ) {
       return NextResponse.json(
-        { error: "FORBIDDEN: Chỉ Giáo viên và Quản trị viên mới được thực thi đồng bộ Google Workspace." },
+        {
+          error:
+            "FORBIDDEN: Chỉ Giáo viên và Quản trị viên mới được thực thi đồng bộ Google Workspace.",
+        },
         { status: 403 }
       );
     }
@@ -78,13 +111,91 @@ export async function POST(req: Request) {
     const { action, payload } = body;
 
     const actorId = session.user.id;
+    const actorEmail = session.user.email;
 
     switch (action) {
       case "SYNC_SHEETS": {
         const result = await syncDatabaseToGoogleSheets(actorId);
         return NextResponse.json({
           success: true,
-          message: `Đã đồng bộ thành công ${result.tablesSynced} bảng dữ liệu (${result.totalRowsExported} bản ghi) sang Google Sheets bằng 1 lệnh batchUpdate duy nhất.`,
+          message: `Đã đồng bộ thành công ${result.tablesSynced} bảng tổng hợp và bảng EDUCARE_AI_Tracking_7A1 (6 tabs) sang Google Sheets bằng batchUpdate.`,
+          data: result,
+        });
+      }
+
+      case "SYNC_CLASS_TRACKING_SHEET": {
+        const className = payload?.className || "7A1";
+        const result = await syncClassTrackingSheet(actorId, className);
+        return NextResponse.json({
+          success: true,
+          message: `Đã tự động khởi tạo & đồng bộ bảng "${result.trackingSheet.spreadsheetTitle}" (6 tabs: Tổng quan, Danh sách HS, Tiến độ học tập, Điểm & Rubric, Sản phẩm sáng tạo, Báo cáo AI) với ${result.totalRowsSynced} dòng dữ liệu.`,
+          data: result,
+        });
+      }
+
+      case "STAGE_SHEET_TEACHER_NOTES":
+      case "CONFIRM_SHEET_TEACHER_NOTES": {
+        const className = payload?.className || "7A1";
+        const confirmImport = action === "CONFIRM_SHEET_TEACHER_NOTES";
+        const incomingNotes = payload?.incomingNotes || [
+          {
+            studentCode: "HS2026001",
+            studentName: "Nguyễn Minh Anh",
+            sheetNote:
+              "Ghi chú từ Google Sheets: Minh Anh hoàn thành tốt trò chơi HTML và bài kiểm tra Tin học, khuyến khích thử sức thêm bài Toán nâng cao.",
+            attemptedScoreChange: payload?.simulateScoreTamper ? 10.0 : null,
+          },
+          {
+            studentCode: "HS2026002",
+            studentName: "Lê Hoàng Nam",
+            sheetNote:
+              "Ghi chú từ Google Sheets: Nam cần ôn lại phần cấu trúc rẽ nhánh và hoàn thành phiếu bài tập Ngữ văn đúng hạn.",
+            attemptedScoreChange: null,
+          },
+        ];
+
+        const result = await stageOrConfirmSheetTeacherNotes(
+          actorId,
+          className,
+          incomingNotes,
+          confirmImport
+        );
+
+        return NextResponse.json({
+          success: true,
+          message: result.message,
+          data: result,
+        });
+      }
+
+      case "PROVISION_DRIVE_6_FOLDERS":
+      case "INIT_DRIVE_FOLDERS": {
+        const accountMode: GoogleAccountMode =
+          payload?.accountMode === "WORKSPACE_DOMAIN"
+            ? "WORKSPACE_DOMAIN"
+            : "PERSONAL_GMAIL_HYBRID";
+        const result = await provisionEducareDriveTree(actorId, accountMode);
+        return NextResponse.json({
+          success: true,
+          message: `Đã khởi tạo cấu trúc 6 thư mục gốc & 15 thư mục con (${result.totalFoldersProvisioned} nodes) trên Google Drive theo chế độ ${accountMode === "WORKSPACE_DOMAIN" ? "Google Workspace Trường (@unigo.edu.vn)" : "Tài khoản Gmail Cá nhân / Hybrid"} và lưu folderId vào Supabase.`,
+          data: result,
+        });
+      }
+
+      case "CREATE_ENCRYPTED_BACKUP": {
+        const backupRecord = await createEncryptedDatabaseBackup(actorId, actorEmail);
+        return NextResponse.json({
+          success: true,
+          message: `Đã tạo bản sao lưu CSDL mã hóa AES-256-GCM (${backupRecord.backupCode}, SHA-256: ${backupRecord.sha256Checksum.slice(0, 12)}...) và lưu vào EDUCARE_AI/06_BACKUP/Database_Encrypted.`,
+          data: backupRecord,
+        });
+      }
+
+      case "VERIFY_RESTORE_DRILL": {
+        const result = await verifyBackupRestoreDrill(actorId, payload?.backupId);
+        return NextResponse.json({
+          success: true,
+          message: result.message,
           data: result,
         });
       }
@@ -130,23 +241,6 @@ export async function POST(req: Request) {
           success: true,
           message: `Đã tạo sự kiện lịch và thiết lập nhắc việc tự động trên "${result.calendarName}".`,
           data: result,
-        });
-      }
-
-      case "INIT_DRIVE_FOLDERS": {
-        const syncLog = await prisma.syncLog.create({
-          data: {
-            userId: actorId,
-            service: "DRIVE",
-            action: "PROVISION_10_STANDARD_FOLDERS",
-            resourceId: "ROOT_UNIGO_EDUCARE_2026",
-            status: "SUCCESS",
-          },
-        });
-        return NextResponse.json({
-          success: true,
-          message: "Đã kiểm tra và đồng bộ cấu trúc 10 thư mục chuẩn UNIGO trên Google Drive.",
-          data: { folders: UNIGO_DRIVE_FOLDERS, syncLog },
         });
       }
 

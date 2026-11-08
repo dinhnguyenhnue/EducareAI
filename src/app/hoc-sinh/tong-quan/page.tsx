@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "@/lib/auth";
 import {
   Clock,
   CheckCircle2,
@@ -15,33 +16,38 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function StudentDashboardPage() {
-  const student = await prisma.user.findFirst({
-    where: { email: "minhanh.nguyen@unigo.edu.vn" },
-    include: {
-      studentProfile: {
-        include: {
-          schoolClass: true,
-          submissions: {
-            include: { assignment: { include: { subject: true } } },
-          },
-          progressRecords: {
-            include: { subject: true },
+  const session = await getServerSession();
+  const isStudentSession = session?.user.role === "STUDENT" && !session.isSuperAdmin;
+
+  const [student, assignments, lessons] = await Promise.all([
+    prisma.user.findFirst({
+      where: isStudentSession
+        ? { id: session.user.id }
+        : { email: "minhanh.nguyen@unigo.edu.vn" },
+      include: {
+        studentProfile: {
+          include: {
+            schoolClass: true,
+            submissions: {
+              select: { id: true, assignmentId: true, status: true, score: true },
+            },
+            progressRecords: {
+              include: { subject: true },
+            },
           },
         },
       },
-    },
-  });
-
-  const assignments = await prisma.assignment.findMany({
-    include: { subject: true, schoolClass: true },
-    orderBy: { dueAt: "asc" },
-  });
-
-  const lessons = await prisma.lesson.findMany({
-    take: 4,
-    include: { topic: { include: { subject: true } } },
-    orderBy: { createdAt: "desc" },
-  });
+    }),
+    prisma.assignment.findMany({
+      include: { subject: true, schoolClass: true },
+      orderBy: { dueAt: "asc" },
+    }),
+    prisma.lesson.findMany({
+      take: 4,
+      include: { topic: { include: { subject: true } } },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
 
   const progressRecords = student?.studentProfile?.progressRecords || [];
 
