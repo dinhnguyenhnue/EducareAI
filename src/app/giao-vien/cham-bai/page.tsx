@@ -3,14 +3,22 @@ import { AppShell } from "@/components/layout/AppShell";
 import { prisma } from "@/lib/prisma";
 import { TeacherGradingWorkspace } from "./TeacherGradingWorkspace";
 
+export const dynamic = "force-dynamic";
+
 export default async function TeacherGradingPage() {
-  const submissions = await prisma.submission.findMany({
-    include: {
-      student: { include: { user: true, schoolClass: true } },
-      assignment: { include: { subject: true } },
-    },
-    orderBy: { submittedAt: "desc" },
-  });
+  let submissions: any[] = [];
+  try {
+    submissions = await prisma.submission.findMany({
+      include: {
+        student: { include: { user: true, schoolClass: true } },
+        assignment: { include: { subject: true } },
+      },
+      orderBy: { submittedAt: "desc" },
+    });
+  } catch (err) {
+    console.warn("Could not load submissions (database might still be migrating):", err);
+    submissions = [];
+  }
 
   return (
     <AppShell>

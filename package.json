@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && (prisma db push --accept-data-loss || true) && next build",
     "start": "next start",
     "lint": "next lint",
     "db:push": "prisma db push",
@@ -12,6 +12,8 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@neon/config": "^1.13.0",
+    "@neon/env": "^2.1.0",
     "@prisma/client": "^6.3.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",

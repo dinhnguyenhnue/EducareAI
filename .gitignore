@@ -14,8 +14,10 @@ yarn-error.log*
 !.env.example
 *.sqlite
 *.sqlite-journal
+prisma/dev.db*
 prisma/dev.db
 prisma/dev.db-journal
 DANH SÁCH HỌC SINH*.xlsx
 tsconfig.tsbuildinfo
 
+.neon

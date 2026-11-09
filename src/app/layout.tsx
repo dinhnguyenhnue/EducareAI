@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { RoleProvider } from "@/context/RoleContext";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "EDUCARE AI — UNIGO Digital Learning Ecosystem",
   description: "Hệ sinh thái học tập số Trường Tiểu học và THCS UNIGO",
