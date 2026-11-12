@@ -1,10 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import { seedTinHocDemoData } from "../src/lib/tin-hoc-seed";
+import { hashPassword } from "../src/lib/password";
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log("Starting EDUCARE AI Phase 2.5 Idempotent Seed for UNIGO...");
+  const defaultPasswordHash = await hashPassword("Educare@Unigo2026");
 
   // 1. Seed 6 System Roles (Section IV)
   const rolesData = [
@@ -101,14 +103,19 @@ async function main() {
     where: { email: "dinhnguyenhnue@gmail.com" },
     update: {
       role: "SUPER_ADMIN",
+      accountStatus: "ACTIVE",
+      passwordHash: defaultPasswordHash,
       mfaRecommended: true,
+      isActive: true,
+      isVerified: true,
     },
     create: {
       email: "dinhnguyenhnue@gmail.com",
       fullName: "Đinh Nguyên (Super Admin UNIGO)",
       role: "SUPER_ADMIN",
-      accountStatus: "PENDING_ACTIVATION",
-      emailVerified: false,
+      accountStatus: "ACTIVE",
+      passwordHash: defaultPasswordHash,
+      emailVerified: true,
       isVerified: true,
       isActive: true,
       mfaRecommended: true,
@@ -129,13 +136,14 @@ async function main() {
   // 4. Seed School Admin
   const schoolAdmin = await prisma.user.upsert({
     where: { email: "admin@unigo.edu.vn" },
-    update: { role: "SCHOOL_ADMIN", accountStatus: "ACTIVE", emailVerified: true },
+    update: { role: "SCHOOL_ADMIN", accountStatus: "ACTIVE", emailVerified: true, passwordHash: defaultPasswordHash },
     create: {
       email: "admin@unigo.edu.vn",
       fullName: "Nguyễn Văn Quản Trị",
       role: "SCHOOL_ADMIN",
       accountStatus: "ACTIVE",
       emailVerified: true,
+      passwordHash: defaultPasswordHash,
       avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80",
     },
   });
@@ -165,13 +173,14 @@ async function main() {
   // 6. Teachers
   const teacherUser1 = await prisma.user.upsert({
     where: { email: "thay.tuan@unigo.edu.vn" },
-    update: { role: "TEACHER", accountStatus: "ACTIVE", emailVerified: true },
+    update: { role: "TEACHER", accountStatus: "ACTIVE", emailVerified: true, passwordHash: defaultPasswordHash },
     create: {
       email: "thay.tuan@unigo.edu.vn",
       fullName: "Thầy Trần Minh Tuấn",
       role: "TEACHER",
       accountStatus: "ACTIVE",
       emailVerified: true,
+      passwordHash: defaultPasswordHash,
       avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
     },
   });
@@ -283,13 +292,14 @@ async function main() {
   // 8. Students & Enrollments
   const studentUser1 = await prisma.user.upsert({
     where: { email: "minhanh.nguyen@unigo.edu.vn" },
-    update: { role: "STUDENT", accountStatus: "ACTIVE", emailVerified: true },
+    update: { role: "STUDENT", accountStatus: "ACTIVE", emailVerified: true, passwordHash: defaultPasswordHash },
     create: {
       email: "minhanh.nguyen@unigo.edu.vn",
       fullName: "Nguyễn Minh Anh",
       role: "STUDENT",
       accountStatus: "ACTIVE",
       emailVerified: true,
+      passwordHash: defaultPasswordHash,
       avatarUrl: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80",
     },
   });
@@ -389,13 +399,14 @@ async function main() {
   // 9. Parent & Verified ParentStudent link
   const parentUser = await prisma.user.upsert({
     where: { email: "ph.minhanh@gmail.com" },
-    update: { role: "PARENT", accountStatus: "ACTIVE", emailVerified: true },
+    update: { role: "PARENT", accountStatus: "ACTIVE", emailVerified: true, passwordHash: defaultPasswordHash },
     create: {
       email: "ph.minhanh@gmail.com",
       fullName: "Nguyễn Quang Huy (Phụ huynh)",
       role: "PARENT",
       accountStatus: "ACTIVE",
       emailVerified: true,
+      passwordHash: defaultPasswordHash,
       avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
     },
   });

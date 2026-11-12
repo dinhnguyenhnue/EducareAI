@@ -302,10 +302,32 @@ export const UNIGO_SYNC_CADENCE_POLICY = [
   },
 ];
 
-export function getGoogleOAuthConfig(): GoogleOAuthConfig {
+export function getSafeBaseUrl(reqUrlOrHost?: string): string {
+  if (process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes("localhost")) {
+    return process.env.NEXTAUTH_URL.replace(/\/$/, "");
+  }
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  if (reqUrlOrHost) {
+    try {
+      const parsed = reqUrlOrHost.startsWith("http") ? new URL(reqUrlOrHost) : null;
+      if (parsed) return parsed.origin;
+    } catch {}
+    if (reqUrlOrHost.includes("vercel.app") || reqUrlOrHost.includes("unigo.edu.vn")) {
+      return `https://${reqUrlOrHost}`;
+    }
+  }
+  return process.env.NEXTAUTH_URL || "http://localhost:3000";
+}
+
+export function getGoogleOAuthConfig(customBaseUrl?: string): GoogleOAuthConfig {
   const clientId = process.env.GOOGLE_CLIENT_ID || "";
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET || "";
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const baseUrl = customBaseUrl || getSafeBaseUrl();
   const redirectUri = `${baseUrl}/api/auth/google/callback`;
 
   return {
@@ -318,9 +340,10 @@ export function getGoogleOAuthConfig(): GoogleOAuthConfig {
 
 export function buildGoogleOAuthUrl(
   selectedServices: string[] = ["DRIVE", "DOCS", "SHEETS", "CLASSROOM", "CALENDAR"],
-  state: string = "educare_oauth"
+  state: string = "educare_oauth",
+  customBaseUrl?: string
 ) {
-  const config = getGoogleOAuthConfig();
+  const config = getGoogleOAuthConfig(customBaseUrl);
   const scopes = new Set<string>(GOOGLE_SCOPES.BASIC);
 
   selectedServices.forEach((svc) => {

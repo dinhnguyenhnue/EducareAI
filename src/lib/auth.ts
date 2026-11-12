@@ -311,7 +311,7 @@ export async function authenticateVerifiedGoogleUser(
  */
 export async function createAuthenticatedSession(params: {
   userId: string;
-  authMethod: "GOOGLE_OIDC" | "LOCAL_DB_TEST_SESSION";
+  authMethod: "GOOGLE_OIDC" | "PASSWORD" | "LOCAL_DB_TEST_SESSION";
   ipAddress?: string;
   userAgent?: string;
   initialViewRole?: ViewRole;

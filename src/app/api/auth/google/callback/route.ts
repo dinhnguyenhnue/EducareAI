@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getGoogleOAuthConfig } from "@/lib/google-workspace";
+import { getGoogleOAuthConfig, getSafeBaseUrl } from "@/lib/google-workspace";
 import {
   validateGoogleIdTokenClaims,
   authenticateVerifiedGoogleUser,
@@ -29,21 +29,24 @@ export async function GET(req: Request) {
   const error = searchParams.get("error");
   const stateParam = searchParams.get("state") || "";
 
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  let stateData: { purpose?: string; callbackUrl?: string; baseUrl?: string } = {};
+  try {
+    if (stateParam) {
+      const decoded = Buffer.from(stateParam, "base64url").toString("utf-8");
+      stateData = JSON.parse(decoded);
+    }
+  } catch {}
+
+  const currentBaseUrl = stateData.baseUrl || getSafeBaseUrl(req.url);
 
   if (error) {
-    return NextResponse.redirect(
-      `${baseUrl}/dang-nhap?error=${encodeURIComponent(error)}`
-    );
+    return NextResponse.redirect(`${currentBaseUrl}/dang-nhap?error=google_denied`);
   }
 
-  const config = getGoogleOAuthConfig();
+  const config = getGoogleOAuthConfig(currentBaseUrl);
 
-  // Do NOT fake Google OAuth callback if credentials or code are missing
   if (!config.isConfigured || !code) {
-    return NextResponse.redirect(
-      `${baseUrl}/dang-nhap?error=OAUTH_NOT_CONFIGURED`
-    );
+    return NextResponse.redirect(`${currentBaseUrl}/dang-nhap?error=google_not_configured`);
   }
 
   try {
@@ -60,15 +63,14 @@ export async function GET(req: Request) {
     });
 
     if (!tokenRes.ok) {
-      return NextResponse.redirect(
-        `${baseUrl}/dang-nhap?error=TOKEN_EXCHANGE_FAILED`
-      );
+      console.error("[GOOGLE_TOKEN_EXCHANGE_FAILED]", await tokenRes.text());
+      return NextResponse.redirect(`${currentBaseUrl}/dang-nhap?error=google_exchange_failed`);
     }
 
     const tokenData = await tokenRes.json();
     const idToken = tokenData.id_token;
     if (!idToken) {
-      return NextResponse.redirect(`${baseUrl}/dang-nhap?error=MISSING_ID_TOKEN`);
+      return NextResponse.redirect(`${currentBaseUrl}/dang-nhap?error=google_missing_token`);
     }
 
     // Verify ID Token with Google's tokeninfo endpoint + local claim verifier
@@ -79,17 +81,11 @@ export async function GET(req: Request) {
       ? await tokenInfoRes.json()
       : decodeJwtPayload(idToken);
 
-    const validation = validateGoogleIdTokenClaims(
-      rawClaims || {},
-      config.clientId
-    );
+    const validation = validateGoogleIdTokenClaims(rawClaims || {}, config.clientId);
 
     if (!validation.valid || !validation.normalized) {
-      return NextResponse.redirect(
-        `${baseUrl}/dang-nhap?error=${encodeURIComponent(
-          validation.error || "INVALID_ID_TOKEN"
-        )}`
-      );
+      console.error("[GOOGLE_ID_TOKEN_INVALID]", validation.error);
+      return NextResponse.redirect(`${currentBaseUrl}/dang-nhap?error=google_invalid_token`);
     }
 
     const user = await authenticateVerifiedGoogleUser(validation.normalized);
@@ -99,20 +95,18 @@ export async function GET(req: Request) {
       ? tokenData.scope.split(" ")
       : ["openid", "email", "profile"];
 
-    if (grantedScopes.length > 3) {
+    if (tokenData.access_token) {
       await prisma.googleConnection.upsert({
         where: { userId: user.id },
         update: {
-          googleEmail: user.email,
-          googleSub: validation.normalized.sub,
+          googleEmail: validation.normalized.email,
           scopesGranted: JSON.stringify(grantedScopes),
           status: "CONNECTED",
           lastSyncAt: new Date(),
         },
         create: {
           userId: user.id,
-          googleEmail: user.email,
-          googleSub: validation.normalized.sub,
+          googleEmail: validation.normalized.email,
           scopesGranted: JSON.stringify(grantedScopes),
           status: "CONNECTED",
           lastSyncAt: new Date(),
@@ -120,33 +114,32 @@ export async function GET(req: Request) {
       });
     }
 
+    // Create session and set HttpOnly cookie
     const sessionData = await createAuthenticatedSession({
       userId: user.id,
       authMethod: "GOOGLE_OIDC",
     });
 
-    let customCallback = "";
-    try {
-      const parsedState = JSON.parse(
-        Buffer.from(stateParam, "base64url").toString("utf-8")
-      );
-      if (parsedState.callbackUrl && parsedState.callbackUrl.startsWith("/")) {
-        customCallback = parsedState.callbackUrl;
-      }
-    } catch {}
+    const isWorkspacePurpose = stateData.purpose === "workspace";
+    const callbackTarget = stateData.callbackUrl && stateData.callbackUrl.startsWith("/")
+      ? stateData.callbackUrl
+      : null;
 
-    const targetPath =
-      customCallback ||
-      getDefaultHomePathForRole(user.role, sessionData.payload.activeViewRole);
+    const targetPath = callbackTarget || (
+      isWorkspacePurpose
+        ? "/giao-vien/google-workspace"
+        : getDefaultHomePathForRole(user.role, sessionData.payload.activeViewRole)
+    );
 
-    const response = NextResponse.redirect(`${baseUrl}${targetPath}`);
+    const redirectUrl = `${currentBaseUrl}${targetPath}`;
+    const response = NextResponse.redirect(redirectUrl);
 
     response.cookies.set(SESSION_COOKIE_NAME, sessionData.signedCookieValue, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/",
-      expires: sessionData.expiresAt,
+      maxAge: 60 * 60 * 24 * 7,
     });
 
     response.cookies.set(CSRF_COOKIE_NAME, sessionData.csrfToken, {
@@ -154,13 +147,12 @@ export async function GET(req: Request) {
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/",
-      expires: sessionData.expiresAt,
+      maxAge: 60 * 60 * 24 * 7,
     });
 
     return response;
-  } catch {
-    return NextResponse.redirect(
-      `${baseUrl}/dang-nhap?error=OAUTH_EXCHANGE_FAILED`
-    );
+  } catch (err: any) {
+    console.error("[GOOGLE_CALLBACK_EXCEPTION]", err);
+    return NextResponse.redirect(`${currentBaseUrl}/dang-nhap?error=google_internal_error`);
   }
 }

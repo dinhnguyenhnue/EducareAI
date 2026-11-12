@@ -81,6 +81,11 @@ export function AppSidebar({
             href: "/admin/overview",
             icon: <ShieldCheck className="w-4 h-4 text-brand-teal" />,
           },
+          {
+            label: "Bảo mật & Tích hợp Google",
+            href: "/admin/settings/integrations",
+            icon: <Network className="w-4 h-4 text-brand-teal" />,
+          },
         ]
       : []),
     { label: "Tổng quan hệ thống", href: "/quan-tri/tong-quan", icon: <LayoutDashboard className="w-4 h-4" /> },

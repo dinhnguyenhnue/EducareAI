@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { buildGoogleOAuthUrl, getGoogleOAuthConfig } from "@/lib/google-workspace";
+import { buildGoogleOAuthUrl, getGoogleOAuthConfig, getSafeBaseUrl } from "@/lib/google-workspace";
 import { getServerSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -9,7 +9,6 @@ export async function GET(req: Request) {
   const scopesParam = searchParams.get("services");
   const callbackUrl = searchParams.get("callbackUrl") || "";
 
-  // Separate basic Google Sign-In (openid, email, profile) from incremental Google Workspace APIs
   const selectedServices =
     purpose === "signin"
       ? []
@@ -17,26 +16,17 @@ export async function GET(req: Request) {
         ? scopesParam.split(",")
         : ["DRIVE", "DOCS", "SHEETS", "CLASSROOM", "CALENDAR"];
 
-  const config = getGoogleOAuthConfig();
-  const statePayload = JSON.stringify({ purpose, callbackUrl });
+  const reqBaseUrl = getSafeBaseUrl(req.url);
+  const config = getGoogleOAuthConfig(reqBaseUrl);
+  const statePayload = JSON.stringify({ purpose, callbackUrl, baseUrl: reqBaseUrl });
   const encodedState = Buffer.from(statePayload).toString("base64url");
-  const oauthUrl = buildGoogleOAuthUrl(selectedServices, encodedState);
+  const oauthUrl = config.isConfigured
+    ? buildGoogleOAuthUrl(selectedServices, encodedState, reqBaseUrl)
+    : null;
 
   return NextResponse.json({
     isConfigured: config.isConfigured,
-    clientIdPreview: config.clientId
-      ? `${config.clientId.slice(0, 12)}...`
-      : "Chưa cấu hình trong .env",
-    redirectUri: config.redirectUri,
-    purpose,
-    oauthUrl: config.isConfigured ? oauthUrl : null,
-    selectedServices,
-    missingEnvVars: config.isConfigured
-      ? []
-      : [
-        !config.clientId ? "GOOGLE_CLIENT_ID" : null,
-        !config.clientSecret ? "GOOGLE_CLIENT_SECRET" : null,
-      ].filter(Boolean),
+    oauthUrl,
   });
 }
 
@@ -45,7 +35,7 @@ export async function POST(req: Request) {
     const session = await getServerSession();
     if (!session) {
       return NextResponse.json(
-        { error: "UNAUTHENTICATED: Vui lòng đăng nhập trước khi cấu hình Google Workspace." },
+        { error: "Vui lòng đăng nhập trước khi cấu hình dịch vụ." },
         { status: 401 }
       );
     }
@@ -54,94 +44,52 @@ export async function POST(req: Request) {
     if (!config.isConfigured) {
       return NextResponse.json(
         {
-          error: "OAUTH_NOT_CONFIGURED",
-          message:
-            "Chưa cấu hình GOOGLE_CLIENT_ID và GOOGLE_CLIENT_SECRET trong .env. Không thể cấp token Google Workspace thực tế.",
+          error: "Không thể kết nối với Google. Vui lòng thử lại sau hoặc liên hệ quản trị viên.",
         },
         { status: 503 }
       );
     }
 
-    const body = await req.json();
-    const { googleEmail, scopes } = body;
+    const { action, services } = await req.json();
 
-    const connection = await prisma.googleConnection.upsert({
-      where: { userId: session.user.id },
-      update: {
-        googleEmail: googleEmail || session.user.email,
-        scopesGranted: JSON.stringify(scopes || ["openid", "email", "profile"]),
-        status: "CONNECTED",
-        lastSyncAt: new Date(),
-      },
-      create: {
-        userId: session.user.id,
-        googleEmail: googleEmail || session.user.email,
-        scopesGranted: JSON.stringify(scopes || ["openid", "email", "profile"]),
-        status: "CONNECTED",
-        lastSyncAt: new Date(),
-      },
-    });
+    if (action === "DISCONNECT") {
+      await prisma.googleConnection.deleteMany({
+        where: { userId: session.user.id },
+      });
 
-    await prisma.syncLog.create({
-      data: {
-        userId: session.user.id,
-        service: "OAUTH",
-        action: "AUTHORIZE_INCREMENTAL_SCOPES",
-        resourceId: connection.googleEmail,
-        status: "SUCCESS",
-      },
-    });
+      await prisma.auditLog.create({
+        data: {
+          actorId: session.user.id,
+          actorEmail: session.user.email,
+          actorRole: session.user.role,
+          action: "GOOGLE_WORKSPACE_DISCONNECTED",
+          resource: "GOOGLE_INTEGRATION",
+          status: "SUCCESS",
+        },
+      });
 
-    return NextResponse.json({ success: true, connection });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
-
-export async function DELETE() {
-  try {
-    const session = await getServerSession();
-    if (!session) {
-      return NextResponse.json(
-        { error: "UNAUTHENTICATED: Vui lòng đăng nhập." },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: true, message: "Đã hủy liên kết Google Workspace." });
     }
 
-    await prisma.googleConnection.updateMany({
-      where: { userId: session.user.id },
-      data: {
-        status: "REVOKED",
-        scopesGranted: JSON.stringify([]),
-      },
+    const reqBaseUrl = getSafeBaseUrl(req.url);
+    const statePayload = JSON.stringify({
+      purpose: "workspace",
+      userId: session.user.id,
+      services: services || [],
+      baseUrl: reqBaseUrl,
     });
-
-    await prisma.syncLog.create({
-      data: {
-        userId: session.user.id,
-        service: "OAUTH",
-        action: "REVOKE_TOKEN_ACCESS",
-        resourceId: session.user.email,
-        status: "SUCCESS",
-      },
-    });
-
-    await prisma.auditLog.create({
-      data: {
-        actorId: session.user.id,
-        actorEmail: session.user.email,
-        actorRole: session.role,
-        action: "GOOGLE_WORKSPACE_TOKEN_REVOKED",
-        resource: "GOOGLE_WORKSPACE",
-        status: "SUCCESS",
-      },
-    });
+    const encodedState = Buffer.from(statePayload).toString("base64url");
+    const incrementalOAuthUrl = buildGoogleOAuthUrl(services || [], encodedState, reqBaseUrl);
 
     return NextResponse.json({
       success: true,
-      message: "Đã thu hồi quyền truy cập Google Workspace APIs và xóa token khỏi hệ thống.",
+      oauthUrl: incrementalOAuthUrl,
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("[GOOGLE_WORKSPACE_CONFIG_ERROR]", err);
+    return NextResponse.json(
+      { error: "Đã xảy ra lỗi khi xử lý yêu cầu kết nối Google." },
+      { status: 500 }
+    );
   }
 }
