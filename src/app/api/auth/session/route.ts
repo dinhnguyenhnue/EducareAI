@@ -65,6 +65,40 @@ export async function POST(req: Request) {
       }
 
       const normalizedEmail = email.trim().toLowerCase();
+
+      // Brute-force & Rate-limiting protection: Max 5 failed attempts per 15 minutes per email/IP
+      const recentFailedAttempts = await prisma.auditLog.count({
+        where: {
+          action: { in: ["LOGIN_FAILED_PASSWORD_MISMATCH", "LOGIN_FAILED_INVALID_CREDENTIALS"] },
+          OR: [
+            { actorEmail: normalizedEmail },
+            { ipAddress: clientIp },
+          ],
+          createdAt: { gte: new Date(Date.now() - 15 * 60 * 1000) },
+        },
+      });
+
+      if (recentFailedAttempts >= 5) {
+        await prisma.auditLog.create({
+          data: {
+            actorEmail: normalizedEmail,
+            actorRole: "UNAUTHENTICATED",
+            action: "BRUTE_FORCE_RATE_LIMITED",
+            resource: "AUTH",
+            status: "DENIED",
+            ipAddress: clientIp,
+            details: JSON.stringify({ recentFailedAttempts }),
+          },
+        });
+        return NextResponse.json(
+          {
+            error:
+              "Đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút để bảo vệ an toàn tài khoản.",
+          },
+          { status: 429 }
+        );
+      }
+
       const user = await prisma.user.findUnique({
         where: { email: normalizedEmail },
       });

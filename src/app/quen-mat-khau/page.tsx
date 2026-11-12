@@ -20,11 +20,25 @@ export default function ForgotPasswordPage() {
     }
 
     setIsLoading(true);
-    // Security best practice: Always show success even if email not found to prevent user enumeration
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMessage(data.error || "Không thể xử lý yêu cầu lúc này. Vui lòng thử lại sau.");
+        return;
+      }
+
       setIsSubmitted(true);
-    }, 1200);
+    } catch {
+      setErrorMessage("Không thể kết nối máy chủ. Vui lòng kiểm tra lại kết nối mạng.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -69,9 +83,9 @@ export default function ForgotPasswordPage() {
               <div className="w-12 h-12 rounded-full bg-status-success/20 text-status-success flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <h3 className="font-bold text-ink text-sm">Yêu cầu đã được gửi!</h3>
+              <h3 className="font-bold text-ink text-sm">Yêu cầu đã được tiếp nhận!</h3>
               <p className="text-xs text-ink-muted leading-relaxed">
-                Nếu tài khoản <strong>{email}</strong> tồn tại trong hệ thống, bạn sẽ nhận được hướng dẫn đặt lại mật khẩu trong hộp thư.
+                Nếu tài khoản <strong>{email}</strong> tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu an toàn đã được kích hoạt.
               </p>
               <div className="pt-3">
                 <Link

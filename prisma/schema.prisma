@@ -70,6 +70,8 @@ model User {
   isActive         Boolean               @default(true)
   mfaRecommended   Boolean               @default(false)
   lastLoginAt      DateTime?
+  resetTokenHash   String?
+  resetTokenExpiry DateTime?
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
 

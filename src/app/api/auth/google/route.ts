@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { buildGoogleOAuthUrl, getGoogleOAuthConfig, getSafeBaseUrl } from "@/lib/google-workspace";
 import { getServerSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -18,7 +19,8 @@ export async function GET(req: Request) {
 
   const reqBaseUrl = getSafeBaseUrl(req.url);
   const config = getGoogleOAuthConfig(reqBaseUrl);
-  const statePayload = JSON.stringify({ purpose, callbackUrl, baseUrl: reqBaseUrl });
+  const stateNonce = crypto.randomBytes(16).toString("hex");
+  const statePayload = JSON.stringify({ purpose, callbackUrl, baseUrl: reqBaseUrl, nonce: stateNonce });
   const encodedState = Buffer.from(statePayload).toString("base64url");
   const oauthUrl = config.isConfigured
     ? buildGoogleOAuthUrl(selectedServices, encodedState, reqBaseUrl)
