@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { StudentAiCenterTabs } from "@/components/ai/StudentAiCenterTabs";
 import {
   TEACHER_GEM_SYSTEM_INSTRUCTIONS,
   STUDENT_PROMPT_TEMPLATES,
@@ -36,10 +37,29 @@ export default function CreativeWithAiPage() {
     "Trò chơi giải mật thư kho báu gồm 10 câu hỏi hoặc 3 nhiệm vụ chọn phần tử ở giữa dãy số."
   );
 
-  // Configurable Teacher Gem Link (with honest fallback notice if student account is restricted)
-  const [teacherGemUrl, setTeacherGemUrl] = useState(
-    "https://gemini.google.com/gem/tin-hoc-sang-tao-unigo"
-  );
+  // Configurable Teacher Gem Link — default empty (DISCONNECTED) until teacher enters a verified Gem URL
+  const [teacherGemUrl, setTeacherGemUrl] = useState("");
+  const isGemUrlValid = useMemo(() => {
+    const trimmed = teacherGemUrl.trim();
+    if (!trimmed) return false;
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol !== "https:") return false;
+      if (
+        parsed.hostname === "gemini.google.com" &&
+        (parsed.pathname === "/" ||
+          parsed.pathname === "/app" ||
+          parsed.pathname === "/gems" ||
+          parsed.pathname === "/gems/" ||
+          parsed.pathname === "/gem/tin-hoc-sang-tao-unigo")
+      ) {
+        return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }, [teacherGemUrl]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showGemInstructions, setShowGemInstructions] = useState(false);
 
@@ -62,6 +82,7 @@ export default function CreativeWithAiPage() {
   return (
     <AppShell>
     <div className="space-y-6">
+      <StudentAiCenterTabs />
       {/* Header Banner */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="space-y-1.5">
@@ -152,19 +173,31 @@ export default function CreativeWithAiPage() {
             <div className="flex gap-2">
               <input
                 type="url"
+                placeholder="Nhập URL Gem cụ thể đã được Giáo viên cấu hình..."
                 value={teacherGemUrl}
                 onChange={(e) => setTeacherGemUrl(e.target.value)}
                 className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-800"
               />
-              <a
-                href={teacherGemUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-teal-700 hover:bg-teal-800 text-white shrink-0"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                Mở Gem
-              </a>
+              {isGemUrlValid ? (
+                <a
+                  href={teacherGemUrl.trim()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-teal-700 hover:bg-teal-800 text-white shrink-0"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Mở Gem
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title="Chưa cấu hình URL Gem cụ thể. Vui lòng dùng 8 câu lệnh mẫu bên phải hoặc Xưởng Trò Chơi."
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-100 border border-slate-300 text-slate-500 cursor-not-allowed shrink-0"
+                >
+                  Chưa cấu hình URL
+                </button>
+              )}
             </div>
 
             {/* Honest Fallback Workflow when student account cannot access Gemini/Gem (Section 1 & 9) */}

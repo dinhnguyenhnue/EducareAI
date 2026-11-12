@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { StudentAiCenterTabs } from "@/components/ai/StudentAiCenterTabs";
 import {
   MessageSquareQuote,
   Sparkles,
@@ -80,6 +81,7 @@ export default function PromptLabPage() {
   return (
     <AppShell>
       <div className="space-y-6">
+        <StudentAiCenterTabs />
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">

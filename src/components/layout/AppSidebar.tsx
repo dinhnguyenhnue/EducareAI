@@ -33,6 +33,7 @@ interface NavItem {
   href: string;
   icon: React.ReactNode;
   badge?: string;
+  matchPaths?: string[];
 }
 
 export function AppSidebar({
@@ -47,17 +48,21 @@ export function AppSidebar({
 
   const studentNav: NavItem[] = [
     { label: "Tổng quan học tập", href: "/hoc-sinh/tong-quan", icon: <LayoutDashboard className="w-4 h-4" /> },
-    { label: "Xưởng Trò Chơi HTML", href: "/hoc-sinh/xuong-tro-choi", icon: <Gamepad2 className="w-4 h-4 text-brand-teal" />, badge: "Mới" },
-    { label: "Luyện tập & Kiểm tra", href: "/hoc-sinh/kiem-tra", icon: <FileCheck2 className="w-4 h-4 text-brand-teal" /> },
-    { label: "Sáng tạo cùng AI (8 Prompt)", href: "/hoc-sinh/sang-tao-cung-ai", icon: <Sparkles className="w-4 h-4 text-brand-teal" /> },
-    { label: "Lớp học & Môn học", href: "/hoc-sinh/mon-hoc", icon: <BookOpen className="w-4 h-4" /> },
+    { label: "Lớp học & Bài giảng", href: "/hoc-sinh/mon-hoc", icon: <BookOpen className="w-4 h-4" /> },
     { label: "Bài tập & Nộp bài", href: "/hoc-sinh/bai-tap", icon: <ClipboardList className="w-4 h-4" /> },
-    { label: "AI Tutor (Gia sư)", href: "/hoc-sinh/ai-tutor", icon: <Sparkles className="w-4 h-4 text-brand-teal" /> },
-    { label: "Gemini Gems", href: "/hoc-sinh/gemini-gems", icon: <Flame className="w-4 h-4 text-brand-teal" /> },
-    { label: "Prompt Lab", href: "/hoc-sinh/prompt-lab", icon: <MessageSquareQuote className="w-4 h-4" /> },
+    { label: "Luyện tập & Kiểm tra", href: "/hoc-sinh/kiem-tra", icon: <FileCheck2 className="w-4 h-4 text-brand-teal" /> },
+    { label: "Xưởng Trò Chơi HTML", href: "/hoc-sinh/xuong-tro-choi", icon: <Gamepad2 className="w-4 h-4 text-brand-teal" />, badge: "Sandbox" },
+    {
+      label: "Trung tâm Trợ lý & AI",
+      href: "/hoc-sinh/sang-tao-cung-ai",
+      matchPaths: ["/hoc-sinh/sang-tao-cung-ai", "/hoc-sinh/prompt-lab", "/hoc-sinh/gemini-gems"],
+      icon: <Sparkles className="w-4 h-4 text-brand-teal" />,
+      badge: "3 Tab",
+    },
+    { label: "AI Tutor (Gia sư)", href: "/hoc-sinh/ai-tutor", icon: <Flame className="w-4 h-4 text-brand-teal" /> },
     { label: "Sản phẩm của tôi", href: "/hoc-sinh/san-pham", icon: <FolderKanban className="w-4 h-4" /> },
     { label: "Cộng đồng học tập", href: "/hoc-sinh/cong-dong", icon: <Compass className="w-4 h-4" /> },
-    { label: "Hồ sơ năng lực", href: "/hoc-sinh/ho-so-nang-luc", icon: <LineChart className="w-4 h-4" /> },
+    { label: "Hồ sơ tiến bộ", href: "/hoc-sinh/ho-so-nang-luc", icon: <LineChart className="w-4 h-4" /> },
   ];
 
   const teacherNav: NavItem[] = [
@@ -121,8 +126,11 @@ export function AppSidebar({
         </div>
       )}
       {currentNav.map((item) => {
-        const isActive =
-          pathname === item.href || pathname.startsWith(item.href + "/");
+        const isActive = item.matchPaths
+          ? item.matchPaths.some(
+              (p) => pathname === p || pathname.startsWith(p + "/")
+            )
+          : pathname === item.href || pathname.startsWith(item.href + "/");
         return (
           <Link
             key={item.href}

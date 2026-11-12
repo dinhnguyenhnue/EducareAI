@@ -367,6 +367,62 @@ export function buildGoogleOAuthUrl(
 }
 
 /**
+ * Chống Formula Injection khi xuất dữ liệu ra Google Sheets / CSV / Excel (LMS_DATA_DESIGN.md #9).
+ * Mọi chuỗi bắt đầu bằng =, +, -, @, tab hoặc carriage return đều được thêm dấu nháy đơn (')
+ * để trình bảng tính xử lý như văn bản thuần, không thực thi công thức.
+ */
+export function sanitizeSheetCell(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "Chưa có dữ liệu";
+  }
+  const str = String(value);
+  if (str.length === 0) {
+    return "";
+  }
+  const trimmedLeading = str.replace(/^[\s\uFEFF\xA0]+/, "");
+  if (/^[=+\-@]/.test(trimmedLeading) || /^[\t\r\n]/.test(str)) {
+    return `'${str}`;
+  }
+  return str;
+}
+
+export function sanitizeSheetRows(rows: unknown[][]): string[][] {
+  return rows.map((row) => row.map((cell) => sanitizeSheetCell(cell)));
+}
+
+/**
+ * Kiểm tra trạng thái kết nối thực tế với Google Workspace API.
+ * Không bao giờ báo SYNCED/SUCCESS nếu chưa có OAuth cấu hình + token hợp lệ + xác nhận từ Google API.
+ */
+export async function resolveGoogleIntegrationMode(userId?: string): Promise<{
+  isOAuthConfigured: boolean;
+  hasLiveToken: boolean;
+  syncStatus: "DISCONNECTED" | "DEMO";
+  logStatus: "DISCONNECTED" | "DEMO";
+}> {
+  const oauth = getGoogleOAuthConfig();
+  let hasLiveToken = false;
+  if (oauth.isConfigured && userId) {
+    const conn = await prisma.googleConnection.findUnique({ where: { userId } }).catch(() => null);
+    hasLiveToken = Boolean(
+      conn &&
+        conn.status === "CONNECTED" &&
+        conn.accessTokenHash &&
+        !conn.accessTokenHash.startsWith("DEMO") &&
+        !conn.accessTokenHash.startsWith("MOCK")
+    );
+  }
+  // Khi chưa thực hiện gọi Google API thật và đọc lại xác nhận, chỉ trả về DISCONNECTED hoặc DEMO
+  const mode = oauth.isConfigured && hasLiveToken ? "DEMO" : "DISCONNECTED";
+  return {
+    isOAuthConfigured: oauth.isConfigured,
+    hasLiveToken,
+    syncStatus: mode,
+    logStatus: mode,
+  };
+}
+
+/**
  * Tự động khởi tạo & đồng bộ cấu trúc 6 thư mục chuẩn EDUCARE_AI/ trên Google Drive
  * Lưu folderId cố định vào bảng DriveFolderNode trong Supabase/DB.
  * Hỗ trợ cả 2 chế độ:
@@ -377,16 +433,11 @@ export async function provisionEducareDriveTree(
   userId: string,
   accountMode: GoogleAccountMode = "PERSONAL_GMAIL_HYBRID"
 ) {
+  const integrationMode = await resolveGoogleIntegrationMode(userId);
   const provisionedNodes = [];
 
   for (const node of EDUCARE_DRIVE_FOLDER_TREE) {
-    const deterministicHash = crypto
-      .createHash("sha1")
-      .update(`EDUCARE_DRIVE_${node.folderCode}`)
-      .digest("hex")
-      .slice(0, 14)
-      .toUpperCase();
-    const googleFolderId = `GDRV-${node.folderCode}-${deterministicHash}`;
+    const placeholderFolderId = `UNCONNECTED_${node.folderCode}`;
 
     const upserted = await prisma.driveFolderNode.upsert({
       where: { folderCode: node.folderCode },
@@ -404,27 +455,14 @@ export async function provisionEducareDriveTree(
         name: node.name,
         parentCode: node.parentCode,
         folderPath: node.folderPath,
-        googleFolderId,
+        googleFolderId: placeholderFolderId,
         permissionScope: node.permissionScope,
         accountMode,
         subjectCode: node.subjectCode,
-        fileCount: node.parentCode ? 3 : 6,
+        fileCount: 0,
       },
     });
     provisionedNodes.push(upserted);
-  }
-
-  // Liên kết tự động các Project HTML đã duyệt với folderId của 04_SAN_PHAM_DA_DUYET
-  const approvedFolder = provisionedNodes.find((n) => n.folderCode === "04_SAN_PHAM_DA_DUYET");
-  const htmlSourceFolder = provisionedNodes.find((n) => n.folderCode === "04_TRO_CHOI_HTML");
-  if (approvedFolder && htmlSourceFolder) {
-    await prisma.project.updateMany({
-      where: { driveFolderId: null },
-      data: {
-        driveFolderId: htmlSourceFolder.googleFolderId,
-        approvedDriveFileId: `GFILE-HTML-${approvedFolder.googleFolderId.slice(-8)}`,
-      },
-    });
   }
 
   const syncLog = await prisma.syncLog.create({
@@ -433,115 +471,259 @@ export async function provisionEducareDriveTree(
       service: "DRIVE",
       action: `PROVISION_6_FOLDER_TREE_${accountMode}`,
       resourceId: "EDUCARE_AI_ROOT_TREE",
-      status: "SUCCESS",
+      status: integrationMode.logStatus,
+      errorMessage:
+        integrationMode.syncStatus === "DISCONNECTED"
+          ? "Chưa kết nối Google Drive API thật (Trạng thái: DISCONNECTED)."
+          : "Chế độ DEMO cục bộ (Chưa gọi Google Drive API thật).",
     },
   });
 
   return {
     accountMode,
+    connectionState: integrationMode.syncStatus,
     totalFoldersProvisioned: provisionedNodes.length,
-    rootFolderId: provisionedNodes[0]?.googleFolderId,
+    rootFolderId: null,
     securityPolicy:
-      "Tất cả thư mục 01_QUAN_TRI, 03_LOP_HOC, 05_TRACKING_REPORTS, 06_BACKUP đều khóa link công khai (anyoneWithLink = false). Truy cập qua folderId/fileId lưu trong Supabase.",
+      "Tất cả thư mục 01_QUAN_TRI, 03_LOP_HOC, 05_TRACKING_REPORTS, 06_BACKUP đều khóa link công khai (anyoneWithLink = false). Chỉ lưu folderId thật sau khi Google Drive API xác nhận.",
     nodes: provisionedNodes,
     syncLog,
   };
 }
 
 /**
- * Tự động tạo và đồng bộ Google Spreadsheet Tracking theo từng lớp:
- * Ví dụ: EDUCARE_AI_Tracking_7A1 với đúng 6 tab chuẩn:
- * 1. Tổng quan | 2. Danh sách HS | 3. Tiến độ học tập | 4. Điểm & Rubric | 5. Sản phẩm sáng tạo | 6. Báo cáo AI
+ * Tự động tạo và đồng bộ Google Spreadsheet Tracking theo từng lớp & năm học:
+ * - Giới hạn Attempt và AIUsageLog theo đúng lớp/năm học được cấp quyền.
+ * - Không dùng className làm định danh duy nhất cho mọi năm học (dùng classId + academicYearId + purpose).
+ * - Không bịa điểm 8.45, tiến độ 83%, nhận xét mẫu hay nhật ký AI mẫu; thiếu dữ liệu trả null / "Chưa có dữ liệu".
+ * - Không tự tạo ID GSHEET-TRACKING-... rồi ghi SYNCED/SUCCESS khi chưa gọi Google Sheets API thật.
  */
-export async function syncClassTrackingSheet(userId: string, className: string = "7A1") {
-  const [schoolClass, students, submissions, projects, attempts, aiLogs] = await Promise.all([
-    prisma.schoolClass.findFirst({
-      where: { name: className },
-      include: { homeroomTeacher: { include: { user: true } }, academicYear: true },
-    }),
-    prisma.studentProfile.findMany({
-      where: { schoolClass: { name: className } },
-      include: {
-        user: true,
-        schoolClass: true,
-        progressRecords: { include: { subject: true } },
-        grades: { include: { subject: true } },
-      },
-      orderBy: { studentCode: "asc" },
-    }),
-    prisma.submission.findMany({
-      where: { student: { schoolClass: { name: className } } },
-      include: {
-        student: { include: { user: true } },
-        assignment: { include: { subject: true } },
-      },
-      orderBy: { submittedAt: "desc" },
-    }),
-    prisma.project.findMany({
-      where: { className },
-      orderBy: { updatedAt: "desc" },
-    }),
-    prisma.attempt.findMany({
-      where: { status: "SUBMITTED" },
-      include: { assessment: true },
-      orderBy: { submittedAt: "desc" },
-    }),
-    prisma.aIUsageLog.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    }),
-  ]);
+export async function syncClassTrackingSheet(
+  userId: string,
+  classNameOrId: string = "7A1",
+  options?: { academicYearId?: string; purpose?: string; enforceTeacherScope?: boolean }
+) {
+  const purpose = options?.purpose || "CLASS_TRACKING";
+  const currentYear = options?.academicYearId
+    ? await prisma.academicYear.findFirst({
+        where: { OR: [{ id: options.academicYearId }, { name: options.academicYearId }] },
+      })
+    : await prisma.academicYear.findFirst({ where: { isCurrent: true } });
 
-  const totalStudents = students.length || 1;
-  const gradedSubmissions = submissions.filter((s) => s.score !== null);
-  const avgScore =
-    gradedSubmissions.length > 0
-      ? (gradedSubmissions.reduce((acc, s) => acc + (s.score || 0), 0) / gradedSubmissions.length).toFixed(2)
-      : "8.45";
+  const schoolClass = await prisma.schoolClass.findFirst({
+    where: {
+      OR: [
+        { id: classNameOrId },
+        {
+          name: classNameOrId,
+          ...(currentYear ? { academicYearId: currentYear.id } : {}),
+        },
+      ],
+    },
+    include: {
+      homeroomTeacher: { include: { user: true } },
+      academicYear: true,
+    },
+  });
 
-  const spreadsheetTitle = `EDUCARE_AI_Tracking_${className}`;
-  const spreadsheetId = `GSHEET-TRACKING-${className.toUpperCase()}-2026`;
-  const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+  // Kiểm tra quyền truy cập lớp của Giáo viên nếu actor là TEACHER
+  const actorUser = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      teacherProfile: {
+        include: {
+          homeroomClasses: true,
+          assignments: { select: { classId: true } },
+        },
+      },
+    },
+  });
+
+  if (actorUser && actorUser.role === "TEACHER" && schoolClass) {
+    const tProfile = actorUser.teacherProfile;
+    const allowedClassIds = new Set<string>([
+      ...(tProfile?.homeroomClasses.map((c) => c.id) || []),
+      ...(tProfile?.assignments.map((a) => a.classId) || []),
+    ]);
+    // Nếu giáo viên đã được phân công ít nhất 1 lớp (hoặc yêu cầu enforceTeacherScope) mà truy cập lớp khác -> chặn
+    if (
+      (options?.enforceTeacherScope || allowedClassIds.size > 0) &&
+      !allowedClassIds.has(schoolClass.id)
+    ) {
+      throw new Error(
+        `FORBIDDEN_CLASS_SCOPE: Giáo viên không được phân công phụ trách lớp ${schoolClass.name} trong năm học này.`
+      );
+    }
+  }
+
+  const resolvedClassId = schoolClass?.id || `UNMAPPED_CLASS_${classNameOrId}`;
+  const resolvedClassName = schoolClass?.name || classNameOrId;
+  const resolvedAcademicYearId =
+    schoolClass?.academicYearId || currentYear?.id || options?.academicYearId || "2026-2027";
+
+  // Lấy danh sách học sinh thuộc đúng lớp và năm học (qua Enrollment hoặc classId của lớp đó)
+  const students = schoolClass
+    ? await prisma.studentProfile.findMany({
+        where: {
+          OR: [
+            { classId: schoolClass.id },
+            {
+              enrollments: {
+                some: {
+                  classId: schoolClass.id,
+                  academicYearId: resolvedAcademicYearId,
+                  status: "ACTIVE",
+                },
+              },
+            },
+          ],
+        },
+        include: {
+          user: true,
+          schoolClass: true,
+          progressRecords: { include: { subject: true } },
+          grades: {
+            where: { academicYearId: resolvedAcademicYearId },
+            include: { subject: true },
+          },
+        },
+        orderBy: { studentCode: "asc" },
+      })
+    : [];
+
+  // Ánh xạ StudentProfile.id -> User.id (vì Attempt.studentId lưu User.id còn Enrollment.studentId lưu StudentProfile.id)
+  const studentProfileIds = students.map((s) => s.id);
+  const studentUserIds = students.map((s) => s.userId);
+  const userIdToStudentCode = new Map<string, string>(
+    students.map((s) => [s.userId, s.studentCode])
+  );
+
+  const [submissions, projects, attempts, aiLogs] = schoolClass
+    ? await Promise.all([
+        prisma.submission.findMany({
+          where: {
+            assignment: { classId: schoolClass.id },
+            ...(studentProfileIds.length > 0 ? { studentId: { in: studentProfileIds } } : {}),
+          },
+          include: {
+            student: { include: { user: true } },
+            assignment: { include: { subject: true } },
+          },
+          orderBy: { submittedAt: "desc" },
+        }),
+        prisma.project.findMany({
+          where: {
+            isDemoData: false,
+            OR: [
+              { classId: schoolClass.id },
+              ...(studentUserIds.length > 0
+                ? [{ authorId: { in: studentUserIds }, className: resolvedClassName }]
+                : []),
+            ],
+          },
+          orderBy: { updatedAt: "desc" },
+        }),
+        prisma.attempt.findMany({
+          where: {
+            status: { in: ["SUBMITTED", "EXPIRED_AUTO_SUBMITTED"] },
+            isDemoData: false,
+            ...(studentUserIds.length > 0
+              ? {
+                  OR: [
+                    { classId: schoolClass.id },
+                    { studentId: { in: studentUserIds }, classId: resolvedClassName },
+                  ],
+                }
+              : { classId: schoolClass.id }),
+          },
+          include: { assessment: true },
+          orderBy: { submittedAt: "desc" },
+        }),
+        prisma.aIUsageLog.findMany({
+          where: {
+            OR: [
+              { classId: schoolClass.id, academicYearId: resolvedAcademicYearId },
+              ...(studentUserIds.length > 0 ? [{ userId: { in: studentUserIds } }] : []),
+            ],
+          },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        }),
+      ])
+    : [[], [], [], []];
+
+  const totalStudents = students.length;
+  // Tính điểm trung bình thực tế: giữ 0 khác null, tuyệt đối không trả "8.45" khi thiếu dữ liệu
+  const numericScores: number[] = [];
+  for (const s of submissions) {
+    if (s.score !== null && s.score !== undefined && Number.isFinite(s.score)) {
+      const max = s.assignment?.maxScore && s.assignment.maxScore > 0 ? s.assignment.maxScore : 10;
+      numericScores.push((s.score / max) * 10);
+    }
+  }
+  for (const att of attempts) {
+    if (att.totalScore !== null && att.totalScore !== undefined && Number.isFinite(att.totalScore)) {
+      const max = att.maxScore && att.maxScore > 0 ? att.maxScore : 10;
+      numericScores.push((att.totalScore / max) * 10);
+    }
+  }
+
+  const avgScoreValue: number | null =
+    numericScores.length > 0
+      ? Math.round((numericScores.reduce((acc, v) => acc + v, 0) / numericScores.length) * 100) / 100
+      : null;
+  const avgScoreDisplay =
+    avgScoreValue !== null ? `${avgScoreValue.toFixed(2)} / 10` : "Chưa có dữ liệu";
+
+  const integrationMode = await resolveGoogleIntegrationMode(userId);
+  const spreadsheetTitle = `EDUCARE_AI_Tracking_${resolvedClassName}_${schoolClass?.academicYear?.name || resolvedAcademicYearId}`;
+  // Không tự tạo ID GSHEET-TRACKING-... giả lập làm ID thật
+  const spreadsheetId: string | null = null;
+  const spreadsheetUrl: string | null = null;
 
   const tabsData = {
     tab1_TongQuan: {
       tabName: "Tổng quan",
-      headers: ["Chỉ số KPI Lớp học", "Giá trị hiện tại", "Nguồn dữ liệu chuẩn", "Chu kỳ đồng bộ"],
-      rows: [
-        ["Lớp học", className, "Supabase (SchoolClass)", "Tự động"],
+      headers: ["Chỉ số KPI Lớp học", "Giá trị hiện tại", "Nguồn dữ liệu chuẩn", "Trạng thái đồng bộ"],
+      rows: sanitizeSheetRows([
+        ["Lớp học", resolvedClassName, "PostgreSQL (SchoolClass)", integrationMode.syncStatus],
+        [
+          "Năm học",
+          schoolClass?.academicYear?.name || resolvedAcademicYearId,
+          "PostgreSQL (AcademicYear)",
+          integrationMode.syncStatus,
+        ],
         [
           "Giáo viên chủ nhiệm / Phụ trách",
-          schoolClass?.homeroomTeacher?.user.fullName || "Thầy Trần Minh Tuấn",
-          "Supabase (TeacherProfile)",
-          "Tự động",
+          schoolClass?.homeroomTeacher?.user.fullName || "Chưa có dữ liệu",
+          "PostgreSQL (TeacherProfile)",
+          integrationMode.syncStatus,
         ],
-        ["Tổng số học sinh", `${students.length} học sinh`, "Supabase (StudentProfile)", "Mỗi 5–15 phút"],
-        ["Điểm trung bình bài tập & kiểm tra", `${avgScore} / 10`, "Supabase (Grade / Attempt)", "Mỗi 5–15 phút"],
+        ["Tổng số học sinh", `${totalStudents} học sinh`, "PostgreSQL (StudentProfile)", integrationMode.syncStatus],
+        ["Điểm trung bình bài tập & kiểm tra", avgScoreDisplay, "PostgreSQL (Grade / Attempt)", integrationMode.syncStatus],
         [
           "Số sản phẩm sáng tạo / Trò chơi HTML",
-          `${projects.length} sản phẩm (${projects.filter((p) => p.status === "APPROVED").length} đã duyệt)`,
-          "Supabase + Google Drive (04_SAN_PHAM_SANG_TAO)",
-          "Mỗi 5–15 phút",
+          projects.length > 0
+            ? `${projects.length} sản phẩm (${projects.filter((p) => p.status === "APPROVED").length} đã duyệt)`
+            : "Chưa có dữ liệu",
+          "PostgreSQL (Project)",
+          integrationMode.syncStatus,
         ],
-        [
-          "Chế độ bảo vệ điểm chính thức",
-          "Chỉ đọc từ Supabase (Ghi chú GV nhập về cần xác nhận)",
-          "Chính sách Toàn vẹn Dữ liệu",
-          "Luôn bật",
-        ],
-      ],
+      ]),
     },
     tab2_DanhSachHS: {
       tabName: "Danh sách HS",
       headers: ["Mã HS", "Họ và tên", "Lớp", "Email / Định danh", "Loại tài khoản", "Trạng thái"],
-      rows: students.map((s) => [
-        s.studentCode,
-        s.user.fullName,
-        className,
-        s.user.email,
-        s.user.email.endsWith("@unigo.edu.vn") ? "Google Workspace Trường" : "Gmail Cá nhân / Mã HS nội bộ",
-        s.user.isActive ? "Đang học" : "Tạm khóa",
-      ]),
+      rows: sanitizeSheetRows(
+        students.map((s) => [
+          s.studentCode,
+          s.user.fullName,
+          resolvedClassName,
+          s.user.email,
+          s.user.email.endsWith("@unigo.edu.vn") ? "Google Workspace Trường" : "Gmail Cá nhân / Mã HS nội bộ",
+          s.user.isActive ? "Đang học" : "Tạm khóa",
+        ])
+      ),
     },
     tab3_TienDoHocTap: {
       tabName: "Tiến độ học tập",
@@ -555,32 +737,36 @@ export async function syncClassTrackingSheet(userId: string, className: string =
         "Điểm mạnh",
         "Ghi chú của Giáo viên (Cột cho phép sửa trên Sheets)",
       ],
-      rows: students.flatMap((s) => {
-        if (s.progressRecords.length === 0) {
-          return [
-            [
-              s.studentCode,
-              s.user.fullName,
-              "Tin học 7",
-              "12 bài",
-              "10 bài",
-              "83%",
-              "Tư duy thuật toán & An toàn số tốt",
-              s.learningGoals || "Cần duy trì tiến độ làm bài thực hành",
-            ],
-          ];
-        }
-        return s.progressRecords.map((pr) => [
-          s.studentCode,
-          s.user.fullName,
-          pr.subject.name,
-          `${pr.completedLessons + 2} bài`,
-          `${pr.completedLessons} bài`,
-          `${Math.round(pr.masteryPercent)}%`,
-          pr.strengths || "Nắm vững kiến thức nền tảng",
-          pr.nextStepSuggestion || "Khuyến khích thử thách bài vận dụng cao",
-        ]);
-      }),
+      rows: sanitizeSheetRows(
+        students.flatMap((s) => {
+          if (s.progressRecords.length === 0) {
+            return [
+              [
+                s.studentCode,
+                s.user.fullName,
+                "Chưa có dữ liệu",
+                "Chưa có dữ liệu",
+                "Chưa có dữ liệu",
+                "Chưa có dữ liệu",
+                "Chưa có dữ liệu",
+                s.learningGoals || "Chưa có dữ liệu",
+              ],
+            ];
+          }
+          return s.progressRecords.map((pr) => [
+            s.studentCode,
+            s.user.fullName,
+            pr.subject.name,
+            `${pr.completedLessons} bài`,
+            `${pr.completedAssignments} bài tập`,
+            pr.masteryPercent !== null && pr.masteryPercent !== undefined
+              ? `${Math.round(pr.masteryPercent)}%`
+              : "Chưa có dữ liệu",
+            pr.strengths || "Chưa có dữ liệu",
+            pr.nextStepSuggestion || "Chưa có dữ liệu",
+          ]);
+        })
+      ),
     },
     tab4_DiemVaRubric: {
       tabName: "Điểm & Rubric",
@@ -593,26 +779,28 @@ export async function syncClassTrackingSheet(userId: string, className: string =
         "Trạng thái",
         "Nhận xét của Giáo viên (Cột cho phép sửa trên Sheets)",
       ],
-      rows: [
+      rows: sanitizeSheetRows([
         ...submissions.map((sub) => [
           sub.student.studentCode,
           sub.student.user.fullName,
           sub.assignment.subject.name,
           sub.assignment.title,
-          sub.score !== null ? String(sub.score) : "Chờ chấm",
+          sub.score !== null && sub.score !== undefined ? String(sub.score) : "Chưa có dữ liệu",
           sub.status,
-          sub.teacherComment || "Đã nộp đúng hạn, trình bày rõ ràng.",
+          sub.teacherComment || "Chưa có dữ liệu",
         ]),
         ...attempts.map((att) => [
-          att.studentEmail.split("@")[0].toUpperCase(),
+          userIdToStudentCode.get(att.studentId) || "Chưa có dữ liệu",
           att.studentName,
           att.assessment.subjectName || "Tin học",
           `[${att.assessment.mode}] ${att.assessment.title}`,
-          att.totalScore !== null ? `${att.totalScore}/${att.maxScore}` : "Đang làm",
+          att.totalScore !== null && att.totalScore !== undefined
+            ? `${att.totalScore}/${att.maxScore}`
+            : "Chưa có dữ liệu",
           att.status,
-          "Chấm tự động trên Server EDUCARE AI",
+          "Chấm tự động trên máy chủ",
         ]),
-      ],
+      ]),
     },
     tab5_SanPhamSangTao: {
       tabName: "Sản phẩm sáng tạo",
@@ -625,15 +813,17 @@ export async function syncClassTrackingSheet(userId: string, className: string =
         "Trạng thái duyệt",
         "Drive File ID (04_SAN_PHAM_SANG_TAO)",
       ],
-      rows: projects.map((p) => [
-        p.title,
-        p.displayAuthorName,
-        p.subjectName || "Tin học",
-        p.lessonTitle,
-        `v${p.currentVersionNum}`,
-        p.status,
-        p.approvedDriveFileId || p.driveFolderId || `GFILE-HTML-${p.slug.toUpperCase()}`,
-      ]),
+      rows: sanitizeSheetRows(
+        projects.map((p) => [
+          p.title,
+          p.displayAuthorName,
+          p.subjectName || "Tin học",
+          p.lessonTitle,
+          `v${p.currentVersionNum}`,
+          p.status,
+          p.approvedDriveFileId || p.driveFolderId || "Chưa đồng bộ Drive",
+        ])
+      ),
     },
     tab6_BaoCaoAI: {
       tabName: "Báo cáo AI",
@@ -647,40 +837,18 @@ export async function syncClassTrackingSheet(userId: string, className: string =
         "Chi phí ước tính (USD)",
         "Ghi chú nghiệp vụ",
       ],
-      rows:
-        aiLogs.length > 0
-          ? aiLogs.map((log) => [
-              new Date(log.createdAt).toLocaleString("vi-VN"),
-              log.userEmail,
-              log.userRole,
-              log.featureModule,
-              log.modelName,
-              String(log.totalTokens),
-              `$${log.estimatedCostUsd.toFixed(5)}`,
-              log.summaryNote || "Hỗ trợ học tập theo phương pháp gợi mở",
-            ])
-          : [
-              [
-                new Date().toLocaleString("vi-VN"),
-                "minhanh.nguyen@unigo.edu.vn",
-                "STUDENT",
-                "AI_TUTOR",
-                "gemini-2.5-flash",
-                "840",
-                "$0.00025",
-                "Gợi ý từng bước bài thuật toán sắp xếp (Không giải hộ)",
-              ],
-              [
-                new Date().toLocaleString("vi-VN"),
-                "thay.tuan@unigo.edu.vn",
-                "TEACHER",
-                "AI_ASSESSMENT_ANALYZER",
-                "gemini-2.5-flash",
-                "1420",
-                "$0.00043",
-                "Phân tích phổ điểm & phân nhóm 4 mức độ sau kiểm tra lớp 7A1",
-              ],
-            ],
+      rows: sanitizeSheetRows(
+        aiLogs.map((log) => [
+          new Date(log.createdAt).toLocaleString("vi-VN"),
+          log.userEmail,
+          log.userRole,
+          log.featureModule,
+          log.modelName,
+          String(log.totalTokens),
+          `$${log.estimatedCostUsd.toFixed(5)}`,
+          log.summaryNote || "Chưa có dữ liệu",
+        ])
+      ),
     },
   };
 
@@ -692,31 +860,36 @@ export async function syncClassTrackingSheet(userId: string, className: string =
     tabsData.tab5_SanPhamSangTao.rows.length +
     tabsData.tab6_BaoCaoAI.rows.length;
 
-  const trackingFolder = await prisma.driveFolderNode.findUnique({
-    where: { folderCode: "05_TRACKING_THEO_LOP" },
-  });
-
   const savedSheet = await prisma.classTrackingSheet.upsert({
-    where: { className },
+    where: {
+      classId_academicYearId_purpose: {
+        classId: resolvedClassId,
+        academicYearId: resolvedAcademicYearId,
+        purpose,
+      },
+    },
     update: {
+      className: resolvedClassName,
       spreadsheetTitle,
       spreadsheetId,
       spreadsheetUrl,
-      driveFolderId: trackingFolder?.googleFolderId || "GDRV-05_TRACKING_THEO_LOP",
+      driveFolderId: null,
       tabsJson: JSON.stringify(tabsData),
-      syncStatus: "SYNCED",
+      syncStatus: integrationMode.syncStatus,
       totalRowsSynced: totalRows,
       lastSyncedAt: new Date(),
     },
     create: {
-      classId: schoolClass?.id || null,
-      className,
+      classId: resolvedClassId,
+      academicYearId: resolvedAcademicYearId,
+      purpose,
+      className: resolvedClassName,
       spreadsheetTitle,
       spreadsheetId,
       spreadsheetUrl,
-      driveFolderId: trackingFolder?.googleFolderId || "GDRV-05_TRACKING_THEO_LOP",
+      driveFolderId: null,
       tabsJson: JSON.stringify(tabsData),
-      syncStatus: "SYNCED",
+      syncStatus: integrationMode.syncStatus,
       totalRowsSynced: totalRows,
       lastSyncedAt: new Date(),
     },
@@ -726,14 +899,20 @@ export async function syncClassTrackingSheet(userId: string, className: string =
     data: {
       userId,
       service: "SHEETS",
-      action: `SYNC_CLASS_TRACKING_6_TABS_${className}`,
-      resourceId: spreadsheetId,
-      status: "SUCCESS",
+      action: `SYNC_CLASS_TRACKING_6_TABS_${resolvedClassName}`,
+      resourceId: spreadsheetId || `LOCAL_SNAPSHOT_${resolvedClassName}_${resolvedAcademicYearId}`,
+      status: integrationMode.logStatus,
+      errorMessage:
+        integrationMode.syncStatus === "DISCONNECTED"
+          ? "Chưa kết nối Google Sheets API thật. Đã tạo bản chụp dữ liệu lớp cục bộ (DISCONNECTED)."
+          : "Chế độ DEMO: Chưa xác nhận đọc lại từ Google Sheets API.",
     },
   });
 
   return {
     trackingSheet: savedSheet,
+    connectionState: integrationMode.syncStatus,
+    avgScore: avgScoreValue,
     tabsCount: 6,
     totalRowsSynced: totalRows,
     studentCount: totalStudents,
@@ -757,8 +936,9 @@ export async function stageOrConfirmSheetTeacherNotes(
   }>,
   confirmImport: boolean = false
 ) {
-  const sheetRecord = await prisma.classTrackingSheet.findUnique({
+  const sheetRecord = await prisma.classTrackingSheet.findFirst({
     where: { className },
+    orderBy: { updatedAt: "desc" },
   });
 
   const sanitizedDiffs = incomingNotes.map((item) => ({
@@ -775,7 +955,7 @@ export async function stageOrConfirmSheetTeacherNotes(
   if (!confirmImport) {
     if (sheetRecord) {
       await prisma.classTrackingSheet.update({
-        where: { className },
+        where: { id: sheetRecord.id },
         data: {
           pendingNotesImportJson: JSON.stringify(sanitizedDiffs),
         },
@@ -812,18 +992,19 @@ export async function stageOrConfirmSheetTeacherNotes(
 
   if (sheetRecord) {
     await prisma.classTrackingSheet.update({
-      where: { className },
+      where: { id: sheetRecord.id },
       data: { pendingNotesImportJson: null, lastSyncedAt: new Date() },
     });
   }
 
+  const integrationMode = await resolveGoogleIntegrationMode(userId);
   const syncLog = await prisma.syncLog.create({
     data: {
       userId,
       service: "SHEETS",
       action: `CONFIRMED_IMPORT_TEACHER_NOTES_${className}`,
-      resourceId: sheetRecord?.spreadsheetId || `GSHEET-${className}`,
-      status: "SUCCESS",
+      resourceId: sheetRecord?.spreadsheetId || `LOCAL_NOTES_${className}`,
+      status: integrationMode.logStatus,
     },
   });
 
@@ -833,7 +1014,7 @@ export async function stageOrConfirmSheetTeacherNotes(
     updatedCount,
     diffs: sanitizedDiffs,
     syncLog,
-    message: `Đã xác nhận và cập nhật ${updatedCount} ghi chú giáo viên từ Google Sheets vào Supabase (Điểm chính thức được giữ nguyên an toàn).`,
+    message: `Đã xác nhận và cập nhật ${updatedCount} ghi chú giáo viên vào cơ sở dữ liệu (Điểm chính thức được giữ nguyên an toàn).`,
   };
 }
 
@@ -967,11 +1148,15 @@ export async function verifyBackupRestoreDrill(userId: string, backupId?: string
  * PostgreSQL/SQLite is the single source of truth; Sheets receives structured report data.
  */
 export async function syncDatabaseToGoogleSheets(userId: string) {
-  // Đồng bộ luôn bảng EDUCARE_AI_Tracking_7A1 6 tabs chuẩn
   await syncClassTrackingSheet(userId, "7A1");
+  const integrationMode = await resolveGoogleIntegrationMode(userId);
 
   const students = await prisma.studentProfile.findMany({
-    include: { user: true, schoolClass: true },
+    include: {
+      user: true,
+      schoolClass: true,
+      progressRecords: { include: { subject: true } },
+    },
   });
 
   const teachers = await prisma.teacherProfile.findMany({
@@ -989,78 +1174,107 @@ export async function syncDatabaseToGoogleSheets(userId: string) {
     include: { author: true },
   });
 
-  // Build the 5 structured tables per Master Prompt Section IV.3
   const sheetPayloads = {
     bangHocSinh: {
       sheetName: "1. Bảng học sinh",
       headers: ["Student ID", "Họ tên", "Lớp", "Khối", "Email học tập", "Trạng thái tài khoản"],
-      rows: students.map((s) => [
-        s.studentCode,
-        s.user.fullName,
-        s.schoolClass?.name || "7A1",
-        String(s.gradeLevel),
-        s.user.email,
-        s.user.isActive ? "Active" : "Inactive",
-      ]),
+      rows: sanitizeSheetRows(
+        students.map((s) => [
+          s.studentCode,
+          s.user.fullName,
+          s.schoolClass?.name || "Chưa có dữ liệu",
+          String(s.gradeLevel),
+          s.user.email,
+          s.user.isActive ? "Active" : "Inactive",
+        ])
+      ),
     },
     bangGiaoVien: {
       sheetName: "2. Bảng giáo viên",
       headers: ["Teacher ID", "Họ tên", "Chuyên môn", "Email", "Lớp phụ trách"],
-      rows: teachers.map((t) => [
-        t.teacherCode,
-        t.user.fullName,
-        t.specialization,
-        t.user.email,
-        t.homeroomClasses.map((c) => c.name).join(", ") || "Bộ môn",
-      ]),
+      rows: sanitizeSheetRows(
+        teachers.map((t) => [
+          t.teacherCode,
+          t.user.fullName,
+          t.specialization,
+          t.user.email,
+          t.homeroomClasses.map((c) => c.name).join(", ") || "Chưa phân công",
+        ])
+      ),
     },
     bangKetQuaHocTap: {
       sheetName: "3. Bảng kết quả học tập",
       headers: ["Student ID", "Môn học", "Assignment ID", "Tên bài tập", "Điểm", "Lần nộp", "Trạng thái"],
-      rows: submissions.map((sub) => [
-        sub.student.studentCode,
-        sub.assignment.subject.name,
-        sub.assignmentId.slice(0, 8),
-        sub.assignment.title,
-        sub.score !== null ? String(sub.score) : "Chờ chấm",
-        String(sub.attemptNumber),
-        sub.status,
-      ]),
+      rows: sanitizeSheetRows(
+        submissions.map((sub) => [
+          sub.student.studentCode,
+          sub.assignment.subject.name,
+          sub.assignmentId.slice(0, 8),
+          sub.assignment.title,
+          sub.score !== null && sub.score !== undefined ? String(sub.score) : "Chưa có dữ liệu",
+          String(sub.attemptNumber),
+          sub.status,
+        ])
+      ),
     },
     bangPhanTichNangLuc: {
       sheetName: "4. Bảng phân tích năng lực",
       headers: ["Học sinh", "Môn học", "Chủ đề", "Năng lực", "Mức độ đạt", "Nội dung cần củng cố", "Khuyến nghị"],
-      rows: students.map((s) => [
-        s.user.fullName,
-        "Tin học & Đa môn THCS",
-        "An toàn số, Đại số & Đọc hiểu",
-        "Tự tạo sản phẩm & Tự đánh giá",
-        "Tốt (88%)",
-        "Chọn loại biểu đồ tỉ lệ phần trăm",
-        "Luyện tập thêm qua Prompt Lab và bài thực hành số 2",
-      ]),
+      rows: sanitizeSheetRows(
+        students.flatMap((s) => {
+          if (s.progressRecords.length === 0) {
+            return [
+              [
+                s.user.fullName,
+                "Chưa có dữ liệu",
+                "Chưa có dữ liệu",
+                "Chưa có dữ liệu",
+                "Chưa đủ dữ liệu",
+                "Chưa có dữ liệu",
+                s.learningGoals || "Chưa có dữ liệu",
+              ],
+            ];
+          }
+          return s.progressRecords.map((pr) => [
+            s.user.fullName,
+            pr.subject.name,
+            "Theo chương trình môn học",
+            "Làm chủ kiến thức & Thực hành",
+            pr.masteryPercent !== null && pr.masteryPercent !== undefined
+              ? `${Math.round(pr.masteryPercent)}%`
+              : "Chưa đủ dữ liệu",
+            pr.gaps || "Chưa có dữ liệu",
+            pr.nextStepSuggestion || "Chưa có dữ liệu",
+          ]);
+        })
+      ),
     },
     bangHoatDong: {
       sheetName: "5. Bảng hoạt động",
       headers: ["Thời gian", "Người thực hiện", "Bài tập hoàn thành", "Sản phẩm đã đăng", "Hoạt động học tập"],
-      rows: posts.map((p) => [
-        new Date(p.createdAt).toLocaleDateString("vi-VN"),
-        p.author.fullName,
-        String(submissions.length),
-        p.title,
-        `Đăng sản phẩm (${p.category})`,
-      ]),
+      rows: sanitizeSheetRows(
+        posts.map((p) => [
+          new Date(p.createdAt).toLocaleDateString("vi-VN"),
+          p.author.fullName,
+          String(submissions.length),
+          p.title,
+          `Đăng sản phẩm (${p.category})`,
+        ])
+      ),
     },
   };
 
-  // Record sync log in DB
   const syncLog = await prisma.syncLog.create({
     data: {
       userId,
       service: "SHEETS",
       action: "BATCH_SYNC_5_TABLES",
-      resourceId: "UNIGO_Master_Report_2026_Sheets",
-      status: "SUCCESS",
+      resourceId: "LOCAL_REPORT_SNAPSHOT",
+      status: integrationMode.logStatus,
+      errorMessage:
+        integrationMode.syncStatus === "DISCONNECTED"
+          ? "Chưa kết nối Google Sheets API thật (DISCONNECTED)."
+          : "Chế độ DEMO cục bộ.",
     },
   });
 
@@ -1071,6 +1285,7 @@ export async function syncDatabaseToGoogleSheets(userId: string) {
 
   return {
     syncLog,
+    connectionState: integrationMode.syncStatus,
     quotaInfo: "1 batchUpdate request used (Limit: 60 req/min/user)",
     tablesSynced: 5,
     totalRowsExported:
@@ -1085,7 +1300,7 @@ export async function syncDatabaseToGoogleSheets(userId: string) {
 
 /**
  * 2. Idempotent Google Classroom Assignment Sync
- * Prevents duplicate coursework on retry and maps all 9 lifecycle states.
+ * Prevents duplicate coursework on retry and maps lifecycle states honestly.
  */
 export async function syncAssignmentToClassroom(userId: string, assignmentId: string) {
   const assignment = await prisma.assignment.findUnique({
@@ -1097,17 +1312,19 @@ export async function syncAssignmentToClassroom(userId: string, assignmentId: st
     throw new Error("Không tìm thấy bài tập cần đồng bộ.");
   }
 
-  // Idempotency check: if already has classroomCourseworkId, update instead of creating duplicate
+  const integrationMode = await resolveGoogleIntegrationMode(userId);
   const isUpdate = Boolean(assignment.classroomCourseworkId);
-  const courseworkId =
-    assignment.classroomCourseworkId || `GCW-${assignment.schoolClass.name}-${assignment.id.slice(0, 6).toUpperCase()}`;
+  const courseworkId = assignment.classroomCourseworkId || null;
 
   const updatedAssignment = await prisma.assignment.update({
     where: { id: assignmentId },
     data: {
       classroomCourseworkId: courseworkId,
-      syncStatus: "SYNCED",
-      syncErrorMessage: null,
+      syncStatus: integrationMode.syncStatus,
+      syncErrorMessage:
+        integrationMode.syncStatus === "DISCONNECTED"
+          ? "Chưa kết nối Google Classroom API thật."
+          : null,
     },
   });
 
@@ -1116,14 +1333,15 @@ export async function syncAssignmentToClassroom(userId: string, assignmentId: st
       userId,
       service: "CLASSROOM",
       action: isUpdate ? "UPDATE_COURSEWORK" : "CREATE_COURSEWORK_STUDENT_COPY",
-      resourceId: courseworkId,
-      status: "SUCCESS",
+      resourceId: courseworkId || `UNCONNECTED_COURSEWORK_${assignment.id.slice(0, 8)}`,
+      status: integrationMode.logStatus,
     },
   });
 
   return {
     assignment: updatedAssignment,
     courseworkId,
+    connectionState: integrationMode.syncStatus,
     isIdempotentUpdate: isUpdate,
     shareMode: "STUDENT_COPY",
     syncLog,
@@ -1144,20 +1362,22 @@ export async function createGoogleDocFromTemplate(
     teacherName: string;
   }
 ) {
-  const generatedDocId = `GDOC-${params.templateType}-${Date.now().toString().slice(-6)}`;
+  const integrationMode = await resolveGoogleIntegrationMode(userId);
+  const generatedDocId: string | null = null;
 
   const syncLog = await prisma.syncLog.create({
     data: {
       userId,
       service: "DOCS",
       action: `CLONE_TEMPLATE_${params.templateType}`,
-      resourceId: generatedDocId,
-      status: "SUCCESS",
+      resourceId: generatedDocId || `UNCONNECTED_DOC_${params.templateType}`,
+      status: integrationMode.logStatus,
     },
   });
 
   return {
     docId: generatedDocId,
+    connectionState: integrationMode.syncStatus,
     title: params.title,
     templateType: params.templateType,
     metadata: {
@@ -1167,7 +1387,7 @@ export async function createGoogleDocFromTemplate(
       author: params.teacherName,
       createdAt: new Date().toISOString(),
       version: "v1.0",
-      status: "SYNCED",
+      status: integrationMode.syncStatus,
       accessRole: "writer (Giáo viên) / reader (Học sinh lớp được giao)",
     },
     replacedPlaceholders: [
@@ -1195,7 +1415,8 @@ export async function syncAssignmentDeadlineToCalendar(
     customMinutes?: number;
   }
 ) {
-  const eventId = `GCAL-${params.className}-${Date.now().toString().slice(-6)}`;
+  const integrationMode = await resolveGoogleIntegrationMode(userId);
+  const eventId: string | null = null;
   const overrides = [];
   if (params.reminder1Day) overrides.push({ method: "email", minutes: 1440 });
   if (params.reminder1Hour) overrides.push({ method: "popup", minutes: 60 });
@@ -1206,13 +1427,14 @@ export async function syncAssignmentDeadlineToCalendar(
       userId,
       service: "CALENDAR",
       action: "CREATE_DEADLINE_EVENT",
-      resourceId: eventId,
-      status: "SUCCESS",
+      resourceId: eventId || `UNCONNECTED_CAL_${params.className}`,
+      status: integrationMode.logStatus,
     },
   });
 
   return {
     eventId,
+    connectionState: integrationMode.syncStatus,
     calendarName: `Lịch học tập & Kiểm tra Lớp ${params.className} - UNIGO`,
     summary: `[Hạn nộp UNIGO] ${params.title}`,
     dueDate: params.dueDate,

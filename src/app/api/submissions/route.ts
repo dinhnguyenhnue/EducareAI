@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth";
+import { submitAssignmentTransactional } from "@/lib/submission-guard";
 
 export async function POST(req: Request) {
   try {
@@ -20,17 +21,39 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { assignmentId, content, driveUrl, selfAssessment, studentEmail } = body;
+    const {
+      assignmentId,
+      content,
+      driveUrl,
+      assetIds,
+      selfAssessment,
+      studentEmail,
+      idempotencyKey,
+    } = body;
 
-    // If STUDENT, enforce their own profile; if SUPER_ADMIN testing Student View, allow studentEmail or default student
+    if (!assignmentId) {
+      return NextResponse.json(
+        { error: "Thiếu mã bài tập (assignmentId)." },
+        { status: 400 }
+      );
+    }
+
+    // If STUDENT, strictly enforce their own profile; if SUPER_ADMIN testing Student View, allow studentEmail
     const targetEmail =
       session.role === "STUDENT"
         ? session.user.email
-        : studentEmail || "minhanh.nguyen@unigo.edu.vn";
+        : studentEmail || session.user.email;
 
     const studentUser = await prisma.user.findFirst({
       where: { email: targetEmail },
-      include: { studentProfile: true },
+      include: {
+        studentProfile: {
+          include: {
+            schoolClass: true,
+            enrollments: { where: { status: "ACTIVE" } },
+          },
+        },
+      },
     });
 
     if (!studentUser || !studentUser.studentProfile) {
@@ -40,62 +63,63 @@ export async function POST(req: Request) {
       );
     }
 
-    const attachments = driveUrl
-      ? JSON.stringify([
-        { url: driveUrl, type: "DRIVE_LINK", title: "Sản phẩm nộp đính kèm" },
-      ])
-      : null;
-
-    const fullContent = selfAssessment
-      ? `${content}\n\n[TỰ ĐÁNH GIÁ CỦA HỌC SINH]:\n${selfAssessment}`
-      : content;
-
-    const existingCount = await prisma.submission.count({
-      where: {
-        assignmentId,
-        studentId: studentUser.studentProfile.id,
-      },
-    });
-
-    const submission = await prisma.submission.create({
-      data: {
-        assignmentId,
-        studentId: studentUser.studentProfile.id,
-        content: fullContent,
-        attachments,
-        status: "SUBMITTED",
-        attemptNumber: existingCount + 1,
-      },
-    });
-
-    if (selfAssessment) {
-      await prisma.selfAssessment.create({
-        data: {
-          studentId: studentUser.studentProfile.id,
-          assignmentId,
-          responses: JSON.stringify({ selfAssessment }),
-          reflection: selfAssessment,
-        },
+    const attachmentItems: Array<Record<string, unknown>> = [];
+    if (driveUrl && String(driveUrl).trim()) {
+      attachmentItems.push({
+        url: String(driveUrl).trim(),
+        type: "DRIVE_LINK",
+        title: "Sản phẩm nộp đính kèm (Drive)",
       });
     }
+    if (Array.isArray(assetIds) && assetIds.length > 0) {
+      for (const id of assetIds) {
+        attachmentItems.push({
+          assetId: String(id),
+          type: "ASSET_FILE",
+          title: "Tệp tải lên kho học liệu",
+        });
+      }
+    }
 
-    await prisma.auditLog.create({
-      data: {
-        actorId: session.user.id,
-        actorEmail: session.user.email,
-        actorRole: session.role,
-        action: "ASSIGNMENT_SUBMISSION_CREATED",
-        resource: "SUBMISSION",
-        resourceId: submission.id,
-        status: "SUCCESS",
-        details: JSON.stringify({
-          assignmentId,
-          studentCode: studentUser.studentProfile.studentCode,
-        }),
-      },
+    const attachmentsJson =
+      attachmentItems.length > 0 ? JSON.stringify(attachmentItems) : null;
+
+    const fullContent = selfAssessment
+      ? `${content || ""}\n\n[TỰ ĐÁNH GIÁ CỦA HỌC SINH]:\n${selfAssessment}`
+      : String(content || "");
+
+    const enrolledClassIds = studentUser.studentProfile.enrollments.map(
+      (e) => e.classId
+    );
+
+    const result = await submitAssignmentTransactional({
+      actorUserId: session.user.id,
+      actorEmail: session.user.email,
+      actorRole: session.role,
+      studentProfileId: studentUser.studentProfile.id,
+      studentCode: studentUser.studentProfile.studentCode,
+      studentClassId: studentUser.studentProfile.classId,
+      studentClassName: studentUser.studentProfile.schoolClass?.name || null,
+      enrolledClassIds,
+      assignmentId: String(assignmentId),
+      content: fullContent,
+      attachmentsJson,
+      selfAssessment: selfAssessment ? String(selfAssessment) : null,
+      idempotencyKey: idempotencyKey ? String(idempotencyKey) : null,
     });
 
-    return NextResponse.json({ success: true, submission });
+    if (!result.ok) {
+      return NextResponse.json(
+        { error: result.error, errorCode: result.errorCode },
+        { status: result.statusCode }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      idempotentReplay: result.idempotentReplay,
+      submission: result.submission,
+    });
   } catch (err: any) {
     console.error("Submission API Error:", err);
     return NextResponse.json(

@@ -19,23 +19,23 @@ export default async function TeacherAnalyticsPage() {
     ]);
 
   const gradedSubs = submissions.filter(
-    (s) => s.status === "GRADED" && s.score !== null
+    (s) => s.status === "GRADED" && s.score !== null && s.score !== undefined
   );
-  const avgScore =
+  const avgScore: string | null =
     gradedSubs.length > 0
       ? (
-          gradedSubs.reduce((acc, s) => acc + (s.score || 0), 0) /
+          gradedSubs.reduce((acc, s) => acc + (s.score ?? 0), 0) /
           gradedSubs.length
         ).toFixed(1)
-      : "0.0";
+      : null;
 
-  const avgMastery =
+  const avgMastery: number | null =
     progressRecords.length > 0
       ? Math.round(
           progressRecords.reduce((acc, p) => acc + p.masteryPercent, 0) /
             progressRecords.length
         )
-      : 0;
+      : null;
 
   return (
     <AppShell>
@@ -75,10 +75,12 @@ export default async function TeacherAnalyticsPage() {
               Điểm trung bình thực tế
             </span>
             <div className="text-2xl font-bold text-ink mt-2 font-mono">
-              {avgScore} / 10
+              {avgScore !== null ? `${avgScore} / 10` : "Chưa có dữ liệu"}
             </div>
             <p className="text-[11px] text-ink-muted mt-1">
-              Tính trên {gradedSubs.length} bài đã chấm
+              {gradedSubs.length > 0
+                ? `Tính trên ${gradedSubs.length} bài đã chấm`
+                : "Chưa có bài nộp nào được chấm điểm"}
             </p>
           </div>
 
@@ -87,10 +89,12 @@ export default async function TeacherAnalyticsPage() {
               Mức độ làm chủ trung bình
             </span>
             <div className="text-2xl font-bold text-brand-teal mt-2 font-mono">
-              {avgMastery}%
+              {avgMastery !== null ? `${avgMastery}%` : "Chưa có dữ liệu"}
             </div>
             <p className="text-[11px] text-brand-teal mt-1">
-              Từ bảng LearningProgress
+              {progressRecords.length > 0
+                ? `Từ ${progressRecords.length} bản ghi LearningProgress`
+                : "Chưa có dữ liệu tiến độ"}
             </p>
           </div>
 

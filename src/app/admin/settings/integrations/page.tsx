@@ -137,9 +137,11 @@ export default async function AdminIntegrationsSettingsPage() {
               <span>Cơ sở dữ liệu</span>
               <Database className="w-4 h-4 text-brand-teal" />
             </div>
-            <div className="text-lg font-bold text-ink">PostgreSQL</div>
+            <div className="text-lg font-bold text-ink">
+              {process.env.DATABASE_URL?.startsWith("file:") ? "SQLite (Local)" : "PostgreSQL"}
+            </div>
             <div className="text-[11px] text-status-success mt-1 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Prisma Cloud Active
+              <CheckCircle2 className="w-3 h-3" /> Prisma ORM Active
             </div>
           </div>
         </div>

@@ -2,36 +2,49 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Link as LinkIcon, CheckSquare, Sparkles } from "lucide-react";
+import { Send, Link as LinkIcon, CheckSquare } from "lucide-react";
+import {
+  MultiFileAssetUploader,
+  type UploadedAssetItem,
+} from "@/components/assets/MultiFileAssetUploader";
 
 export function AssignmentSubmissionForm({ assignmentId }: { assignmentId: string }) {
   const router = useRouter();
   const [content, setContent] = useState("");
   const [driveUrl, setDriveUrl] = useState("");
   const [selfAssessment, setSelfAssessment] = useState("");
+  const [uploadedAssets, setUploadedAssets] = useState<UploadedAssetItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() && !driveUrl.trim()) {
-      alert("Vui lòng nhập nội dung bài làm hoặc đính kèm liên kết sản phẩm.");
+    setErrorMsg(null);
+    if (!content.trim() && !driveUrl.trim() && uploadedAssets.length === 0) {
+      setErrorMsg("Vui lòng nhập nội dung bài làm, tải tệp đính kèm trực tiếp hoặc dán liên kết sản phẩm.");
       return;
     }
 
     setIsSubmitting(true);
     try {
+      const primaryAssetUrl =
+        uploadedAssets.length > 0
+          ? `/api/assets/${uploadedAssets[0].id}`
+          : driveUrl;
+
       const res = await fetch("/api/submissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           assignmentId,
           content,
-          driveUrl,
+          driveUrl: primaryAssetUrl,
+          assetIds: uploadedAssets.map((a) => a.id),
           selfAssessment,
-          studentEmail: "minhanh.nguyen@unigo.edu.vn",
         }),
       });
+      const data = await res.json();
 
       if (res.ok) {
         setSuccess(true);
@@ -39,11 +52,11 @@ export function AssignmentSubmissionForm({ assignmentId }: { assignmentId: strin
           router.refresh();
         }, 1200);
       } else {
-        alert("Có lỗi xảy ra khi nộp bài. Vui lòng thử lại.");
+        setErrorMsg(data.error || "Có lỗi xảy ra khi nộp bài. Vui lòng thử lại.");
       }
     } catch (err) {
       console.error(err);
-      alert("Có lỗi xảy ra khi gửi bài làm.");
+      setErrorMsg("Có lỗi xảy ra khi gửi bài làm.");
     } finally {
       setIsSubmitting(false);
     }
@@ -64,6 +77,12 @@ export function AssignmentSubmissionForm({ assignmentId }: { assignmentId: strin
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {errorMsg && (
+        <div className="p-3 rounded-lg bg-status-danger-soft border border-status-danger/30 text-xs text-status-danger font-semibold">
+          {errorMsg}
+        </div>
+      )}
+
       <div>
         <label className="block text-xs font-bold text-ink uppercase tracking-wide mb-1.5">
           1. Tóm tắt nội dung bài làm hoặc thuyết minh sản phẩm
@@ -74,14 +93,19 @@ export function AssignmentSubmissionForm({ assignmentId }: { assignmentId: strin
           onChange={(e) => setContent(e.target.value)}
           placeholder="Mô tả các bước thực hiện, giải pháp em đã áp dụng..."
           className="w-full p-3 rounded-button bg-canvas border border-border text-xs text-ink focus:outline-none focus:border-brand-teal leading-relaxed"
-          required
         />
       </div>
+
+      <MultiFileAssetUploader
+        assignmentId={assignmentId}
+        onAssetsChange={setUploadedAssets}
+        label="2. Tải tệp bài làm trực tiếp lên hệ thống (PDF, DOCX, PPTX, XLSX, Ảnh, Âm thanh, Video, HTML, ZIP)"
+      />
 
       <div>
         <label className="block text-xs font-bold text-ink uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
           <LinkIcon className="w-3.5 h-3.5 text-brand-teal" />
-          <span>2. Liên kết tệp Google Drive hoặc sản phẩm số</span>
+          <span>3. Hoặc đính kèm liên kết Google Drive / sản phẩm số (Tùy chọn)</span>
         </label>
         <input
           type="url"

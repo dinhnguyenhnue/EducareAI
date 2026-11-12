@@ -173,7 +173,7 @@ export default async function ParentAssignmentsExamsPage() {
                 <h3 className="text-sm font-bold text-ink">{sub.assignment.title}</h3>
                 <p className="text-xs text-ink-muted">
                   <strong>Nhận xét của Giáo viên:</strong>{" "}
-                  {sub.teacherComment || "Con nộp bài đúng hạn, trình bày cẩn thận."}
+                  {sub.teacherComment || "Chưa có dữ liệu nhận xét"}
                 </p>
               </div>
             ))}

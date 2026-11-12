@@ -65,11 +65,21 @@ export default function SandboxedHtmlGamePlayer({
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
       if (!event.data || typeof event.data !== "object") return;
-      if (event.data.type === "TIN_HOC_GAME_PRACTICE_COMPLETE") {
+      if (
+        event.data.type === "TIN_HOC_GAME_PRACTICE_COMPLETE" ||
+        event.data.type === "TINHOC_GAME_PRACTICE_RESULT"
+      ) {
+        const rawScore = Number(event.data.score);
+        const rawMax = Number(event.data.maxScore || 10);
+        if (!Number.isFinite(rawScore) || !Number.isFinite(rawMax) || rawMax <= 0) {
+          return;
+        }
+        const safeMax = Math.min(1000, Math.max(1, rawMax));
+        const safeScore = Math.min(safeMax, Math.max(0, rawScore));
         setPracticeEvent({
-          gameType: String(event.data.gameType || "HTML_GAME"),
-          score: Number(event.data.score || 0),
-          maxScore: Number(event.data.maxScore || 10),
+          gameType: String(event.data.gameType || "HTML_GAME").slice(0, 40),
+          score: safeScore,
+          maxScore: safeMax,
           receivedAt: new Date().toLocaleTimeString("vi-VN"),
         });
       }

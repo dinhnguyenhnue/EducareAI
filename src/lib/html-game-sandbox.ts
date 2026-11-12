@@ -90,6 +90,20 @@ export function analyzeStudentHtmlCode(html: string): StaticScanResult {
       description:
         "Phát hiện lệnh mở cửa sổ popup (window.open). Sẽ bị chặn vì không cấp quyền allow-popups.",
     },
+    {
+      regex: /<meta[^>]+http-equiv\s*=\s*["']?refresh/i,
+      code: "META_REFRESH_REDIRECT",
+      severity: "HIGH",
+      description:
+        "Phát hiện thẻ <meta http-equiv='refresh'> chuyển hướng trang. Thẻ này sẽ bị loại bỏ khi đóng gói sandbox.",
+    },
+    {
+      regex: /<base\b[^>]*>/i,
+      code: "BASE_URI_OVERRIDE",
+      severity: "HIGH",
+      description:
+        "Phát hiện thẻ <base> thay đổi đường dẫn gốc. Bị chặn bởi CSP base-uri 'none' và bộ lọc.",
+    },
   ];
 
   for (const p of patterns) {
@@ -117,17 +131,22 @@ export function analyzeStudentHtmlCode(html: string): StaticScanResult {
 }
 
 /**
- * Wraps student HTML with a strict Content-Security-Policy meta tag and a runtime
- * security harness so it runs purely self-contained inside <iframe sandbox="allow-scripts">.
+ * Wraps student HTML with a strict Content-Security-Policy meta tag at the very top
+ * of a trusted HTML document shell so that CSP is ALWAYS evaluated before any
+ * untrusted user markup, comments, or scripts inside <iframe sandbox="allow-scripts">.
  */
 export function wrapHtmlWithStrictCsp(rawHtml: string): string {
   const cspMetaTag = `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${STRICT_GAME_CSP}">`;
 
-  if (/<head[^>]*>/i.test(rawHtml)) {
-    return rawHtml.replace(/<head([^>]*)>/i, `<head$1>${cspMetaTag}`);
-  }
+  const sanitizedUserHtml = String(rawHtml || "")
+    // Remove any doctype or structural html/head/body wrapper tags so user markup cannot precede our trusted <head>
+    .replace(/<!doctype[^>]*>/gi, "")
+    .replace(/<\/?(?:html|head|body)\b[^>]*>/gi, "")
+    // Strip meta http-equiv (e.g. refresh redirect or conflicting CSP) and base tags
+    .replace(/<meta\b[^>]*http-equiv\s*=[^>]*>/gi, "")
+    .replace(/<base\b[^>]*>/gi, "");
 
-  return `<!DOCTYPE html><html lang="vi"><head>${cspMetaTag}</head><body>${rawHtml}</body></html>`;
+  return `<!DOCTYPE html><html lang="vi"><head>${cspMetaTag}</head><body>${sanitizedUserHtml}</body></html>`;
 }
 
 /**

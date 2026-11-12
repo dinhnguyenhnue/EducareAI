@@ -754,20 +754,27 @@ model DriveFolderNode {
 
 model ClassTrackingSheet {
   id                     String   @id @default(uuid())
-  classId                String?
-  className              String   @unique // e.g., "7A1" -> Spreadsheet "EDUCARE_AI_Tracking_7A1"
+  classId                String   @default("CLASS_7A1")
+  academicYearId         String   @default("2026-2027")
+  purpose                String   @default("CLASS_TRACKING") // CLASS_TRACKING, EXAM_EXPORT, SEMESTER_SUMMARY
+  className              String   // e.g., "7A1" -> Spreadsheet "EDUCARE_AI_Tracking_7A1"
   spreadsheetTitle       String   // "EDUCARE_AI_Tracking_7A1"
-  spreadsheetId          String   // Persistent Google Sheets spreadsheetId
-  spreadsheetUrl         String
+  spreadsheetId          String?  // Persistent Google Sheets spreadsheetId (Null when DISCONNECTED/DEMO)
+  spreadsheetUrl         String?
   driveFolderId          String?  // Stored inside 05_TRACKING_REPORTS/Tracking_theo_lop/
   tabsJson               String   // JSON metadata for 6 tabs: Tổng quan, Danh sách HS, Tiến độ học tập, Điểm & Rubric, Sản phẩm sáng tạo, Báo cáo AI
   pendingNotesImportJson String?  // Teacher notes/comments staged from Sheets awaiting explicit teacher confirmation
   syncCadenceMinutes     Int      @default(10) // 5-15 min incremental sync
-  syncStatus             String   @default("SYNCED") // SYNCED, PENDING, ERROR
+  syncStatus             String   @default("DISCONNECTED") // DISCONNECTED, DEMO, PENDING, SYNCED, ERROR
   totalRowsSynced        Int      @default(0)
   lastSyncedAt           DateTime @default(now())
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
+
+  importSources          SheetImportSource[]
+
+  @@unique([classId, academicYearId, purpose])
+  @@index([className, academicYearId])
 }
 
 model AIUsageLog {
@@ -775,6 +782,8 @@ model AIUsageLog {
   userId           String
   userEmail        String
   userRole         String
+  classId          String?
+  academicYearId   String?
   className        String?
   subjectCode      String   @default("TIN7")
   featureModule    String   // "AI_TUTOR", "AI_ASSESSMENT_ANALYZER", "AI_TEACHER_ASSISTANT", "AI_PARENT_COMPANION", "PROMPT_LAB"
@@ -790,6 +799,7 @@ model AIUsageLog {
 
   @@index([userId, featureModule])
   @@index([className, createdAt])
+  @@index([classId, academicYearId, createdAt])
 }
 
 model SystemBackupRecord {
@@ -809,4 +819,266 @@ model SystemBackupRecord {
   createdById         String
   createdByEmail      String
   createdAt           DateTime  @default(now())
+}
+
+// ============================================================================
+// KHO HỌC LIỆU & TỆP DÙNG CHUNG (ASSET REPOSITORY - MASTER PROMPT SECTION 4)
+// ============================================================================
+
+model Asset {
+  id                 String    @id @default(uuid())
+  storageKey         String    @unique // Random server-side object key
+  originalFilename   String
+  mimeType           String
+  extension          String
+  sizeBytes          Int
+  sha256Checksum     String
+  category           String    // DOCUMENT, SPREADSHEET, PRESENTATION, IMAGE, AUDIO, VIDEO, HTML, ARCHIVE
+  previewMode        String    @default("DOWNLOAD_ONLY") // INLINE_PREVIEW, DOWNLOAD_ONLY, SANDBOX_HTML
+  quarantineStatus   String    @default("QUARANTINED") // QUARANTINED, CLEAN_PUBLISHED, REJECTED
+  scanNotes          String?
+  version            Int       @default(1)
+  parentAssetId      String?
+  ownerId            String
+  ownerRole          String
+  classId            String?
+  academicYearId     String?
+  lessonId           String?
+  assignmentId       String?
+  submissionId       String?
+  driveLinkOptional  String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([ownerId, quarantineStatus])
+  @@index([classId, quarantineStatus])
+  @@index([lessonId])
+  @@index([assignmentId])
+}
+
+// ============================================================================
+// CHỖ CHỜ GEMS & AGENTS (INTEGRATION SLOTS - MASTER PROMPT SECTION 6)
+// ============================================================================
+
+model IntegrationSlot {
+  id                String    @id @default(uuid())
+  code              String    @unique // e.g., "SLOT_LESSON_HINT", "SLOT_GAME_CREATOR", "GEM_TIN7"
+  name              String
+  kind              String    @default("GEM_LINK") // GEM_LINK | AGENT_API
+  contextKey        String    // LESSON_HINT, ASSIGNMENT_EXPLAIN, GAME_CREATOR, TEACHER_ASSISTANT, ANALYTICS_INSIGHT, SUBJECT_GEM
+  subjectCode       String?
+  gradeLevel        Int?
+  provider          String    @default("GOOGLE_GEMINI")
+  externalUrl       String?   // Specific Gem URL (never generic homepage)
+  endpointRef       String?   // Internal server-side agent endpoint ref
+  configJson        String    @default("{}")
+  secretRef         String?   // Env variable name only (never raw secret)
+  allowedRoles      String    @default("TEACHER,STUDENT")
+  classScope        String?   // Null = all allowed classes, or comma-separated classIds
+  status            String    @default("DISCONNECTED") // DISCONNECTED, CONFIGURED, HEALTHY, ERROR, DISABLED
+  fallbackPrompt    String
+  version           Int       @default(1)
+  lastCheckedAt     DateTime?
+  lastErrorMessage  String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([contextKey, status])
+}
+
+// ============================================================================
+// PIPELINE NHẬP GOOGLE SHEETS & ĐÁNH GIÁ MINH BẠCH (LMS_DATA_DESIGN.md)
+// ============================================================================
+
+model SheetImportSource {
+  id              String              @id @default(uuid())
+  trackingSheetId String?
+  trackingSheet   ClassTrackingSheet? @relation(fields: [trackingSheetId], references: [id], onDelete: SetNull)
+  spreadsheetId   String
+  sheetId         Int                 // Stable numeric sheet tab ID
+  classId         String
+  academicYearId  String
+  direction       String              @default("IMPORT_READ_ONLY") // IMPORT_READ_ONLY, EXPORT_REPORT_ONLY
+  mappingJson     String              // Column mapping schema
+  mappingVersion  Int                 @default(1)
+  timezone        String              @default("Asia/Ho_Chi_Minh")
+  enabled         Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  studentIdentities    StudentExternalIdentity[]
+  assessmentIdentities AssessmentExternalIdentity[]
+  importRuns           SheetImportRun[]
+  importedAttempts     ImportedAttempt[]
+  importedSummaries    ImportedAssessmentSummary[]
+
+  @@unique([spreadsheetId, sheetId])
+  @@index([classId, academicYearId])
+}
+
+model StudentExternalIdentity {
+  id                String            @id @default(uuid())
+  sourceId          String
+  source            SheetImportSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  externalStudentId String            // Student code in external sheet
+  studentProfileId  String
+  createdAt         DateTime          @default(now())
+
+  @@unique([sourceId, externalStudentId])
+  @@index([studentProfileId])
+}
+
+model AssessmentExternalIdentity {
+  id                   String            @id @default(uuid())
+  sourceId             String
+  source               SheetImportSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  externalAssessmentId String
+  assessmentId         String
+  assessmentVersion    Int               @default(1)
+  createdAt            DateTime          @default(now())
+
+  @@unique([sourceId, externalAssessmentId, assessmentVersion])
+}
+
+model SheetImportRun {
+  id             String            @id @default(uuid())
+  sourceId       String
+  source         SheetImportSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  idempotencyKey String
+  startedAt      DateTime          @default(now())
+  completedAt    DateTime?
+  status         String            @default("RUNNING") // RUNNING, COMPLETED, FAILED, PARTIAL
+  readCount      Int               @default(0)
+  acceptedCount  Int               @default(0)
+  rejectedCount  Int               @default(0)
+  unchangedCount Int               @default(0)
+  errorCode      String?
+
+  rows           SheetImportRow[]
+
+  @@unique([sourceId, idempotencyKey])
+}
+
+model SheetImportRow {
+  id                 String         @id @default(uuid())
+  runId              String
+  run                SheetImportRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  sourceRecordId     String         // Stable record_id (Never row number!)
+  sourceRevision     Int            @default(1)
+  payloadHash        String
+  rawJson            String
+  status             String         @default("STAGED") // STAGED, ACCEPTED, REJECTED, CONFLICT, UNCHANGED
+  errorCodes         String?        // JSON array of validation error codes
+  mappedStudentId    String?        // User.id resolved via StudentProfile.userId
+  mappedAssessmentId String?
+  sourceUpdatedAt    DateTime?
+  createdAt          DateTime       @default(now())
+
+  @@index([runId, status])
+  @@index([sourceRecordId])
+}
+
+model ImportedAttempt {
+  id                String              @id @default(uuid())
+  sourceId          String
+  source            SheetImportSource   @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  sourceRecordId    String
+  studentUserId     String              // Maps to User.id (via StudentProfile.userId)
+  assessmentId      String
+  assessmentVersion Int                 @default(1)
+  classId           String
+  academicYearId    String
+  mode              String              @default("PRACTICE") // PRACTICE | EXAM
+  submittedAt       DateTime
+  rawScore          Float
+  maxScore          Float
+  normalizedScore   Float               // 10 * rawScore / maxScore (scale 10)
+  normalizedScore100 Float              @default(0.0) // 100 * rawScore / maxScore (scale 100)
+  status            String              @default("ACCEPTED") // ACCEPTED, PENDING_CORRECTION_APPROVAL, REVOKED_PROPOSED
+  revision          Int                 @default(1)
+  importRowId       String
+  nativeAttemptId   String?             // Prevents double-counting LMS attempts exported to Sheets & re-imported
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  corrections       AttemptCorrection[]
+
+  @@unique([sourceId, sourceRecordId])
+  @@index([studentUserId, assessmentId, submittedAt])
+  @@index([classId, academicYearId, submittedAt])
+  @@index([sourceId, status])
+}
+
+model AttemptCorrection {
+  id                String          @id @default(uuid())
+  importedAttemptId String
+  importedAttempt   ImportedAttempt @relation(fields: [importedAttemptId], references: [id], onDelete: Cascade)
+  oldPayload        String
+  newPayload        String
+  reason            String
+  actorId           String
+  approvedAt        DateTime?
+  sourceRevision    Int
+  createdAt         DateTime        @default(now())
+}
+
+model ImportedAssessmentSummary {
+  id                    String            @id @default(uuid())
+  sourceId              String
+  source                SheetImportSource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  sourceRecordId        String
+  studentUserId         String            // User.id
+  assessmentId          String
+  reportedAttemptCount  Int
+  reportedScore         Float
+  maxScore              Float             @default(10.0)
+  scoreMeaning          String            @default("AGGREGATE_ONLY") // AGGREGATE_ONLY (no fabricated first/latest/trend)
+  asOf                  DateTime
+  createdAt             DateTime          @default(now())
+
+  @@unique([sourceId, sourceRecordId])
+  @@index([studentUserId, assessmentId])
+}
+
+model StudentAssessmentMetric {
+  id                String   @id @default(uuid())
+  studentUserId     String   // User.id
+  assessmentId      String
+  assessmentVersion Int      @default(1)
+  mode              String   @default("PRACTICE") // PRACTICE | EXAM
+  windowStart       DateTime
+  windowEnd         DateTime
+  validAttemptCount Int      @default(0)
+  firstScore        Float?   // Null when insufficient data or aggregate-only
+  latestScore       Float?
+  bestScore         Float?
+  meanScore         Float?
+  improvement       Float?   // latestScore - firstScore ONLY when validAttemptCount >= 2
+  evidenceCount     Int      @default(0)
+  computedAt        DateTime @default(now())
+  algorithmVersion  String   @default("v1.0-transparent")
+  sourceWatermark   String?
+
+  @@unique([studentUserId, assessmentId, assessmentVersion, mode, windowStart, windowEnd])
+  @@index([studentUserId, mode])
+}
+
+model StudentInsight {
+  id               String    @id @default(uuid())
+  studentUserId    String    // User.id
+  classId          String
+  metricSnapshotId String?
+  evidenceRefsJson String    // JSON array of real attempt/submission IDs
+  suggestedAction  String
+  draftText        String
+  status           String    @default("DRAFT") // DRAFT, APPROVED, REJECTED
+  reviewerId       String?
+  reviewedAt       DateTime?
+  modelVersion     String?
+  promptVersion    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([studentUserId, status])
+  @@index([classId, status])
 }

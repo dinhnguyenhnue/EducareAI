@@ -1,0 +1,15 @@
+# Progress log (append-only, mới nhất ở cuối)
+
+Định dạng: `- [YYYY-MM-DD HH:mm] [model] T<id>: việc — file — kết quả`
+
+- [2026-11-12 21:53] [claude-opus] T0.1: tạo AGENTS.md, CLAUDE.md, .agents/skills/educare-session-handoff/SKILL.md, .planning/*
+- [2026-11-12 21:54] [claude-opus] T0.2: `pnpm install --frozen-lockfile` OK (163 pkgs); `prisma validate` OK; `prisma generate` OK; `tsc --noEmit` EXIT=0
+- [2026-11-12 21:54] [claude-opus] T0.4: giao subagent research lập ma trận yêu cầu
+
+- [2026-11-12 22:02] [gemini-4-argon] T0.3 & T0.4: hoàn thành ma trận yêu cầu trong `.planning/findings.md` và thêm `"test": "tsx --test tests/*.test.ts"` vào `package.json`
+- [2026-11-12 22:05] [gemini-4-argon] T1.1 & T1.2: sửa `wrapHtmlWithStrictCsp` đặt CSP ở đầu khung HTML tin cậy + lọc meta refresh/base; thêm `/api/game-frame/route.ts` trả HTTP CSP header; sửa `SandboxedHtmlGamePlayer.tsx` — `node scratch/lms-sandbox-audit.cjs` 7/7 PASS, `pnpm test` 7/7 PASS
+- `2026-11-12T22:17:55+07:00` | Completed T1.5 & T1.7: Updated `src/app/api/tin-hoc/assessments/route.ts` with teacher class scope check (`verifyTeacherClassScope`), student class membership & deadline check (`dueAt`), and `withKeyLock` + `prisma.$transaction` for concurrent attempt start/submit idempotency. Starting T1.6, T4.1, T4.2 (`IntegrationSlot` & AI Center consolidation).
+- `2026-11-12T22:21:55+07:00` | Completed T1.6, T4.1, T4.2: Created `src/lib/integration-slots.ts`, `src/app/api/integrations/slots/route.ts`, `src/components/ai/StudentAiCenterTabs.tsx`, and `src/app/hoc-sinh/gemini-gems/GeminiGemsClient.tsx`; updated `/hoc-sinh/gemini-gems`, `/hoc-sinh/sang-tao-cung-ai`, `/hoc-sinh/prompt-lab`, `/admin/settings/integrations`, and `AppSidebar.tsx`. Starting Phase 2 (T2.1, T2.2 — `Asset` repository & multi-file upload).
+- `2026-11-12T22:26:05+07:00` | Completed Phase 2 (T2.1, T2.2): Created `src/lib/asset-validation.ts`, `src/app/api/assets/route.ts`, `src/app/api/assets/[id]/route.ts`, and `src/components/assets/MultiFileAssetUploader.tsx`; integrated into student assignment submission form (`AssignmentSubmissionForm.tsx`) and teacher lesson studio (`TeacherLessonsClient.tsx`). Starting Phase 3 (T3.2, T3.3 — Google Sheets Import Pipeline & Transparent Evaluation Metrics).
+- `2026-11-12T22:28:25+07:00` | Completed Phase 3 (T3.2, T3.3): Created `src/lib/sheets-import-pipeline.ts` and `src/app/api/sheets/import/route.ts` with `record_id`-keyed idempotency, comma/dot decimal parsing, `0.0` vs `null` preservation, `8/10` vs `80/100` normalization, native LMS attempt deduplication, `AttemptCorrection` revision audit trail, `ImportedAssessmentSummary` for aggregate rows, and `computeTransparentStudentMetrics`. Starting Phase 5 (T5.1, T5.2 — acceptance tests, typecheck, build, and report).
+- `2026-11-12T22:42:45+07:00` | Completed Phase 5 (T5.1, T5.2): Wrote 33 automated tests across 6 suites (`tests/*.test.ts` -> 33/33 PASS), verified `prisma validate` (PASS), `tsc --noEmit` (PASS), `pnpm build` (PASS), and wrote `docs/LMS_IMPLEMENTATION_REPORT.md` + updated `.planning/HANDOFF.md` and `.planning/task_plan.md`.

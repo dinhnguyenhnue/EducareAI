@@ -207,9 +207,18 @@ export default async function ParentDashboardPage() {
                     <span className="font-bold text-brand-teal block">
                       Gợi ý câu hỏi trò chuyện cùng con tối nay:
                     </span>
-                    <p className="text-ink-muted">
-                      &ldquo;Hôm nay bố/mẹ thấy sản phẩm Infographic Văn hóa số của con được thầy Tuấn đánh giá 9.0 điểm. Con tâm đắc nhất quy tắc bảo mật nào và làm thế nào để cả nhà mình cùng áp dụng?&rdquo;
-                    </p>
+                    {linkedChild?.submissions && linkedChild.submissions.length > 0 ? (
+                      <p className="text-ink-muted">
+                        &ldquo;Bố/mẹ thấy con vừa nộp bài &lsquo;{linkedChild.submissions[0].assignment.title}&rsquo;
+                        {linkedChild.submissions[0].score !== null && linkedChild.submissions[0].score !== undefined
+                          ? ` (${linkedChild.submissions[0].score}/${linkedChild.submissions[0].assignment.maxScore} điểm)`
+                          : ""}. Con tâm đắc nhất nội dung nào trong bài làm này?&rdquo;
+                      </p>
+                    ) : (
+                      <p className="text-ink-muted">
+                        Chưa có dữ liệu bài nộp đã chấm để tạo gợi ý cụ thể cho con.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

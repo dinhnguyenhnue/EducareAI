@@ -95,8 +95,7 @@ export default async function ParentStrengthsAndGapsPage() {
                   <span>Điểm mạnh nổi bật của con</span>
                 </div>
                 <p className="text-xs text-emerald-950 leading-relaxed">
-                  {record.strengths ||
-                    "Con nắm vững lý thuyết cốt lõi, tích cực hoàn thành bài tập thực hành và sản phẩm sáng tạo."}
+                  {record.strengths || "Chưa có dữ liệu"}
                 </p>
               </div>
 
@@ -106,8 +105,7 @@ export default async function ParentStrengthsAndGapsPage() {
                   <span>Nội dung con cần củng cố thêm</span>
                 </div>
                 <p className="text-xs text-amber-950 leading-relaxed">
-                  {record.gaps ||
-                    "Cần rèn thêm kỹ năng kiểm tra lại đáp án ở các câu hỏi vận dụng để tránh mất điểm đáng tiếc."}
+                  {record.gaps || "Chưa có dữ liệu"}
                 </p>
               </div>
 
@@ -117,8 +115,7 @@ export default async function ParentStrengthsAndGapsPage() {
                   <span>Định hướng tiếp theo từ Giáo viên & AI</span>
                 </div>
                 <p className="text-xs text-ink-muted leading-relaxed">
-                  {record.nextStepSuggestion ||
-                    "Ôn lại 15 phút mỗi tối qua phiếu bài tập thích ứng và trao đổi với giáo viên bộ môn."}
+                  {record.nextStepSuggestion || "Chưa có dữ liệu"}
                 </p>
               </div>
             </div>

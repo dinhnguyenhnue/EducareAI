@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth";
+import { verifyTeacherClassScope, withKeyLock } from "@/lib/submission-guard";
 import crypto from "crypto";
 
 function isTeacherOrAdmin(role: string): boolean {
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const requestedStudentId = searchParams.get("studentId");
+  const requestedClassId = searchParams.get("classId");
 
   // Section 3 & 12 #2: Block student from querying another student's attempts/results
   if (
@@ -36,6 +38,20 @@ export async function GET(request: NextRequest) {
 
   const teacherView =
     isTeacherOrAdmin(session.role) && session.activeViewRole !== "STUDENT";
+
+  if (teacherView && requestedClassId && session.role === "TEACHER") {
+    const scopeCheck = await verifyTeacherClassScope(
+      session.user.id,
+      session.role,
+      requestedClassId
+    );
+    if (!scopeCheck.allowed) {
+      return NextResponse.json(
+        { error: scopeCheck.message || scopeCheck.reason },
+        { status: scopeCheck.status || 403 }
+      );
+    }
+  }
 
   const assessments = await prisma.assessment.findMany({
     where: teacherView ? {} : { status: "PUBLISHED" },
@@ -236,80 +252,119 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existingAttempts = await prisma.attempt.findMany({
-      where: {
-        assessmentId: assessment.id,
-        studentId: session.user.id,
-      },
-      include: { answers: true },
-      orderBy: { createdAt: "desc" },
-    });
-
-    // Check if there is an active IN_PROGRESS attempt to resume on page reload
-    const activeAttempt = existingAttempts.find((a) => a.status === "IN_PROGRESS");
-    if (activeAttempt) {
-      const now = new Date();
-      if (activeAttempt.expiresAt && now > activeAttempt.expiresAt) {
-        // Auto-expire and grade saved answers
-        const graded = await finalizeAndGradeAttempt(activeAttempt.id, {}, true);
-        return NextResponse.json({
-          attempt: graded.attempt,
-          resumed: false,
-          expired: true,
-          message: "Thời gian làm bài đã hết. Hệ thống đã tự động thu bài theo các câu đã lưu.",
-        });
-      }
-
-      return NextResponse.json({
-        attempt: activeAttempt,
-        resumed: true,
-        serverNow: now.toISOString(),
-        message: "Đã khôi phục phiên làm bài đang diễn ra và các câu trả lời đã lưu tạm.",
-      });
-    }
-
-    // Enforce maxAttempts for EXAM mode
-    const completedCount = existingAttempts.filter(
-      (a) => a.status === "SUBMITTED" || a.status === "EXPIRED_AUTO_SUBMITTED"
-    ).length;
-
-    if (assessment.maxAttempts > 0 && completedCount >= assessment.maxAttempts) {
+    const now = new Date();
+    if (assessment.dueAt && now > assessment.dueAt) {
       return NextResponse.json(
-        {
-          error: `MAX_ATTEMPTS_REACHED: Bạn đã hoàn thành ${completedCount}/${assessment.maxAttempts} lượt làm bài cho phép của đề này.`,
-        },
+        { error: "DEADLINE_EXCEEDED: Đề bài đã quá hạn làm bài." },
         { status: 400 }
       );
     }
 
-    const now = new Date();
-    const expiresAt = assessment.timeLimitMinutes
-      ? new Date(now.getTime() + assessment.timeLimitMinutes * 60 * 1000)
-      : null;
+    // Verify class membership for STUDENT role when assessment specifies a classId
+    if (session.role === "STUDENT" && assessment.classId) {
+      const profile = await prisma.studentProfile.findUnique({
+        where: { userId: session.user.id },
+        include: {
+          schoolClass: true,
+          enrollments: { where: { status: "ACTIVE" }, include: { schoolClass: true } },
+        },
+      });
+      if (profile) {
+        const allowedKeys = new Set<string>();
+        if (profile.classId) allowedKeys.add(profile.classId);
+        if (profile.schoolClass?.name) allowedKeys.add(profile.schoolClass.name);
+        for (const enr of profile.enrollments) {
+          allowedKeys.add(enr.classId);
+          if (enr.schoolClass?.name) allowedKeys.add(enr.schoolClass.name);
+        }
+        if (allowedKeys.size > 0 && !allowedKeys.has(assessment.classId)) {
+          return NextResponse.json(
+            {
+              error: `FORBIDDEN_CLASS_SCOPE: Đề bài này thuộc lớp ${assessment.classId}, không thuộc lớp của bạn.`,
+            },
+            { status: 403 }
+          );
+        }
+      }
+    }
 
-    const newAttempt = await prisma.attempt.create({
-      data: {
-        assessmentId: assessment.id,
-        studentId: session.user.id,
-        studentEmail: session.user.email,
-        studentName: session.user.fullName,
-        classId:
-          session.user.studentProfile?.classId || assessment.classId || "7A1",
-        attemptNumber: existingAttempts.length + 1,
-        idempotencyKey: `INIT-${session.user.id}-${assessment.id}-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
-        status: "IN_PROGRESS",
-        startedAt: now,
-        expiresAt,
-        maxScore: 10.0,
-        isDemoData: assessment.isDemoData,
-      },
-      include: { answers: true },
-    });
+    const lockKey = `assessment-start:${session.user.id}:${assessment.id}`;
+    return withKeyLock(lockKey, async () => {
+      const existingAttempts = await prisma.attempt.findMany({
+        where: {
+          assessmentId: assessment.id,
+          studentId: session.user.id,
+        },
+        include: { answers: true },
+        orderBy: { createdAt: "desc" },
+      });
 
-    return NextResponse.json({
-      attempt: newAttempt,
-      resumed: false,
-      serverNow: now.toISOString(),
+      // Check if there is an active IN_PROGRESS attempt to resume on page reload
+      const activeAttempt = existingAttempts.find((a) => a.status === "IN_PROGRESS");
+      if (activeAttempt) {
+        const currentNow = new Date();
+        if (activeAttempt.expiresAt && currentNow > activeAttempt.expiresAt) {
+          // Auto-expire and grade saved answers
+          const graded = await finalizeAndGradeAttempt(activeAttempt.id, {}, true);
+          return NextResponse.json({
+            attempt: graded.attempt,
+            resumed: false,
+            expired: true,
+            message: "Thời gian làm bài đã hết. Hệ thống đã tự động thu bài theo các câu đã lưu.",
+          });
+        }
+
+        return NextResponse.json({
+          attempt: activeAttempt,
+          resumed: true,
+          serverNow: currentNow.toISOString(),
+          message: "Đã khôi phục phiên làm bài đang diễn ra và các câu trả lời đã lưu tạm.",
+        });
+      }
+
+      // Enforce maxAttempts for EXAM mode
+      const completedCount = existingAttempts.filter(
+        (a) => a.status === "SUBMITTED" || a.status === "EXPIRED_AUTO_SUBMITTED"
+      ).length;
+
+      if (assessment.maxAttempts > 0 && completedCount >= assessment.maxAttempts) {
+        return NextResponse.json(
+          {
+            error: `MAX_ATTEMPTS_REACHED: Bạn đã hoàn thành ${completedCount}/${assessment.maxAttempts} lượt làm bài cho phép của đề này.`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const startNow = new Date();
+      const expiresAt = assessment.timeLimitMinutes
+        ? new Date(startNow.getTime() + assessment.timeLimitMinutes * 60 * 1000)
+        : null;
+
+      const newAttempt = await prisma.attempt.create({
+        data: {
+          assessmentId: assessment.id,
+          studentId: session.user.id,
+          studentEmail: session.user.email,
+          studentName: session.user.fullName,
+          classId:
+            session.user.studentProfile?.classId || assessment.classId || "7A1",
+          attemptNumber: existingAttempts.length + 1,
+          idempotencyKey: `INIT-${session.user.id}-${assessment.id}-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
+          status: "IN_PROGRESS",
+          startedAt: startNow,
+          expiresAt,
+          maxScore: 10.0,
+          isDemoData: assessment.isDemoData,
+        },
+        include: { answers: true },
+      });
+
+      return NextResponse.json({
+        attempt: newAttempt,
+        resumed: false,
+        serverNow: startNow.toISOString(),
+      });
     });
   }
 
@@ -377,54 +432,64 @@ export async function POST(request: NextRequest) {
   if (action === "SUBMIT_ATTEMPT") {
     const { attemptId, idempotencyKey, responses = {} } = body;
 
-    const attempt = await prisma.attempt.findUnique({
-      where: { id: attemptId },
-      include: { answers: true, assessment: { include: { items: true } } },
-    });
-
-    if (!attempt || attempt.studentId !== session.user.id) {
+    if (!attemptId) {
       return NextResponse.json(
-        { error: "FORBIDDEN: Bạn không sở hữu lượt làm bài này." },
-        { status: 403 }
+        { error: "Thiếu attemptId." },
+        { status: 400 }
       );
     }
 
-    // Idempotency check: if already submitted (e.g., double click or retry), return the existing result!
-    if (
-      attempt.status === "SUBMITTED" ||
-      attempt.status === "EXPIRED_AUTO_SUBMITTED"
-    ) {
-      return NextResponse.json({
-        attempt: sanitizeAttemptResult(attempt, attempt.assessment),
-        idempotentReplay: true,
-        message: "Bài làm đã được ghi nhận trước đó (Chống nộp trùng Idempotent).",
+    const lockKey = `assessment-submit:${attemptId}`;
+    return withKeyLock(lockKey, async () => {
+      const attempt = await prisma.attempt.findUnique({
+        where: { id: attemptId },
+        include: { answers: true, assessment: { include: { items: true } } },
       });
-    }
 
-    // Detect if client tried to spoof score in request body (Section 12 #6)
-    const clientTriedToSpoofScore =
-      typeof body.score !== "undefined" ||
-      typeof body.totalScore !== "undefined" ||
-      typeof body.earnedPoints !== "undefined";
+      if (!attempt || attempt.studentId !== session.user.id) {
+        return NextResponse.json(
+          { error: "FORBIDDEN: Bạn không sở hữu lượt làm bài này." },
+          { status: 403 }
+        );
+      }
 
-    const now = new Date();
-    // Allow 15s network latency buffer; if past that, mark EXPIRED_AUTO_SUBMITTED
-    const isPastServerDeadline =
-      attempt.expiresAt &&
-      now.getTime() > new Date(attempt.expiresAt).getTime() + 15000;
+      // Idempotency check: if already submitted (e.g., double click or retry), return the existing result!
+      if (
+        attempt.status === "SUBMITTED" ||
+        attempt.status === "EXPIRED_AUTO_SUBMITTED"
+      ) {
+        return NextResponse.json({
+          attempt: sanitizeAttemptResult(attempt, attempt.assessment),
+          idempotentReplay: true,
+          message: "Bài làm đã được ghi nhận trước đó (Chống nộp trùng Idempotent).",
+        });
+      }
 
-    const graded = await finalizeAndGradeAttempt(
-      attempt.id,
-      responses,
-      Boolean(isPastServerDeadline),
-      idempotencyKey
-    );
+      // Detect if client tried to spoof score in request body (Section 12 #6)
+      const clientTriedToSpoofScore =
+        typeof body.score !== "undefined" ||
+        typeof body.totalScore !== "undefined" ||
+        typeof body.earnedPoints !== "undefined";
 
-    return NextResponse.json({
-      attempt: sanitizeAttemptResult(graded.attempt, graded.assessment),
-      idempotentReplay: false,
-      ignoredClientScoreSpoof: clientTriedToSpoofScore,
-      serverGradedAt: now.toISOString(),
+      const now = new Date();
+      // Allow 15s network latency buffer; if past that, mark EXPIRED_AUTO_SUBMITTED
+      const isPastServerDeadline =
+        attempt.expiresAt &&
+        now.getTime() > new Date(attempt.expiresAt).getTime() + 15000;
+
+      const graded = await finalizeAndGradeAttempt(
+        attempt.id,
+        responses,
+        Boolean(isPastServerDeadline),
+        idempotencyKey
+      );
+
+      return NextResponse.json({
+        attempt: sanitizeAttemptResult(graded.attempt, graded.assessment),
+        idempotentReplay: graded.idempotentReplay,
+        ignoredClientScoreSpoof: clientTriedToSpoofScore,
+        serverGradedAt: now.toISOString(),
+      });
     });
   }
 
@@ -437,83 +502,100 @@ async function finalizeAndGradeAttempt(
   expiredAutoSubmit: boolean,
   idempotencyKey?: string
 ) {
-  const attempt = await prisma.attempt.findUniqueOrThrow({
-    where: { id: attemptId },
-    include: {
-      answers: true,
-      assessment: {
-        include: { items: { orderBy: { orderIndex: "asc" } } },
-      },
-    },
-  });
-
-  const existingAnswerMap = new Map<string, string>();
-  for (const ans of attempt.answers) {
-    existingAnswerMap.set(ans.assessmentItemId, ans.studentResponse);
-  }
-
-  // Merge incoming responses only if not expired beyond deadline
-  if (!expiredAutoSubmit && incomingResponses) {
-    for (const [itemId, val] of Object.entries(incomingResponses)) {
-      if (typeof val === "string" && val.trim().length > 0) {
-        existingAnswerMap.set(itemId, val.trim());
-      }
-    }
-  }
-
-  let totalEarnedPoints = 0;
-  let totalPossiblePoints = 0;
-
-  for (const item of attempt.assessment.items) {
-    totalPossiblePoints += item.points;
-    const rawStudentResp = (existingAnswerMap.get(item.id) || "").trim().toUpperCase();
-    const expectedAnswer = item.snapshotCorrectAnswer.trim().toUpperCase();
-    const isCorrect = rawStudentResp.length > 0 && rawStudentResp === expectedAnswer;
-    const earnedPoints = isCorrect ? item.points : 0;
-    totalEarnedPoints += earnedPoints;
-
-    await prisma.answer.upsert({
-      where: {
-        attemptId_assessmentItemId: {
-          attemptId: attempt.id,
-          assessmentItemId: item.id,
+  return prisma.$transaction(async (tx) => {
+    const attempt = await tx.attempt.findUniqueOrThrow({
+      where: { id: attemptId },
+      include: {
+        answers: true,
+        assessment: {
+          include: { items: { orderBy: { orderIndex: "asc" } } },
         },
       },
-      update: {
-        studentResponse: rawStudentResp,
-        isCorrect,
-        earnedPoints,
-      },
-      create: {
-        attemptId: attempt.id,
-        assessmentItemId: item.id,
-        studentResponse: rawStudentResp,
-        isCorrect,
-        earnedPoints,
-      },
     });
-  }
 
-  const normalizedScore10 =
-    totalPossiblePoints > 0
-      ? Math.round(((totalEarnedPoints / totalPossiblePoints) * 10 + Number.EPSILON) * 100) / 100
-      : 0;
+    if (
+      attempt.status === "SUBMITTED" ||
+      attempt.status === "EXPIRED_AUTO_SUBMITTED"
+    ) {
+      return {
+        attempt,
+        assessment: attempt.assessment,
+        idempotentReplay: true,
+      };
+    }
 
-  const updatedAttempt = await prisma.attempt.update({
-    where: { id: attempt.id },
-    data: {
-      status: expiredAutoSubmit ? "EXPIRED_AUTO_SUBMITTED" : "SUBMITTED",
-      submittedAt: new Date(),
-      totalScore: normalizedScore10,
-      idempotencyKey:
-        idempotencyKey && String(idempotencyKey).trim().length > 0
-          ? String(idempotencyKey).trim()
-          : attempt.idempotencyKey,
-    },
-    include: { answers: true },
+    const existingAnswerMap = new Map<string, string>();
+    for (const ans of attempt.answers) {
+      existingAnswerMap.set(ans.assessmentItemId, ans.studentResponse);
+    }
+
+    // Merge incoming responses only if not expired beyond deadline
+    if (!expiredAutoSubmit && incomingResponses) {
+      for (const [itemId, val] of Object.entries(incomingResponses)) {
+        if (typeof val === "string" && val.trim().length > 0) {
+          existingAnswerMap.set(itemId, val.trim());
+        }
+      }
+    }
+
+    let totalEarnedPoints = 0;
+    let totalPossiblePoints = 0;
+
+    for (const item of attempt.assessment.items) {
+      totalPossiblePoints += item.points;
+      const rawStudentResp = (existingAnswerMap.get(item.id) || "").trim().toUpperCase();
+      const expectedAnswer = item.snapshotCorrectAnswer.trim().toUpperCase();
+      const isCorrect = rawStudentResp.length > 0 && rawStudentResp === expectedAnswer;
+      const earnedPoints = isCorrect ? item.points : 0;
+      totalEarnedPoints += earnedPoints;
+
+      await tx.answer.upsert({
+        where: {
+          attemptId_assessmentItemId: {
+            attemptId: attempt.id,
+            assessmentItemId: item.id,
+          },
+        },
+        update: {
+          studentResponse: rawStudentResp,
+          isCorrect,
+          earnedPoints,
+        },
+        create: {
+          attemptId: attempt.id,
+          assessmentItemId: item.id,
+          studentResponse: rawStudentResp,
+          isCorrect,
+          earnedPoints,
+        },
+      });
+    }
+
+    const normalizedScore10 =
+      totalPossiblePoints > 0
+        ? Math.round(((totalEarnedPoints / totalPossiblePoints) * 10 + Number.EPSILON) * 100) / 100
+        : 0;
+
+    const updatedAttempt = await tx.attempt.update({
+      where: { id: attempt.id },
+      data: {
+        status: expiredAutoSubmit ? "EXPIRED_AUTO_SUBMITTED" : "SUBMITTED",
+        submittedAt: new Date(),
+        totalScore: normalizedScore10,
+        idempotencyKey:
+          idempotencyKey && String(idempotencyKey).trim().length > 0
+            ? String(idempotencyKey).trim()
+            : attempt.idempotencyKey,
+      },
+      include: { answers: true },
+    });
+
+    return {
+      attempt: updatedAttempt,
+      assessment: attempt.assessment,
+      idempotentReplay: false,
+    };
   });
-
-  return { attempt: updatedAttempt, assessment: attempt.assessment };
 }
 
 function sanitizeAttemptResult(

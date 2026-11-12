@@ -74,3 +74,60 @@ CREATE POLICY "admin_only_system_backups" ON "SystemBackupRecord"
     )
   );
 
+
+-- 4. RLS & Access Revocation for Sheets Import Staging, Metrics, Assets & Integration Slots (LMS_DATA_DESIGN.md)
+ALTER TABLE "Asset" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "IntegrationSlot" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "SheetImportSource" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "StudentExternalIdentity" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "AssessmentExternalIdentity" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "SheetImportRun" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "SheetImportRow" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ImportedAttempt" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "AttemptCorrection" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ImportedAssessmentSummary" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "StudentAssessmentMetric" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "StudentInsight" ENABLE ROW LEVEL SECURITY;
+
+-- Revoke public/anon/authenticated PostgREST Data API access on raw staging & OAuth token tables
+REVOKE ALL ON TABLE "GoogleConnection" FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE "SheetImportSource" FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE "SheetImportRun" FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE "SheetImportRow" FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE "AttemptCorrection" FROM PUBLIC, anon, authenticated;
+
+-- Helper expression: supports custom session GUC app.current_user_id (since EDUCARE AI uses custom OIDC session cookies)
+-- Policy: Students only read their own ImportedAttempt & StudentAssessmentMetric; Parents read verified child's; Teachers read assigned class
+CREATE POLICY "student_or_parent_or_teacher_read_imported_attempts" ON "ImportedAttempt"
+  FOR SELECT
+  USING (
+    "studentUserId" = COALESCE(NULLIF(current_setting('app.current_user_id', true), ''), auth.uid()::text)
+    OR EXISTS (
+      SELECT 1 FROM "StudentProfile" sp
+      JOIN "ParentStudent" ps ON ps."studentId" = sp."id" AND ps."isVerified" = true
+      JOIN "ParentProfile" pp ON pp."id" = ps."parentId"
+      WHERE sp."userId" = "ImportedAttempt"."studentUserId"
+        AND pp."userId" = COALESCE(NULLIF(current_setting('app.current_user_id', true), ''), auth.uid()::text)
+    )
+    OR EXISTS (
+      SELECT 1 FROM "SchoolClass" sc
+      JOIN "TeacherProfile" tp ON tp."id" = sc."homeroomTeacherId"
+      WHERE sc."id" = "ImportedAttempt"."classId"
+        AND tp."userId" = COALESCE(NULLIF(current_setting('app.current_user_id', true), ''), auth.uid()::text)
+    )
+  );
+
+CREATE POLICY "student_only_approved_insights" ON "StudentInsight"
+  FOR SELECT
+  USING (
+    (
+      "status" = 'APPROVED'
+      AND "studentUserId" = COALESCE(NULLIF(current_setting('app.current_user_id', true), ''), auth.uid()::text)
+    )
+    OR EXISTS (
+      SELECT 1 FROM "SchoolClass" sc
+      JOIN "TeacherProfile" tp ON tp."id" = sc."homeroomTeacherId"
+      WHERE sc."id" = "StudentInsight"."classId"
+        AND tp."userId" = COALESCE(NULLIF(current_setting('app.current_user_id', true), ''), auth.uid()::text)
+    )
+  );

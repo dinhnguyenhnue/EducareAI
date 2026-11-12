@@ -11,6 +11,10 @@ import {
   X,
   Network,
 } from "lucide-react";
+import {
+  MultiFileAssetUploader,
+  type UploadedAssetItem,
+} from "@/components/assets/MultiFileAssetUploader";
 
 export function TeacherLessonsClient({
   initialLessons,
@@ -26,6 +30,7 @@ export function TeacherLessonsClient({
   const [summaryParagraph, setSummaryParagraph] = useState("");
   const [activityContent, setActivityContent] = useState("");
   const [driveFileUrl, setDriveFileUrl] = useState("");
+  const [uploadedAssets, setUploadedAssets] = useState<UploadedAssetItem[]>([]);
   const [createGoogleDoc, setCreateGoogleDoc] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -35,6 +40,10 @@ export function TeacherLessonsClient({
     setIsSaving(true);
     setNotice(null);
     try {
+      const primaryAssetUrl =
+        uploadedAssets.length > 0
+          ? `/api/assets/${uploadedAssets[0].id}`
+          : driveFileUrl;
       const res = await fetch("/api/teacher/lessons", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -43,7 +52,8 @@ export function TeacherLessonsClient({
           title,
           summaryParagraph,
           activityContent,
-          driveFileUrl,
+          driveFileUrl: primaryAssetUrl,
+          assetIds: uploadedAssets.map((a) => a.id),
           createGoogleDoc,
         }),
       });
@@ -215,9 +225,14 @@ export function TeacherLessonsClient({
               />
             </div>
 
+            <MultiFileAssetUploader
+              onAssetsChange={setUploadedAssets}
+              label="Tải học liệu trực tiếp lên Kho Bài giảng (PDF, DOCX, PPTX, XLSX, Ảnh, Video, HTML, ZIP):"
+            />
+
             <div>
               <label className="font-semibold text-ink block mb-1">
-                Link tài liệu Google Drive đính kèm (Tùy chọn):
+                Hoặc dán Link tài liệu Google Drive đính kèm (Tùy chọn):
               </label>
               <input
                 type="url"
