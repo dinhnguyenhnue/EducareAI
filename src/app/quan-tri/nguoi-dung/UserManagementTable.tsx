@@ -218,14 +218,14 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Tìm theo tên, mã HS hoặc email..."
-              className="w-full pl-9 pr-3 py-2 bg-canvas border border-border rounded-button text-xs text-ink focus:outline-none focus:border-brand-teal"
+              className="w-full pl-9 pr-3 py-2 bg-canvas border border-border rounded-xl text-xs text-ink focus:outline-none focus:ring-2 focus:ring-ocean-500/20 focus:border-ocean-500"
             />
           </div>
 
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-3 py-2 bg-canvas border border-border rounded-button text-xs text-ink focus:outline-none focus:border-brand-teal"
+            className="px-3 py-2 bg-canvas border border-border rounded-xl text-xs text-ink focus:outline-none focus:ring-2 focus:ring-ocean-500/20 focus:border-ocean-500"
           >
             <option value="ALL">Tất cả vai trò ({users.length})</option>
             <option value="SUPER_ADMIN">Super Admin</option>
@@ -244,9 +244,9 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
               setUserActionError(null);
               setShowCreateModal(true);
             }}
-            className="px-3.5 py-2 rounded-button bg-canvas hover:bg-surface-muted border border-border text-ink text-xs font-semibold transition-colors flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl bg-canvas hover:bg-surface-muted border border-border text-ink text-xs font-semibold transition-colors flex items-center gap-1.5"
           >
-            <UserPlus className="w-3.5 h-3.5 text-brand-teal" />
+            <UserPlus className="w-3.5 h-3.5 text-ocean-600" />
             <span>Thêm tài khoản</span>
           </button>
 
@@ -259,7 +259,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
               setImportReport(null);
               setImportError(null);
             }}
-            className="px-3.5 py-2 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors shadow-sm flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 transition-colors shadow-sm flex items-center gap-1.5"
           >
             <Upload className="w-3.5 h-3.5" />
             <span>Nhập danh sách Học sinh UNIGO (.xlsx)</span>
@@ -309,7 +309,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                       {u.fullName}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className="text-[11px] font-mono font-semibold bg-brand-teal-soft text-brand-teal px-2 py-0.5 rounded">
+                      <span className="text-[11px] font-mono font-semibold bg-ocean-50 text-ocean-700 border border-ocean-200 px-2.5 py-0.5 rounded-full">
                         {u.role}
                       </span>
                     </td>
@@ -346,7 +346,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                           setUserActionError(null);
                           setEditingUser({ ...u });
                         }}
-                        className="text-xs font-semibold text-brand-teal hover:underline inline-flex items-center gap-1"
+                        className="text-xs font-semibold text-ocean-600 hover:text-ocean-700 hover:underline inline-flex items-center gap-1"
                       >
                         <Edit3 className="w-3 h-3" />
                         <span>Phân quyền</span>
@@ -363,10 +363,10 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
       {/* Modal: Nhập danh sách Học sinh UNIGO (Section IX) */}
       {showImportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm">
-          <div className="w-full max-w-4xl bg-surface rounded-panel border border-border shadow-dialog p-6 space-y-5 max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-4xl bg-surface rounded-2xl border border-border shadow-dialog p-6 space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <FileSpreadsheet className="w-5 h-5 text-brand-teal" />
+                <FileSpreadsheet className="w-5 h-5 text-ocean-600" />
                 <div>
                   <h3 className="text-base font-bold text-ink">
                     Nhập Danh sách Học sinh Năm học 2026 – 2027 (Khối 6, 7, 8)
@@ -395,7 +395,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
             {importReport ? (
               <div
                 data-testid="import-commit-report"
-                className="p-5 rounded-panel bg-status-success-soft/50 border border-status-success/30 space-y-3 text-xs"
+                className="p-5 rounded-2xl bg-status-success-soft/50 border border-status-success/30 space-y-3 text-xs"
               >
                 <div className="flex items-center gap-2 text-status-success font-bold text-sm">
                   <CheckCircle2 className="w-5 h-5" />
@@ -415,7 +415,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                     <span className="text-ink-muted block">
                       Cập nhật (Không trùng):
                     </span>
-                    <span className="text-lg font-bold text-brand-teal">
+                    <span className="text-lg font-bold text-ocean-600">
                       {importReport.updatedIdempotentCount} học sinh
                     </span>
                   </div>
@@ -436,7 +436,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                   <button
                     type="button"
                     onClick={() => setShowImportModal(false)}
-                    className="px-4 py-2 rounded-button bg-brand-teal text-white font-semibold"
+                    className="px-4 py-2 rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white font-semibold"
                   >
                     Đóng báo cáo
                   </button>
@@ -446,9 +446,9 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Option 1: Load DANH SÁCH HỌC SINH NĂM HỌC 2026 - 2027.xlsx directly */}
-                  <div className="p-5 rounded-panel bg-canvas border border-border flex flex-col justify-between space-y-3">
+                  <div className="p-5 rounded-2xl bg-canvas border border-border flex flex-col justify-between space-y-3">
                     <div>
-                      <span className="text-[11px] font-bold text-brand-teal uppercase">
+                      <span className="text-[11px] font-bold text-ocean-600 uppercase">
                         Cách 1: Từ thư mục dự án
                       </span>
                       <h4 className="text-sm font-bold text-ink mt-1">
@@ -463,7 +463,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                       data-testid="preview-workspace-excel-btn"
                       onClick={handleLoadWorkspaceExcel}
                       disabled={isLoadingPreview}
-                      className="w-full py-2.5 px-4 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors"
+                      className="w-full py-2.5 px-4 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 transition-colors"
                     >
                       {isLoadingPreview
                         ? "Đang phân tích cấu trúc sheet..."
@@ -472,9 +472,9 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                   </div>
 
                   {/* Option 2: Upload custom .xlsx or .csv */}
-                  <label className="p-5 rounded-panel bg-canvas border-2 border-dashed border-brand-teal/40 hover:bg-surface-muted transition-colors cursor-pointer flex flex-col justify-between space-y-3">
+                  <label className="p-5 rounded-2xl bg-canvas border-2 border-dashed border-ocean-300 hover:bg-sky-50/40 transition-colors cursor-pointer flex flex-col justify-between space-y-3">
                     <div>
-                      <span className="text-[11px] font-bold text-brand-teal uppercase">
+                      <span className="text-[11px] font-bold text-ocean-600 uppercase">
                         Cách 2: Tải file từ máy tính
                       </span>
                       <h4 className="text-sm font-bold text-ink mt-1">
@@ -497,7 +497,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                   <span>Tải xuống file workbook mẫu 3 khối (Khối 6, 7, 8):</span>
                   <a
                     href="/api/admin/import-students?download=template"
-                    className="font-semibold text-brand-teal hover:underline flex items-center gap-1"
+                    className="font-semibold text-ocean-600 hover:text-ocean-700 hover:underline flex items-center gap-1"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Tải DANH SÁCH HỌC SINH NĂM HỌC 2026 - 2027.xlsx</span>
@@ -507,7 +507,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
             ) : (
               <div className="space-y-4 text-xs">
                 {/* Summary Banner */}
-                <div className="p-3.5 rounded-panel bg-brand-teal-soft/50 border border-brand-teal/30 flex flex-wrap items-center justify-between gap-2">
+                <div className="p-3.5 rounded-2xl bg-sky-50 border border-ocean-200 flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <span className="font-bold text-ink">
                       File: {previewData.fileName}
@@ -516,7 +516,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                       (Sheets: {previewData.sheetsDetected.join(", ")})
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 font-semibold text-brand-teal">
+                  <div className="flex items-center gap-3 font-semibold text-ocean-700">
                     <span>Khối 6: {previewData.gradeBreakdown.grade6} HS</span>
                     <span>•</span>
                     <span>Khối 7: {previewData.gradeBreakdown.grade7} HS</span>
@@ -553,7 +553,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                             <td className="py-2 px-3 font-medium text-ink">
                               {r.fullName}
                             </td>
-                            <td className="py-2 px-3 font-bold text-brand-teal">
+                            <td className="py-2 px-3 font-bold text-ocean-600">
                               {r.className}
                             </td>
                             <td className="py-2 px-3 text-ink-muted">
@@ -588,7 +588,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                   <button
                     type="button"
                     onClick={() => setPreviewData(null)}
-                    className="px-4 py-2 rounded-button bg-canvas hover:bg-surface-muted font-semibold text-ink"
+                    className="px-4 py-2 rounded-xl bg-canvas hover:bg-surface-muted font-semibold text-ink"
                   >
                     Chọn file khác
                   </button>
@@ -597,7 +597,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                     data-testid="commit-excel-import-btn"
                     onClick={handleCommitImport}
                     disabled={isCommitting}
-                    className="px-5 py-2 rounded-button bg-brand-teal text-white font-semibold hover:bg-brand-teal-hover transition-colors shadow-sm"
+                    className="px-5 py-2 rounded-xl bg-ocean-600 text-white font-semibold hover:bg-ocean-700 transition-colors shadow-sm"
                   >
                     {isCommitting
                       ? "Đang lưu vào CSDL..."
@@ -675,7 +675,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                 onChange={(e) =>
                   setEditingUser({ ...editingUser, isActive: e.target.checked })
                 }
-                className="accent-brand-teal"
+                className="accent-ocean-600"
               />
               <span className="font-medium text-ink">
                 Cho phép tài khoản hoạt động
@@ -686,13 +686,13 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
               <button
                 type="button"
                 onClick={() => setEditingUser(null)}
-                className="px-4 py-2 rounded-button bg-canvas text-ink font-semibold"
+                className="px-4 py-2 rounded-xl bg-canvas text-ink font-semibold"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-button bg-brand-teal text-white font-semibold"
+                className="px-4 py-2 rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white font-semibold"
               >
                 Lưu thay đổi
               </button>
@@ -706,7 +706,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm">
           <form
             onSubmit={handleCreateUser}
-            className="w-full max-w-md bg-surface rounded-panel border border-border shadow-dialog p-6 space-y-4 text-xs"
+            className="w-full max-w-md bg-surface rounded-2xl border border-border shadow-dialog p-6 space-y-4 text-xs"
           >
             <div className="flex items-center justify-between pb-2 border-b border-border">
               <h3 className="text-sm font-bold text-ink">
@@ -735,7 +735,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                 value={newUserName}
                 onChange={(e) => setNewUserName(e.target.value)}
                 placeholder="VD: Cô Nguyễn Thị Hoa"
-                className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+                className="w-full px-3 py-2 rounded-xl bg-canvas border border-border text-ink focus:outline-none focus:ring-2 focus:ring-ocean-500/20 focus:border-ocean-500"
               />
             </div>
 
@@ -747,7 +747,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                 value={newUserEmail}
                 onChange={(e) => setNewUserEmail(e.target.value)}
                 placeholder="hoa.nguyen@unigo.edu.vn"
-                className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+                className="w-full px-3 py-2 rounded-xl bg-canvas border border-border text-ink focus:outline-none focus:ring-2 focus:ring-ocean-500/20 focus:border-ocean-500"
               />
             </div>
 
@@ -756,7 +756,7 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
               <select
                 value={newUserRole}
                 onChange={(e) => setNewUserRole(e.target.value)}
-                className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+                className="w-full px-3 py-2 rounded-xl bg-canvas border border-border text-ink focus:outline-none focus:ring-2 focus:ring-ocean-500/20 focus:border-ocean-500"
               >
                 <option value="TEACHER">TEACHER (Giáo viên)</option>
                 <option value="STUDENT">STUDENT (Học sinh)</option>
@@ -770,13 +770,13 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
               <button
                 type="button"
                 onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 rounded-button bg-canvas text-ink font-semibold"
+                className="px-4 py-2 rounded-xl bg-canvas text-ink font-semibold"
               >
                 Hủy
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-button bg-brand-teal text-white font-semibold"
+                className="px-4 py-2 rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white font-semibold"
               >
                 Tạo tài khoản
               </button>

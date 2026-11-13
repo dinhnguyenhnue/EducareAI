@@ -1,12 +1,25 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { AppShell } from "@/components/layout/AppShell";
-import SandboxedHtmlGamePlayer from "@/components/game/SandboxedHtmlGamePlayer";
+import { PageHeader } from "@/components/ui";
 import {
   SAMPLE_QUIZ_10_GAME_HTML,
   SAMPLE_SIMULATION_3_TASKS_HTML,
 } from "@/lib/html-game-sandbox";
+
+const SandboxedHtmlGamePlayer = dynamic(
+  () => import("@/components/game/SandboxedHtmlGamePlayer"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[530px] rounded-2xl border border-indigo-200 bg-indigo-50/40 animate-pulse flex items-center justify-center text-xs font-semibold text-indigo-700">
+        Đang khởi tạo Sandbox trò chơi HTML cô lập...
+      </div>
+    ),
+  }
+);
 import {
   Gamepad2,
   Code2,
@@ -282,57 +295,51 @@ export default function StudentGameStudioPage() {
     <AppShell>
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div className="space-y-1.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
-              <Gamepad2 className="w-3.5 h-3.5" />
-              CỔNG HỌC TẬP TIN HỌC – XƯỞNG SÁNG TẠO TRÒ CHƠI
-            </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
-              <ShieldCheck className="w-3.5 h-3.5 text-teal-700" />
-              Thực thi trong Sandbox cô lập
-            </span>
+      <PageHeader
+        tone="games"
+        badge="Cổng học tập Tin học – Xưởng sáng tạo trò chơi"
+        badgeIcon={<Gamepad2 className="w-3.5 h-3.5" />}
+        title="Thư Viện Trò Chơi HTML & Xưởng Sáng Tạo Học Sinh"
+        description="Khám phá các trò chơi trắc nghiệm (tối thiểu 10 câu có giải thích) và mô phỏng thuật toán (tối thiểu 3 nhiệm vụ) đã được Giáo viên kiểm duyệt, hoặc tự sáng tạo sản phẩm HTML của riêng em cùng trợ lý AI."
+        meta={
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-800 border border-indigo-200">
+            <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+            Thực thi trong Sandbox cô lập
+          </span>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              href="/hoc-sinh/sang-tao-cung-ai"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-violet-50 hover:bg-violet-100 text-violet-800 border border-violet-200 transition-colors"
+            >
+              <Sparkles className="w-4 h-4 text-violet-600" />
+              Mở 8 Prompt & Gem Sáng tạo AI
+            </Link>
+            <button
+              type="button"
+              onClick={() =>
+                setActiveTab(activeTab === "LIBRARY" ? "MY_STUDIO" : "LIBRARY")
+              }
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-ocean-600 hover:bg-ocean-700 active:scale-[0.98] text-white transition-all shadow-sm"
+            >
+              <Code2 className="w-4 h-4" />
+              {activeTab === "LIBRARY"
+                ? "Xưởng của em & Nộp trò chơi HTML"
+                : "Quay lại Thư viện Trò chơi đã duyệt"}
+            </button>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Thư Viện Trò Chơi HTML & Xưởng Sáng Tạo Học Sinh
-          </h1>
-          <p className="text-sm text-slate-600 max-w-3xl">
-            Khám phá các trò chơi trắc nghiệm (tối thiểu 10 câu có giải thích) và mô phỏng thuật toán (tối thiểu 3 nhiệm vụ) đã được Giáo viên kiểm duyệt, hoặc tự sáng tạo sản phẩm HTML của riêng em cùng trợ lý AI.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Link
-            href="/hoc-sinh/sang-tao-cung-ai"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors"
-          >
-            <Sparkles className="w-4 h-4 text-teal-700" />
-            Mở 8 Prompt & Gem Sáng tạo AI
-          </Link>
-          <button
-            type="button"
-            onClick={() =>
-              setActiveTab(activeTab === "LIBRARY" ? "MY_STUDIO" : "LIBRARY")
-            }
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-teal-700 hover:bg-teal-800 text-white transition-colors"
-          >
-            <Code2 className="w-4 h-4" />
-            {activeTab === "LIBRARY"
-              ? "Xưởng của em & Nộp trò chơi HTML"
-              : "Quay lại Thư viện Trò chơi đã duyệt"}
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Mode Switch Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
         <button
           type="button"
           onClick={() => setActiveTab("LIBRARY")}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
             activeTab === "LIBRARY"
-              ? "bg-teal-700 text-white"
+              ? "bg-indigo-600 text-white shadow-sm"
               : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
           }`}
         >
@@ -341,9 +348,9 @@ export default function StudentGameStudioPage() {
         <button
           type="button"
           onClick={() => setActiveTab("MY_STUDIO")}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
             activeTab === "MY_STUDIO"
-              ? "bg-teal-700 text-white"
+              ? "bg-indigo-600 text-white shadow-sm"
               : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
           }`}
         >
@@ -400,14 +407,14 @@ export default function StudentGameStudioPage() {
                       key={proj.id}
                       type="button"
                       onClick={() => setSelectedProject(proj)}
-                      className={`w-full text-left rounded-xl border p-4 transition-all ${
+                      className={`w-full text-left rounded-2xl border p-4 transition-all ${
                         isSelected
-                          ? "border-teal-600 bg-teal-50/40 shadow-sm"
-                          : "border-slate-200 bg-white hover:border-slate-300"
+                          ? "border-indigo-500 bg-indigo-50/50 shadow-sm ring-1 ring-indigo-400/30"
+                          : "border-slate-200 bg-white hover:border-indigo-300"
                       }`}
                     >
                       <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                        <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-teal-100 text-teal-800">
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800">
                           {proj.gameType === "QUIZ_10"
                             ? "Trắc nghiệm >= 10 câu"
                             : "Mô phỏng >= 3 nhiệm vụ"}
@@ -471,9 +478,9 @@ export default function StudentGameStudioPage() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    <div className="rounded-lg bg-slate-50 p-3.5 border border-slate-200/80 space-y-1.5">
+                    <div className="rounded-xl bg-slate-50 p-3.5 border border-slate-200/80 space-y-1.5">
                       <div className="font-semibold text-slate-900 flex items-center gap-1.5">
-                        <BookOpen className="w-3.5 h-3.5 text-teal-700" />
+                        <BookOpen className="w-3.5 h-3.5 text-sky-600" />
                         Hướng dẫn cách chơi & Mục tiêu học tập
                       </div>
                       <p className="text-slate-700">{selectedProject.howToPlay}</p>
@@ -482,9 +489,9 @@ export default function StudentGameStudioPage() {
                       </p>
                     </div>
 
-                    <div className="rounded-lg bg-teal-50/50 p-3.5 border border-teal-200/70 space-y-1.5">
-                      <div className="font-semibold text-teal-900 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-teal-700" />
+                    <div className="rounded-xl bg-violet-50/60 p-3.5 border border-violet-200 space-y-1.5">
+                      <div className="font-semibold text-violet-900 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-violet-600" />
                         Minh bạch sử dụng AI & Đóng góp của học sinh
                       </div>
                       <p className="text-slate-700">
@@ -499,10 +506,10 @@ export default function StudentGameStudioPage() {
                 </div>
 
                 {/* Safe Plain-Text Comments Section */}
-                <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4 text-teal-700" />
+                      <MessageSquare className="w-4 h-4 text-indigo-600" />
                       Nhận xét & Góp ý học tập ({selectedProject.comments?.length || 0})
                     </h3>
                     <span className="text-xs text-slate-500">
@@ -517,11 +524,11 @@ export default function StudentGameStudioPage() {
                       onChange={(e) => setCommentText(e.target.value)}
                       placeholder="Viết nhận xét xây dựng về kiến thức hoặc gợi ý cải tiến trò chơi..."
                       maxLength={400}
-                      className="flex-1 rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900"
+                      className="flex-1 rounded-xl border border-slate-300 px-3.5 py-2 text-sm text-slate-900 focus:outline-none focus:border-ocean-600 focus:ring-2 focus:ring-ocean-500/20"
                     />
                     <button
                       type="submit"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold bg-teal-700 hover:bg-teal-800 text-white"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-ocean-600 hover:bg-ocean-700 text-white transition-colors"
                     >
                       <Send className="w-3.5 h-3.5" />
                       Gửi
@@ -529,7 +536,7 @@ export default function StudentGameStudioPage() {
                   </form>
 
                   {commentMsg && (
-                    <p className="text-xs font-medium text-teal-700">{commentMsg}</p>
+                    <p className="text-xs font-medium text-emerald-700">{commentMsg}</p>
                   )}
 
                   <div className="space-y-2.5">
@@ -592,7 +599,7 @@ export default function StudentGameStudioPage() {
                           <span
                             className={`px-2 py-0.5 rounded font-semibold ${
                               mp.status === "APPROVED"
-                                ? "bg-teal-100 text-teal-800"
+                                ? "bg-emerald-100 text-emerald-800"
                                 : mp.status === "PENDING_REVIEW"
                                 ? "bg-amber-100 text-amber-800"
                                 : mp.status === "NEEDS_REVISION"
@@ -670,12 +677,12 @@ export default function StudentGameStudioPage() {
                 <div
                   className={`rounded-xl p-3.5 text-xs font-medium flex items-center gap-2 border ${
                     submitStatus.type === "success"
-                      ? "bg-teal-50 border-teal-200 text-teal-900"
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-900"
                       : "bg-rose-50 border-rose-200 text-rose-900"
                   }`}
                 >
                   {submitStatus.type === "success" ? (
-                    <CheckCircle2 className="w-4 h-4 text-teal-700 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
                   ) : (
                     <AlertCircle className="w-4 h-4 text-rose-700 shrink-0" />
                   )}
@@ -844,7 +851,7 @@ export default function StudentGameStudioPage() {
                     type="button"
                     disabled={submitting}
                     onClick={() => handleSaveOrSubmitProject(true)}
-                    className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-semibold bg-teal-700 hover:bg-teal-800 text-white disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-semibold bg-ocean-600 hover:bg-ocean-700 active:scale-[0.98] transition-all text-white disabled:opacity-50 shadow-sm"
                   >
                     <Send className="w-4 h-4" />
                     Gửi Giáo viên duyệt (PENDING_REVIEW)
@@ -910,7 +917,7 @@ export default function StudentGameStudioPage() {
                 />
               </div>
               {reportStatusMsg && (
-                <p className="text-teal-700 font-semibold">{reportStatusMsg}</p>
+                <p className="text-emerald-700 font-semibold">{reportStatusMsg}</p>
               )}
               <div className="flex justify-end gap-2 pt-2">
                 <button

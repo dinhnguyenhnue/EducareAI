@@ -1,11 +1,11 @@
 import React from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth";
 import {
   HeartHandshake,
   ShieldCheck,
-  Sparkles,
   CalendarCheck,
   MessageCircleHeart,
 } from "lucide-react";
@@ -71,37 +71,32 @@ export default async function ParentCompanionGuidePage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <div className="p-6 rounded-panel bg-surface border border-border shadow-card">
-          <div className="flex items-center gap-2 text-xs font-bold text-brand-teal uppercase">
-            <HeartHandshake className="w-4 h-4" />
-            <span>AI Parent Assistant • Trợ lý Đồng hành cùng Phụ huynh (SRS §4.4 & §4.5)</span>
-          </div>
-          <h1 className="text-2xl font-bold text-ink mt-1">
-            Gợi ý Đồng hành cùng {studentUser?.fullName || "Nguyễn Minh Anh"} tại nhà
-          </h1>
-          <p className="text-xs text-ink-muted mt-1 max-w-3xl">
-            Các gợi ý dưới đây được thiết kế ngắn gọn, dễ áp dụng trong 10–15 phút mỗi tối mà không đòi hỏi phụ huynh phải giảng lại kiến thức chuyên sâu của chương trình THCS.
-          </p>
-        </div>
+        <PageHeader
+          tone="overview"
+          badge="AI Parent Assistant • Trợ lý Đồng hành cùng Phụ huynh (SRS §4.4 & §4.5)"
+          badgeIcon={<HeartHandshake className="w-3.5 h-3.5" />}
+          title={`Gợi ý Đồng hành cùng ${studentUser?.fullName || "Chưa có dữ liệu"} tại nhà`}
+          description="Các gợi ý dưới đây được thiết kế ngắn gọn, dễ áp dụng trong 10–15 phút mỗi tối mà không đòi hỏi phụ huynh phải giảng lại kiến thức chuyên sâu của chương trình THCS."
+        />
 
         {/* Weekly Actionable Companion Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {companionTips.map((tip, idx) => (
             <div
               key={idx}
-              className="p-5 rounded-panel bg-surface border border-border shadow-card flex flex-col justify-between space-y-4"
+              className="p-5 rounded-2xl bg-surface border border-slate-200 shadow-card hover:shadow-card-hover hover:-translate-y-0.5 hover:border-ocean-300 transition-all flex flex-col justify-between space-y-4"
             >
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="px-2.5 py-0.5 rounded bg-brand-teal-soft text-brand-teal font-bold">
+                  <span className="px-2.5 py-0.5 rounded-full bg-ocean-50 text-ocean-700 border border-ocean-200 font-bold">
                     {tip.day}
                   </span>
                 </div>
                 <h2 className="text-base font-bold text-ink">{tip.title}</h2>
                 <p className="text-xs text-ink-muted leading-relaxed">{tip.action}</p>
               </div>
-              <div className="pt-3 border-t border-border flex items-center gap-1.5 text-[11px] font-semibold text-brand-teal">
-                <CalendarCheck className="w-3.5 h-3.5" />
+              <div className="pt-3 border-t border-slate-100 flex items-center gap-1.5 text-[11px] font-semibold text-ocean-700">
+                <CalendarCheck className="w-3.5 h-3.5 text-sky-600" />
                 <span>{tip.subjectTag}</span>
               </div>
             </div>
@@ -109,31 +104,31 @@ export default async function ParentCompanionGuidePage() {
         </div>
 
         {/* Suggested Conversation Starters */}
-        <div className="p-6 rounded-panel bg-surface border border-border shadow-card space-y-4">
+        <div className="p-6 rounded-2xl bg-surface border border-slate-200 shadow-card space-y-4">
           <div className="flex items-center gap-2">
-            <MessageCircleHeart className="w-4 h-4 text-brand-teal" />
+            <MessageCircleHeart className="w-4 h-4 text-pink-600" />
             <h2 className="text-base font-bold text-ink">
               3 Câu hỏi Gợi mở Tích cực Phụ huynh có thể hỏi con tối nay
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-            <div className="p-3.5 rounded-lg bg-canvas border border-border">
+            <div className="p-4 rounded-xl bg-ocean-50/50 border border-ocean-200/70 text-ink leading-relaxed">
               &ldquo;Hôm nay ở trường có câu hỏi hay trò chơi học tập nào làm con thấy thú vị nhất không? Con bật cho bố/mẹ chơi thử với nhé!&rdquo;
             </div>
-            <div className="p-3.5 rounded-lg bg-canvas border border-border">
+            <div className="p-4 rounded-xl bg-violet-50/50 border border-violet-200/70 text-ink leading-relaxed">
               &ldquo;Khi làm bài tập có chỗ nào khó, con đã đặt câu hỏi cho trợ lý AI gợi ý từng bước như thế nào?&rdquo;
             </div>
-            <div className="p-3.5 rounded-lg bg-canvas border border-border">
+            <div className="p-4 rounded-xl bg-sky-50/50 border border-sky-200/70 text-ink leading-relaxed">
               &ldquo;Tuần này con muốn bố/mẹ nhắc lịch ôn tập vào khung giờ nào để con thoải mái nhất?&rdquo;
             </div>
           </div>
         </div>
 
         {/* SRS Section 4.5 Mandatory Psychological Privacy Guarantee */}
-        <div className="p-5 rounded-panel bg-slate-900 text-white flex items-start gap-3">
-          <ShieldCheck className="w-5 h-5 text-teal-400 shrink-0 mt-0.5" />
+        <div className="p-5 rounded-2xl bg-ocean-950 text-white flex items-start gap-3 shadow-sm">
+          <ShieldCheck className="w-5 h-5 text-sky-400 shrink-0 mt-0.5" />
           <div className="text-xs space-y-1">
-            <p className="font-bold text-teal-300">
+            <p className="font-bold text-sky-300">
               Cam kết Bảo vệ Không gian Tâm lý & Quyền Riêng tư của Học sinh (SRS Mục 4.5)
             </p>
             <p className="text-slate-300 leading-relaxed">

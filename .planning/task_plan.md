@@ -35,3 +35,20 @@
 ## Phase 5 — Kiểm thử Nghiệm thu, Build & Báo cáo (`complete`)
 - [x] **T5.1** (`complete`): Viết 33 ca kiểm thử tự động trong `tests/` (`html-sandbox.test.ts`, `submission-and-rbac.test.ts`, `asset-validation.test.ts`, `integration-slots.test.ts`, `sheets-and-metrics.test.ts`, `db-integration.test.ts`). Kết quả: **33/33 PASS**.
 - [x] **T5.2** (`complete`): Chạy `pnpm exec prisma validate` (**PASS**), `pnpm exec tsc --noEmit` (**PASS**), `pnpm build` (**PASS**), và xuất báo cáo `docs/LMS_IMPLEMENTATION_REPORT.md`.
+
+
+---
+
+# Kế hoạch Thực thi EDUCARE AI 3.0 — Ocean Blue Design System & Fluid Motion
+
+> **Cập nhật lần cuối**: `2026-11-13T17:22:00+07:00`
+> **Trạng thái tổng thể**: `complete` (Đã hoàn tất toàn bộ EDUCARE AI 3.0 Phase A -> Phase H; riêng kiểm thử giao diện trực quan qua `chrome_devtools` MCP tạm chặn do Chrome chưa bật `chrome://inspect/#remote-debugging`)
+
+- [x] **Phase A — Audit (`complete`)**: Kiểm tra toàn bộ layout, CSS, tailwind, font, `framer-motion` (đã cài `14.12.0`), chụp ảnh BEFORE, ghi nhận điểm yếu vào `.planning/findings.md`.
+- [x] **Phase B — Design Tokens & Typography (`complete`)**: Cấu hình `next/font/google`, cập nhật `tailwind.config.ts`, `globals.css`, tạo `src/lib/theme.ts` (Ocean Blue + bảng màu ngữ nghĩa theo module) và `src/lib/motion.ts` (easing `cubic-bezier(0.22, 1, 0.36, 1)`, timing chuẩn, `reducedMotion`).
+- [x] **Phase C — Core Component Library & Navigation (`complete`)**: Tạo `src/components/ui/*` (`PageTransition`, `PageHeader`, `StatCard`, `FeatureCard`, `CourseCard`, `ProgressCard`, `DataTable`, `ChartCard`, `Modal`, `Drawer`, `Tabs`, `Toast`, `Skeleton`, `EmptyState`, `ErrorState`, `AIWidget`, `RoleSwitcher`, `MotionProvider`), nâng cấp `AppShell`, `AppSidebar` (active `layoutId` indicator, module icon tints), `AppHeader` (fix OAuth link, `RoleSwitcher`, animated search modal), `FloatingAIAssistant`, và `loading.tsx` skeletons.
+- [x] **Phase D — Authentication Pages & Home Portal (`complete` cho Auth & Home; legal pages ở Phase F)**: Redesign `/dang-nhap`, `/dang-ky`, `/quen-mat-khau`, `/dat-lai-mat-khau`, `/khong-co-quyen`, và `/` với bố cục Split-Screen Ocean Blue + minh họa SVG 3D giáo dục + motion mượt mà (`tsc --noEmit` PASS).
+- [x] **Phase E — Role Dashboards (Admin, Teacher, Student, Parent) (`complete`)**: Thiết kế lại `/admin/overview` (+ `SuperAdminViewCards`), `/quan-tri/tong-quan`, `/giao-vien/tong-quan`, `/hoc-sinh/tong-quan`, `/phu-huynh/tong-quan` theo đúng định vị SaaS Admin / Productivity Teacher / Gamified Student / Trust Parent dùng dữ liệu thực + biểu đồ tương tác `ChartCard` (`tsc --noEmit` PASS).
+- [x] **Phase F — Functional Pages & Sub-routes (`complete`)**: Hoàn tất Batch 1–5 (`StudentAiCenterTabs`, `MultiFileAssetUploader`, `SandboxedHtmlGamePlayer`, `html-game-sandbox`, `/privacy`, `/terms`, `/embed/tro-choi/[slug]`, `/admin/settings/integrations`, `quan-tri/*`, `giao-vien/*`, `hoc-sinh/*`, `phu-huynh/*`), xóa hoàn toàn 0/0 token teal cũ khỏi `src/`, gỡ bỏ alias `brand.teal` khỏi `tailwind.config.ts` và bổ sung đầy đủ thang màu `ocean-*`.
+- [x] **Phase G — Motion & Performance Optimization (`complete`)**: `LazyMotion features={domAnimation}` + `<MotionConfig reducedMotion="user">`, `next/font/google`, GPU-friendly `transform`/`opacity`, `next/dynamic` lazy-loading cho `SandboxedHtmlGamePlayer` (`xuong-tro-choi`, `duyet-tro-choi`) và `FloatingAIAssistant` (`AppShell`), `@media (prefers-reduced-motion: reduce)` trong `globals.css`.
+- [x] **Phase H — QA & Visual Comparison (`complete` cho build/unit/HTTP/RBAC checks; Chrome DevTools MCP blocked)**: `prisma validate` PASS, `tsc --noEmit` PASS, `pnpm test` 33/33 PASS, `pnpm build` PASS (shared JS 103 kB, CSS `d8ff7d670f8dc374.css` 78,649 bytes). Live `next start` (`http://localhost:3000`): 10/10 public routes HTTP 200, 5/5 protected portals HTTP 307 redirect. Subagent `chrome_devtools` bị chặn do thiếu `DevToolsActivePort` (Chrome chưa bật `chrome://inspect/#remote-debugging`).

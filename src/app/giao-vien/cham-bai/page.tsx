@@ -1,6 +1,8 @@
 import React from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/prisma";
+import { Award } from "lucide-react";
 import { TeacherGradingWorkspace } from "./TeacherGradingWorkspace";
 
 export const dynamic = "force-dynamic";
@@ -23,17 +25,14 @@ export default async function TeacherGradingPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-ink">Trung tâm Chấm bài & Đánh giá Rubric</h1>
-            <span className="text-xs font-semibold bg-brand-teal-soft text-brand-teal px-2 py-0.5 rounded">
-              LMS Assessment Engine
-            </span>
-          </div>
-          <p className="text-xs text-ink-muted mt-1">
-            Chấm điểm minh bạch theo 4 tiêu chí rubric, tích hợp AI đề xuất nhận xét sư phạm (Giáo viên là người phê duyệt cuối cùng).
-          </p>
-        </div>
+        <PageHeader
+          variant="card"
+          tone="assignments"
+          badge="LMS Assessment Engine"
+          badgeIcon={<Award className="w-3.5 h-3.5" />}
+          title="Trung tâm Chấm bài & Đánh giá Rubric"
+          description="Chấm điểm minh bạch theo 4 tiêu chí rubric, tích hợp AI đề xuất nhận xét sư phạm (Giáo viên là người phê duyệt cuối cùng)."
+        />
 
         <TeacherGradingWorkspace initialSubmissions={submissions} />
       </div>

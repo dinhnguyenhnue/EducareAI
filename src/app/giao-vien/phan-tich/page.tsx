@@ -1,7 +1,8 @@
 import React from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageHeader, StatCard, ChartCard, ProgressCard, EmptyState } from "@/components/ui";
 import { prisma } from "@/lib/prisma";
-import { Award, Sparkles } from "lucide-react";
+import { Award, Sparkles, TrendingUp, Users, FileCheck2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -37,132 +38,137 @@ export default async function TeacherAnalyticsPage() {
         )
       : null;
 
+  const subjectChartMap = new Map<string, { sum: number; count: number }>();
+  progressRecords.forEach((p) => {
+    const key = p.subject.name;
+    const prev = subjectChartMap.get(key) ?? { sum: 0, count: 0 };
+    subjectChartMap.set(key, { sum: prev.sum + p.masteryPercent, count: prev.count + 1 });
+  });
+  const subjectChartData = Array.from(subjectChartMap.entries()).map(([label, v]) => ({
+    label,
+    value: Math.round(v.sum / v.count),
+    hint: `${v.count} HS`,
+  }));
+
   return (
     <AppShell>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-ink">
-                Phân tích Học tập & Đề xuất AI (Dữ liệu Thực)
-              </h1>
-              <span className="text-xs font-semibold bg-brand-teal-soft text-brand-teal px-2 py-0.5 rounded">
-                Learning Analytics Engine
-              </span>
-            </div>
-            <p className="text-xs text-ink-muted mt-1">
-              Tổng hợp trực tiếp từ {submissions.length} bài nộp,{" "}
-              {grades.length} bản ghi điểm chính thức và {progressRecords.length}{" "}
-              hồ sơ tiến độ trong CSDL.
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          variant="card"
+          tone="progress"
+          badge="Learning Analytics Engine"
+          badgeIcon={<TrendingUp className="w-3.5 h-3.5" />}
+          title="Phân tích Học tập & Đề xuất AI (Dữ liệu Thực)"
+          description={`Tổng hợp trực tiếp từ ${submissions.length} bài nộp, ${grades.length} bản ghi điểm chính thức và ${progressRecords.length} hồ sơ tiến độ trong CSDL.`}
+        />
 
         {/* Real DB Analytics KPI Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <span className="text-xs text-ink-muted">Tổng bài nộp đã thu</span>
-            <div className="text-2xl font-bold text-ink mt-2 font-mono">
-              {submissions.length} bài nộp
-            </div>
-            <p className="text-[11px] text-status-success font-medium mt-1">
-              {gradedSubs.length} bài đã chấm điểm Rubric
-            </p>
-          </div>
-
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <span className="text-xs text-ink-muted">
-              Điểm trung bình thực tế
-            </span>
-            <div className="text-2xl font-bold text-ink mt-2 font-mono">
-              {avgScore !== null ? `${avgScore} / 10` : "Chưa có dữ liệu"}
-            </div>
-            <p className="text-[11px] text-ink-muted mt-1">
-              {gradedSubs.length > 0
-                ? `Tính trên ${gradedSubs.length} bài đã chấm`
-                : "Chưa có bài nộp nào được chấm điểm"}
-            </p>
-          </div>
-
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <span className="text-xs text-ink-muted">
-              Mức độ làm chủ trung bình
-            </span>
-            <div className="text-2xl font-bold text-brand-teal mt-2 font-mono">
-              {avgMastery !== null ? `${avgMastery}%` : "Chưa có dữ liệu"}
-            </div>
-            <p className="text-[11px] text-brand-teal mt-1">
-              {progressRecords.length > 0
-                ? `Từ ${progressRecords.length} bản ghi LearningProgress`
-                : "Chưa có dữ liệu tiến độ"}
-            </p>
-          </div>
-
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <span className="text-xs text-ink-muted">
-              Tổng học sinh trên hệ thống
-            </span>
-            <div className="text-2xl font-bold text-ink mt-2 font-mono">
-              {studentsCount} học sinh
-            </div>
-            <p className="text-[11px] text-ink-muted mt-1">
-              Khối 6, 7, 8 UNIGO
-            </p>
-          </div>
+          <StatCard
+            tone="assignments"
+            label="Tổng bài nộp đã thu"
+            value={`${submissions.length} bài`}
+            hint={`${gradedSubs.length} bài đã chấm điểm Rubric`}
+            icon={<FileCheck2 className="w-4 h-4" />}
+          />
+          <StatCard
+            tone="assessments"
+            label="Điểm trung bình thực tế"
+            value={avgScore !== null ? `${avgScore} / 10` : "Chưa có dữ liệu"}
+            hint={gradedSubs.length > 0 ? `Tính trên ${gradedSubs.length} bài đã chấm` : "Chưa có bài nộp nào được chấm điểm"}
+            icon={<Award className="w-4 h-4" />}
+          />
+          <StatCard
+            tone="progress"
+            label="Mức độ làm chủ trung bình"
+            value={avgMastery !== null ? `${avgMastery}%` : "Chưa có dữ liệu"}
+            hint={progressRecords.length > 0 ? `Từ ${progressRecords.length} bản ghi LearningProgress` : "Chưa có dữ liệu tiến độ"}
+            icon={<TrendingUp className="w-4 h-4" />}
+          />
+          <StatCard
+            tone="overview"
+            label="Tổng học sinh trên hệ thống"
+            value={`${studentsCount} học sinh`}
+            hint="Khối 6, 7, 8 UNIGO"
+            icon={<Users className="w-4 h-4" />}
+          />
         </div>
 
         {/* 12-Column Detailed Analytics */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7 p-6 rounded-panel bg-surface border border-border shadow-card space-y-4">
-            <h3 className="text-sm font-bold text-ink uppercase tracking-wide pb-2 border-b border-border flex items-center gap-2">
-              <Award className="w-4 h-4 text-brand-teal" />
-              <span>
-                Bản ghi Tiến độ Năng lực Học sinh trong CSDL ({progressRecords.length})
-              </span>
-            </h3>
+          <div className="lg:col-span-7 space-y-6">
+            {subjectChartData.length > 0 && (
+              <ChartCard
+                title="Mức độ làm chủ trung bình theo Môn học"
+                subtitle="Tính từ dữ liệu thực trong CSDL LearningProgress"
+                data={subjectChartData}
+                unit="%"
+                tone="progress"
+              />
+            )}
 
-            <div className="space-y-4 text-xs">
-              {progressRecords.map((rec) => (
-                <div key={rec.id}>
-                  <div className="flex justify-between font-medium text-ink mb-1">
-                    <span>
-                      {rec.student.user.fullName} — {rec.subject.name}
-                    </span>
-                    <span className="font-mono font-bold text-brand-teal">
-                      {rec.masteryPercent}% Đạt chuẩn
-                    </span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-surface-muted overflow-hidden">
-                    <div
-                      className="h-full bg-brand-teal rounded-full"
-                      style={{ width: `${rec.masteryPercent}%` }}
+            <div className="p-6 rounded-2xl bg-surface border border-border shadow-card space-y-4">
+              <h3 className="text-sm font-bold text-ink uppercase tracking-wide pb-2 border-b border-border flex items-center gap-2">
+                <Award className="w-4 h-4 text-emerald-600" />
+                <span>
+                  Bản ghi Tiến độ Năng lực Học sinh trong CSDL ({progressRecords.length})
+                </span>
+              </h3>
+
+              {progressRecords.length === 0 ? (
+                <EmptyState
+                  tone="progress"
+                  title="Chưa có dữ liệu LearningProgress"
+                  description="Khi có bài tập được chấm hoặc dữ liệu đồng bộ chính thức, biểu đồ tiến độ sẽ hiển thị tại đây."
+                />
+              ) : (
+                <div className="space-y-4">
+                  {progressRecords.map((rec) => (
+                    <ProgressCard
+                      key={rec.id}
+                      tone="progress"
+                      title={`${rec.student.user.fullName} — ${rec.subject.name}`}
+                      subtitle={
+                        rec.strengths
+                          ? `Điểm mạnh: ${rec.strengths}`
+                          : "Đang cập nhật nhận xét"
+                      }
+                      percent={rec.masteryPercent}
+                      detail={rec.gaps ? `Cần củng cố: ${rec.gaps}` : undefined}
                     />
-                  </div>
-                  <p className="text-[11px] text-ink-muted mt-1">
-                    <strong>Điểm mạnh:</strong> {rec.strengths} |{" "}
-                    <strong>Cần củng cố:</strong> {rec.gaps}
-                  </p>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
-          <div className="lg:col-span-5 p-6 rounded-panel bg-brand-teal-soft/40 border border-brand-teal/20 shadow-card flex flex-col justify-between">
+          <div className="lg:col-span-5 p-6 rounded-2xl bg-gradient-to-br from-violet-50 to-fuchsia-50/50 border border-violet-200 shadow-card flex flex-col justify-between">
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-brand-teal font-bold text-xs uppercase tracking-wider pb-2 border-b border-brand-teal/20">
+              <div className="flex items-center gap-2 text-violet-700 font-bold text-xs uppercase tracking-wider pb-2 border-b border-violet-200/80">
                 <Sparkles className="w-4 h-4" />
                 <span>AI Recommendation Engine</span>
               </div>
 
               <div className="text-xs text-ink leading-relaxed space-y-3">
-                <div className="p-3 rounded-panel bg-surface border border-border shadow-sm">
-                  <span className="font-bold text-ink block mb-1">
-                    Phát hiện từ CSDL LearningProgress:
-                  </span>
-                  <p className="text-ink-muted">
-                    Học sinh hoàn thành tốt sản phẩm số môn Tin học, nhưng cần tăng cường bài tập thực hành tỉ lệ thức môn Toán và mở rộng dẫn chứng thực tế môn Ngữ văn.
-                  </p>
-                </div>
+                {progressRecords.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-surface border border-violet-200/60 shadow-xs text-ink-muted">
+                    Chưa có dữ liệu tiến độ để tạo gợi ý sư phạm.
+                  </div>
+                ) : (
+                  progressRecords
+                    .filter((r) => Boolean(r.gaps))
+                    .slice(0, 4)
+                    .map((r) => (
+                      <div key={r.id} className="p-3.5 rounded-xl bg-surface border border-violet-200/70 shadow-xs">
+                        <span className="font-bold text-violet-700 block mb-1">
+                          {r.student.user.fullName} • {r.subject.name} ({r.masteryPercent}%)
+                        </span>
+                        <p className="text-ink-muted">
+                          Cần củng cố: {r.gaps}
+                        </p>
+                      </div>
+                    ))
+                )}
               </div>
             </div>
           </div>

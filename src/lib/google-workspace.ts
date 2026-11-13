@@ -321,12 +321,22 @@ export function getSafeBaseUrl(reqUrlOrHost?: string): string {
       return `https://${reqUrlOrHost}`;
     }
   }
-  return process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const envUrl = (process.env.NEXTAUTH_URL || "http://localhost:3000")
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/\/$/, "");
+  return envUrl || "http://localhost:3000";
+}
+
+function sanitizeEnvCredential(raw?: string): string {
+  return (raw || "")
+    .trim()
+    .replace(/^["']|["']$/g, "");
 }
 
 export function getGoogleOAuthConfig(customBaseUrl?: string): GoogleOAuthConfig {
-  const clientId = process.env.GOOGLE_CLIENT_ID || "";
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET || "";
+  const clientId = sanitizeEnvCredential(process.env.GOOGLE_CLIENT_ID);
+  const clientSecret = sanitizeEnvCredential(process.env.GOOGLE_CLIENT_SECRET);
   const baseUrl = customBaseUrl || getSafeBaseUrl();
   const redirectUri = `${baseUrl}/api/auth/google/callback`;
 

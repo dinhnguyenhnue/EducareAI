@@ -1,5 +1,6 @@
 import React from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageHeader, StatCard } from "@/components/ui";
 import { prisma } from "@/lib/prisma";
 import { Sparkles, CheckCircle2, ShieldCheck, MessageSquareQuote } from "lucide-react";
 
@@ -22,28 +23,23 @@ export default async function AdminGeminiConfigPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-ink">
-              Cấu hình Gemini AI, Gem Registry & Kiểm duyệt Cộng đồng
-            </h1>
-            <span className="text-xs font-semibold bg-brand-teal-soft text-brand-teal px-2 py-0.5 rounded">
-              AI Governance
-            </span>
-          </div>
-          <p className="text-xs text-ink-muted mt-1">
-            Quản lý phương thức Socratic, bảo vệ quyền riêng tư hội thoại học sinh và kiểm duyệt Thư viện Prompt.
-          </p>
-        </div>
+        <PageHeader
+          variant="card"
+          tone="aiTutor"
+          badge="AI Governance"
+          badgeIcon={<Sparkles className="w-3.5 h-3.5" />}
+          title="Cấu hình Gemini AI, Gem Registry & Kiểm duyệt Cộng đồng"
+          description="Quản lý phương thức Socratic, bảo vệ quyền riêng tư hội thoại học sinh và kiểm duyệt Thư viện Prompt."
+        />
 
         {/* AI Governance Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card space-y-2">
+          <div className="p-5 rounded-2xl bg-surface border border-border shadow-card space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-bold text-ink">Kết nối Gemini API Server</span>
-              <Sparkles className="w-4 h-4 text-brand-teal" />
+              <Sparkles className="w-4 h-4 text-violet-600" />
             </div>
-            <div className="text-sm font-bold text-brand-teal">
+            <div className="text-sm font-bold text-violet-700">
               {hasGeminiKey
                 ? "GEMINI_API_KEY Active"
                 : "Socratic Pedagogical Engine (Local Fallback Ready)"}
@@ -53,12 +49,12 @@ export default async function AdminGeminiConfigPage() {
             </p>
           </div>
 
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card space-y-2">
+          <div className="p-5 rounded-2xl bg-surface border border-border shadow-card space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-bold text-ink">Bảo vệ Quyền riêng tư Trẻ em</span>
-              <ShieldCheck className="w-4 h-4 text-status-success" />
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
             </div>
-            <div className="text-sm font-bold text-status-success">
+            <div className="text-sm font-bold text-emerald-700">
               Cô lập Lịch sử Chat AI Học sinh
             </div>
             <p className="text-[11px] text-ink-muted">
@@ -66,10 +62,10 @@ export default async function AdminGeminiConfigPage() {
             </p>
           </div>
 
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card space-y-2">
+          <div className="p-5 rounded-2xl bg-surface border border-border shadow-card space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-bold text-ink">Thư viện Prompt & Cộng đồng</span>
-              <MessageSquareQuote className="w-4 h-4 text-brand-teal" />
+              <MessageSquareQuote className="w-4 h-4 text-fuchsia-600" />
             </div>
             <div className="text-sm font-bold text-ink font-mono">
               {prompts.length} Prompt mẫu • {posts.length} Bài đăng
@@ -81,7 +77,7 @@ export default async function AdminGeminiConfigPage() {
         </div>
 
         {/* Prompt Templates Table */}
-        <div className="p-6 rounded-panel bg-surface border border-border shadow-card space-y-4">
+        <div className="p-6 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <h2 className="text-sm font-bold text-ink uppercase tracking-wide pb-2 border-b border-border">
             Danh mục Prompt Sư phạm đã xuất bản ({prompts.length})
           </h2>
@@ -94,7 +90,7 @@ export default async function AdminGeminiConfigPage() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-ink">{p.title}</span>
-                    <span className="text-[10px] font-semibold bg-brand-teal-soft text-brand-teal px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-semibold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">
                       Khối {p.gradeLevel || 7} • {p.difficulty}
                     </span>
                   </div>

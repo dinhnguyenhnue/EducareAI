@@ -1,13 +1,20 @@
 import React from "react";
-import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { prisma } from "@/lib/prisma";
+import {
+  PageHeader,
+  StatCard,
+  FeatureCard,
+  ChartCard,
+  OceanButtonLink,
+} from "@/components/ui";
 import {
   Users,
   Layers,
   Network,
   Sparkles,
   Database,
+  ShieldCheck,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +34,9 @@ export default async function AdminDashboardPage() {
     prisma.teacherProfile.count(),
     prisma.studentProfile.count(),
     prisma.parentProfile.count(),
-    prisma.schoolClass.findMany(),
+    prisma.schoolClass.findMany({
+      include: { _count: { select: { students: true } } },
+    }),
     prisma.assignment.count(),
     prisma.submission.count(),
     prisma.syncLog.count(),
@@ -40,147 +49,96 @@ export default async function AdminDashboardPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-ink">
-                Trung tâm Quản trị Hệ thống
-              </h1>
-              <span className="text-xs font-semibold bg-brand-teal-soft text-brand-teal px-2 py-0.5 rounded">
-                School Admin Console
-              </span>
-            </div>
-            <p className="text-xs text-ink-muted mt-1">
-              Giám sát toàn diện Trường Tiểu học và THCS UNIGO: Người dùng, Lớp học, Google Workspace, Gemini AI và CSDL thực.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Link
-              href="/admin/overview"
-              className="text-xs font-semibold text-brand-teal bg-brand-teal-soft px-3 py-1.5 rounded hover:underline"
-            >
+        <PageHeader
+          badge="School Admin Console"
+          badgeIcon={<ShieldCheck className="w-3.5 h-3.5" />}
+          tone="overview"
+          title="Trung tâm Quản trị Hệ thống"
+          description="Giám sát toàn diện Trường Tiểu học và THCS UNIGO: Người dùng, Lớp học, Google Workspace, Gemini AI và CSDL thực."
+          actions={
+            <OceanButtonLink href="/admin/overview" variant="soft" size="sm">
               Mở Super Admin Console →
-            </Link>
-          </div>
-        </div>
+            </OceanButtonLink>
+          }
+        />
 
         {/* Real Database System KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted">
-              <span>Tổng người dùng (CSDL thực)</span>
-              <Users className="w-4 h-4 text-brand-teal" />
-            </div>
-            <div className="text-2xl font-bold text-ink mt-2 font-mono">
-              {usersCount} tài khoản
-            </div>
-            <p className="text-[11px] text-ink-muted mt-1">
-              {teachersCount} GV • {studentsCount} HS • {parentsCount} Phụ huynh
-            </p>
-          </div>
-
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted">
-              <span>Lớp học THCS (2026–2027)</span>
-              <Layers className="w-4 h-4 text-brand-teal" />
-            </div>
-            <div className="text-2xl font-bold text-ink mt-2 font-mono">
-              {classes.length} lớp
-            </div>
-            <p className="text-[11px] text-ink-muted mt-1">
-              Khối 6 ({g6} lớp), Khối 7 ({g7} lớp), Khối 8 ({g8} lớp)
-            </p>
-          </div>
-
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted">
-              <span>Bài tập & Bài nộp thực</span>
-              <Database className="w-4 h-4 text-brand-teal" />
-            </div>
-            <div className="text-2xl font-bold text-ink mt-2 font-mono">
-              {assignmentsCount} bài / {submissionsCount} nộp
-            </div>
-            <p className="text-[11px] text-ink-muted mt-1">
-              Lưu trữ trên CSDL chính SQLite/PostgreSQL
-            </p>
-          </div>
-
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted">
-              <span>Lượt đồng bộ Google API</span>
-              <Network className="w-4 h-4 text-status-success" />
-            </div>
-            <div className="text-2xl font-bold text-status-success mt-2 font-mono">
-              {syncLogsCount} phiên
-            </div>
-            <p className="text-[11px] text-ink-muted mt-1">
-              Drive, Docs, Sheets, Classroom, Calendar
-            </p>
-          </div>
+          <StatCard
+            label="Tổng người dùng (CSDL thực)"
+            value={`${usersCount} tài khoản`}
+            hint={`${teachersCount} GV • ${studentsCount} HS • ${parentsCount} Phụ huynh`}
+            icon={<Users className="w-4 h-4" />}
+            tone="overview"
+            href="/quan-tri/nguoi-dung"
+          />
+          <StatCard
+            label="Lớp học THCS (2026–2027)"
+            value={`${classes.length} lớp`}
+            hint={`Khối 6 (${g6} lớp), Khối 7 (${g7} lớp), Khối 8 (${g8} lớp)`}
+            icon={<Layers className="w-4 h-4" />}
+            tone="progress"
+            href="/quan-tri/lop-hoc"
+          />
+          <StatCard
+            label="Bài tập & Bài nộp thực"
+            value={`${assignmentsCount} / ${submissionsCount}`}
+            hint={`${assignmentsCount} bài giao • ${submissionsCount} bài nộp trên PostgreSQL`}
+            icon={<Database className="w-4 h-4" />}
+            tone="assignments"
+          />
+          <StatCard
+            label="Lượt đồng bộ Google API"
+            value={`${syncLogsCount} phiên`}
+            hint="Drive, Docs, Sheets, Classroom, Calendar"
+            icon={<Network className="w-4 h-4" />}
+            tone="workspace"
+            href="/quan-tri/google-integrations"
+          />
         </div>
 
+        <ChartCard
+          title="Phân bố học sinh theo lớp học (CSDL thực)"
+          subtitle="Số lượng hồ sơ học sinh đang liên kết theo từng lớp"
+          data={classes.slice(0, 8).map((c) => ({
+            label: c.name,
+            value: c._count.students,
+            tone: c.gradeLevel === 7 ? "overview" : c.gradeLevel === 6 ? "materials" : "progress",
+          }))}
+          unit=" HS"
+          variant="horizontal"
+          tone="overview"
+        />
+
         {/* Administrative Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Link
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <FeatureCard
+            title="Quản lý & Nhập người dùng"
+            description="Thêm mới, phân quyền RBAC và nhập hàng loạt danh sách học sinh theo khối từ file Excel chuẩn UNIGO."
             href="/quan-tri/nguoi-dung"
-            className="p-6 rounded-panel bg-surface border border-border shadow-card hover:border-brand-teal transition-colors flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-10 h-10 rounded-panel bg-brand-teal-soft flex items-center justify-center text-brand-teal mb-3">
-                <Users className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-bold text-ink">
-                Quản lý & Nhập người dùng
-              </h3>
-              <p className="text-xs text-ink-muted mt-1 leading-relaxed">
-                Thêm mới, phân quyền RBAC và nhập hàng loạt danh sách học sinh theo khối từ file Excel chuẩn UNIGO.
-              </p>
-            </div>
-            <span className="text-xs font-semibold text-brand-teal mt-4 flex items-center gap-1">
-              Mở trang quản lý →
-            </span>
-          </Link>
-
-          <Link
+            ctaLabel="Mở trang quản lý"
+            tone="overview"
+            badge="RBAC"
+            icon={<Users className="w-5 h-5" />}
+          />
+          <FeatureCard
+            title="Tích hợp Google Workspace"
+            description="Kiểm tra kết nối OAuth, hạn ngạch Sheets, Drive Folder phân cấp và trạng thái đồng bộ thực."
             href="/quan-tri/google-integrations"
-            className="p-6 rounded-panel bg-surface border border-border shadow-card hover:border-brand-teal transition-colors flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-10 h-10 rounded-panel bg-brand-teal-soft flex items-center justify-center text-brand-teal mb-3">
-                <Network className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-bold text-ink">
-                Tích hợp Google Workspace
-              </h3>
-              <p className="text-xs text-ink-muted mt-1 leading-relaxed">
-                Cấu hình Client ID, kiểm tra hạn ngạch Sheets (60 req/min), Drive Folder phân cấp và trạng thái token.
-              </p>
-            </div>
-            <span className="text-xs font-semibold text-brand-teal mt-4 flex items-center gap-1">
-              Kiểm tra tích hợp →
-            </span>
-          </Link>
-
-          <Link
+            ctaLabel="Kiểm tra tích hợp"
+            tone="workspace"
+            badge="Google API"
+            icon={<Network className="w-5 h-5" />}
+          />
+          <FeatureCard
+            title="Audit Logs & Nhật ký Bảo mật"
+            description="Tra cứu toàn bộ lịch sử đăng nhập, chuyển góc nhìn Super Admin, phân quyền và đồng bộ dữ liệu."
             href="/quan-tri/nhat-ky"
-            className="p-6 rounded-panel bg-surface border border-border shadow-card hover:border-brand-teal transition-colors flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-10 h-10 rounded-panel bg-brand-teal-soft flex items-center justify-center text-brand-teal mb-3">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-bold text-ink">
-                Audit Logs & Nhật ký Bảo mật
-              </h3>
-              <p className="text-xs text-ink-muted mt-1 leading-relaxed">
-                Tra cứu toàn bộ lịch sử đăng nhập, chuyển góc nhìn Super Admin, phân quyền và đồng bộ dữ liệu.
-              </p>
-            </div>
-            <span className="text-xs font-semibold text-brand-teal mt-4 flex items-center gap-1">
-              Xem nhật ký →
-            </span>
-          </Link>
+            ctaLabel="Xem nhật ký"
+            tone="assessments"
+            badge="Security"
+            icon={<Sparkles className="w-5 h-5" />}
+          />
         </div>
       </div>
     </AppShell>

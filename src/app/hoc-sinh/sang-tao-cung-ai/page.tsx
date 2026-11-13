@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { StudentAiCenterTabs } from "@/components/ai/StudentAiCenterTabs";
+import { PageHeader } from "@/components/ui";
 import {
   TEACHER_GEM_SYSTEM_INSTRUCTIONS,
   STUDENT_PROMPT_TEMPLATES,
@@ -84,46 +85,38 @@ export default function CreativeWithAiPage() {
     <div className="space-y-6">
       <StudentAiCenterTabs />
       {/* Header Banner */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div className="space-y-1.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
-              <Sparkles className="w-3.5 h-3.5" />
-              SÁNG TẠO CÙNG AI – TRỢ LÝ GEM TIN HỌC SÁNG TẠO
-            </span>
+      <PageHeader
+        tone="promptLab"
+        badge="Sáng tạo cùng AI – Trợ lý Gem Tin học sáng tạo"
+        badgeIcon={<Sparkles className="w-3.5 h-3.5" />}
+        title="Hướng Dẫn Sử Dụng Gem & Bộ 8 Prompt Thiết Kế Trò Chơi HTML"
+        description="Điền thông tin bài học của em vào bảng biến bên dưới để tự động tạo câu lệnh (Prompt) chuẩn, sao chép sang Gem do Giáo viên cấu hình, kiểm chứng lại kiến thức SGK và gửi duyệt tại Xưởng Trò Chơi."
+        actions={
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => setShowGemInstructions((v) => !v)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-violet-50 hover:bg-violet-100 text-violet-800 border border-violet-200 transition-colors"
+            >
+              <BookOpen className="w-4 h-4 text-violet-600" />
+              {showGemInstructions
+                ? "Ẩn cấu hình Gem của Giáo viên"
+                : "Xem cấu hình Gem Instructions (Dành cho Giáo viên)"}
+            </button>
+            <Link
+              href="/hoc-sinh/xuong-tro-choi"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-ocean-600 hover:bg-ocean-700 active:scale-[0.98] text-white transition-all shadow-sm"
+            >
+              <Code2 className="w-4 h-4" />
+              Mở Xưởng Trò Chơi & Chạy Thử Sandbox
+            </Link>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Hướng Dẫn Sử Dụng Gem & Bộ 8 Prompt Thiết Kế Trò Chơi HTML
-          </h1>
-          <p className="text-sm text-slate-600 max-w-3xl">
-            Điền thông tin bài học của em vào bảng biến bên dưới để tự động tạo câu lệnh (Prompt) chuẩn, sao chép sang Gem do Giáo viên cấu hình, kiểm chứng lại kiến thức SGK và gửi duyệt tại Xưởng Trò Chơi.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => setShowGemInstructions((v) => !v)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800"
-          >
-            <BookOpen className="w-4 h-4 text-teal-700" />
-            {showGemInstructions
-              ? "Ẩn cấu hình Gem của Giáo viên"
-              : "Xem cấu hình Gem Instructions (Dành cho Giáo viên)"}
-          </button>
-          <Link
-            href="/hoc-sinh/xuong-tro-choi"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-teal-700 hover:bg-teal-800 text-white"
-          >
-            <Code2 className="w-4 h-4" />
-            Mở Xưởng Trò Chơi & Chạy Thử Sandbox
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* Teacher Gem System Instructions Box (Section 9) */}
       {showGemInstructions && (
-        <div className="rounded-2xl border border-teal-300 bg-teal-50/40 p-6 space-y-3">
+        <div className="rounded-2xl border border-violet-300 bg-violet-50/60 p-6 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-base font-bold text-slate-900">
@@ -138,7 +131,7 @@ export default function CreativeWithAiPage() {
               onClick={() =>
                 handleCopy("gem-system-instructions", TEACHER_GEM_SYSTEM_INSTRUCTIONS)
               }
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-teal-700 hover:bg-teal-800 text-white"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-ocean-600 hover:bg-ocean-700 text-white transition-colors shadow-xs"
             >
               {copiedId === "gem-system-instructions" ? (
                 <>
@@ -183,7 +176,7 @@ export default function CreativeWithAiPage() {
                   href={teacherGemUrl.trim()}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-teal-700 hover:bg-teal-800 text-white shrink-0"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-ocean-600 hover:bg-ocean-700 text-white shrink-0"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   Mở Gem
@@ -257,13 +250,13 @@ export default function CreativeWithAiPage() {
           {/* Mandatory Verification & Privacy Checklist */}
           <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-              <ShieldAlert className="w-4 h-4 text-teal-700" />
+              <ShieldAlert className="w-4 h-4 text-fuchsia-600" />
               3. Bảng kiểm bắt buộc trước khi nộp sản phẩm
             </h2>
             <ul className="space-y-2 text-xs text-slate-700">
               {STUDENT_AI_SAFETY_CHECKLIST.map((item, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -361,7 +354,7 @@ export default function CreativeWithAiPage() {
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-teal-50 text-teal-800 border border-teal-200 mb-1">
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-fuchsia-50 text-fuchsia-800 border border-fuchsia-200 mb-1">
                         Prompt #{tpl.number} • {tpl.category}
                       </span>
                       <h3 className="text-sm font-bold text-slate-900">
@@ -373,7 +366,7 @@ export default function CreativeWithAiPage() {
                     <button
                       type="button"
                       onClick={() => handleCopy(tpl.id, renderedPrompt)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-700 hover:bg-teal-800 text-white shrink-0"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-ocean-600 hover:bg-ocean-700 text-white shrink-0 transition-colors"
                     >
                       {isCopied ? (
                         <>

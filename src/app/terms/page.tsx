@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 import {
   FileText,
   ShieldCheck,
@@ -23,34 +24,21 @@ export default function TermsOfUsePage() {
   return (
     <div className="min-h-screen bg-canvas text-ink flex flex-col">
       {/* Top Header */}
-      <header className="sticky top-0 z-30 h-16 bg-surface border-b border-border px-6 sm:px-12 flex items-center justify-between">
+      <header className="sticky top-0 z-30 h-16 bg-surface/95 backdrop-blur-md border-b border-border px-6 sm:px-12 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-button bg-brand-teal flex items-center justify-center text-white font-bold text-base">
-              EA
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-ink tracking-tight text-base">EDUCARE AI</span>
-                <span className="text-[11px] font-semibold bg-brand-teal-soft text-brand-teal px-1.5 py-0.5 rounded">
-                  UNIGO
-                </span>
-              </div>
-              <p className="text-[11px] text-ink-muted">Cổng Pháp lý & Điều khoản Dịch vụ</p>
-            </div>
-          </Link>
+          <BrandLogo size="md" subtitle="Cổng Pháp lý & Điều khoản Dịch vụ" />
         </div>
 
         <div className="flex items-center gap-3 text-xs font-semibold">
           <Link
             href="/privacy"
-            className="px-3 py-1.5 rounded-button bg-canvas hover:bg-surface-muted border border-border text-ink transition-colors"
+            className="px-3 py-1.5 rounded-xl bg-canvas hover:bg-surface-muted border border-border text-ink transition-colors"
           >
             Chính sách bảo mật (Privacy)
           </Link>
           <Link
             href="/dang-nhap"
-            className="px-4 py-2 rounded-button bg-brand-teal text-white hover:bg-brand-teal-hover transition-colors"
+            className="px-4 py-2 rounded-xl bg-ocean-600 text-white hover:bg-ocean-700 shadow-sm transition-colors"
           >
             Đăng nhập OAuth
           </Link>
@@ -63,7 +51,7 @@ export default function TermsOfUsePage() {
         <div className="flex items-center justify-between">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-teal hover:underline"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-ocean-600 hover:text-ocean-700 hover:underline"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Quay lại Trang chủ EDUCARE AI</span>
@@ -74,8 +62,8 @@ export default function TermsOfUsePage() {
         </div>
 
         {/* Hero Card */}
-        <section className="p-8 rounded-panel bg-surface border border-border shadow-card space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-teal-soft text-brand-teal text-xs font-semibold">
+        <section className="p-8 rounded-2xl bg-surface border border-border shadow-card space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-ocean-50 border border-ocean-200 text-ocean-700 text-xs font-semibold">
             <FileText className="w-4 h-4" />
             <span>Điều khoản Sử dụng & Quy tắc Học thuật Số UNIGO (Terms of Service)</span>
           </div>
@@ -88,15 +76,15 @@ export default function TermsOfUsePage() {
             Văn bản này quy định quyền và nghĩa vụ pháp lý giữa người sử dụng (Học sinh, Giáo viên, Phụ huynh, Quản trị viên và Thành viên Cộng đồng) với <strong>Trường Tiểu học và THCS UNIGO</strong> khi truy cập và sử dụng hệ sinh thái học tập số <strong>EDUCARE AI</strong>, bao gồm các tích hợp với <strong>Google Workspace</strong> và <strong>Google Gemini AI</strong>.
           </p>
 
-          <div className="p-4 rounded-panel bg-canvas border border-border text-xs text-ink-muted leading-relaxed">
+          <div className="p-4 rounded-xl bg-canvas border border-border text-xs text-ink-muted leading-relaxed">
             <strong className="text-ink">English Summary for Google OAuth Verification:</strong> By signing in with Google OAuth 2.0 or using EDUCARE AI, users agree to use the platform exclusively for educational, instructional, and academic assessment purposes under the supervision of UNIGO Primary &amp; Secondary School. Users retain full ownership of their Google Drive files, Docs, Sheets, and Calendar events, and may revoke OAuth permissions at any time.
           </div>
         </section>
 
         {/* Section 1: Roles & Accounts */}
-        <section className="p-8 rounded-panel bg-surface border border-border shadow-card space-y-4">
+        <section className="p-8 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center gap-2.5 pb-3 border-b border-border">
-            <Users className="w-5 h-5 text-brand-teal" />
+            <Users className="w-5 h-5 text-ocean-600" />
             <h2 className="text-lg font-bold text-ink">
               1. Phân loại Tài khoản và Quy định Đăng nhập bằng Google (OAuth 2.0)
             </h2>
@@ -139,9 +127,9 @@ export default function TermsOfUsePage() {
         </section>
 
         {/* Section 2: Academic Integrity & AI Usage */}
-        <section className="p-8 rounded-panel bg-surface border border-border shadow-card space-y-4">
+        <section className="p-8 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center gap-2.5 pb-3 border-b border-border">
-            <Sparkles className="w-5 h-5 text-brand-teal" />
+            <Sparkles className="w-5 h-5 text-violet-600" />
             <h2 className="text-lg font-bold text-ink">
               2. Liêm chính Học thuật và Quy tắc sử dụng Trí tuệ nhân tạo (Gemini AI & Gems)
             </h2>
@@ -152,22 +140,22 @@ export default function TermsOfUsePage() {
               Căn cứ triết lý giáo dục của <strong>Tổ THCS UNIGO</strong> (<em>Giúp học sinh biết đặt câu hỏi, biết làm, biết phản biện, hạn chế học vẹt</em>), người dùng cam kết tuân thủ các nguyên tắc sử dụng AI sau:
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 rounded-button bg-canvas border border-border space-y-1.5">
-                <span className="font-bold text-brand-teal block">AI là Gia sư gợi mở, không làm thay</span>
+              <div className="p-4 rounded-xl bg-canvas border border-border space-y-1.5">
+                <span className="font-bold text-violet-700 block">AI là Gia sư gợi mở, không làm thay</span>
                 <p className="text-ink-muted">
                   Học sinh sử dụng AI Tutor và Prompt Lab để tìm hiểu bản chất vấn đề, xin gợi ý từng bước và rèn tư duy phản biện; không sử dụng AI để chép lời giải có sẵn mà không hiểu bài.
                 </p>
               </div>
 
-              <div className="p-4 rounded-button bg-canvas border border-border space-y-1.5">
-                <span className="font-bold text-brand-teal block">Trách nhiệm với sản phẩm học tập</span>
+              <div className="p-4 rounded-xl bg-canvas border border-border space-y-1.5">
+                <span className="font-bold text-ocean-600 block">Trách nhiệm với sản phẩm học tập</span>
                 <p className="text-ink-muted">
                   Khi nộp bài tập hoặc đăng sản phẩm lên Cộng đồng, học sinh phải thuyết minh rõ quy trình thực hiện, công cụ đã dùng và tự đánh giá trung thực theo Rubric.
                 </p>
               </div>
 
-              <div className="p-4 rounded-button bg-canvas border border-border space-y-1.5">
-                <span className="font-bold text-brand-teal block">Giáo viên quyết định chuyên môn cuối cùng</span>
+              <div className="p-4 rounded-xl bg-canvas border border-border space-y-1.5">
+                <span className="font-bold text-ocean-600 block">Giáo viên quyết định chuyên môn cuối cùng</span>
                 <p className="text-ink-muted">
                   Mọi điểm số đề xuất hoặc nhận xét do AI sinh ra đều mang nhãn &ldquo;Bản nháp AI / AI đề xuất&rdquo;. Giáo viên bộ môn là người kiểm tra và phê duyệt kết quả chính thức.
                 </p>
@@ -177,9 +165,9 @@ export default function TermsOfUsePage() {
         </section>
 
         {/* Section 3: Google Workspace Services Rules */}
-        <section className="p-8 rounded-panel bg-surface border border-border shadow-card space-y-4">
+        <section className="p-8 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center gap-2.5 pb-3 border-b border-border">
-            <Lock className="w-5 h-5 text-brand-teal" />
+            <Lock className="w-5 h-5 text-cyan-600" />
             <h2 className="text-lg font-bold text-ink">
               3. Quy định về Tích hợp Google Drive, Docs, Sheets, Classroom và Calendar
             </h2>
@@ -199,9 +187,9 @@ export default function TermsOfUsePage() {
         </section>
 
         {/* Section 4: Community Moderation */}
-        <section className="p-8 rounded-panel bg-surface border border-border shadow-card space-y-4">
+        <section className="p-8 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center gap-2.5 pb-3 border-b border-border">
-            <AlertTriangle className="w-5 h-5 text-brand-teal" />
+            <AlertTriangle className="w-5 h-5 text-amber-600" />
             <h2 className="text-lg font-bold text-ink">
               4. Quy tắc Cộng đồng Học tập Mở và Kiểm duyệt Nội dung
             </h2>
@@ -221,9 +209,9 @@ export default function TermsOfUsePage() {
         </section>
 
         {/* Footer Acceptance */}
-        <section className="p-6 rounded-panel bg-brand-teal-soft/50 border border-brand-teal/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+        <section className="p-6 rounded-2xl bg-sky-50/70 border border-ocean-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
           <div className="space-y-1">
-            <span className="font-bold text-brand-teal text-sm block">
+            <span className="font-bold text-ocean-700 text-sm block">
               Xác nhận đồng ý Điều khoản & Chính sách Bảo mật
             </span>
             <p className="text-ink">
@@ -234,13 +222,13 @@ export default function TermsOfUsePage() {
           <div className="flex items-center gap-3 shrink-0">
             <Link
               href="/privacy"
-              className="px-4 py-2 rounded-button bg-surface border border-border font-semibold text-ink hover:bg-surface-muted transition-colors"
+              className="px-4 py-2 rounded-xl bg-surface border border-border font-semibold text-ink hover:bg-surface-muted transition-colors"
             >
               Chính sách Bảo mật
             </Link>
             <Link
               href="/dang-nhap"
-              className="px-4 py-2 rounded-button bg-brand-teal text-white font-semibold hover:bg-brand-teal-hover transition-colors"
+              className="px-4 py-2 rounded-xl bg-ocean-600 text-white font-semibold hover:bg-ocean-700 shadow-sm transition-colors"
             >
               Đến trang Đăng nhập →
             </Link>

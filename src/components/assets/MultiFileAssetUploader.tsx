@@ -168,9 +168,9 @@ export function MultiFileAssetUploader({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <label className="block text-xs font-bold text-ink">{label}</label>
-        <span className="inline-flex items-center gap-1 text-[11px] text-brand-teal font-semibold">
+        <span className="inline-flex items-center gap-1 text-[11px] text-sky-700 font-semibold">
           <ShieldCheck className="w-3.5 h-3.5" />
           Kiểm tra Magic Bytes & chống Zip Slip
         </span>
@@ -189,10 +189,10 @@ export function MultiFileAssetUploader({
           handleFilesSelected(e.dataTransfer.files);
         }}
         onClick={() => fileInputRef.current?.click()}
-        className={`p-5 rounded-xl border-2 border-dashed cursor-pointer transition-all text-center space-y-1.5 ${
+        className={`p-5 rounded-2xl border-2 border-dashed cursor-pointer transition-all text-center space-y-1.5 ${
           isDragging
-            ? "border-brand-teal bg-brand-teal-soft/40"
-            : "border-border bg-canvas hover:border-brand-teal/60"
+            ? "border-sky-500 bg-sky-50"
+            : "border-border bg-canvas hover:border-sky-400 hover:bg-sky-50/40"
         }`}
       >
         <input
@@ -206,7 +206,7 @@ export function MultiFileAssetUploader({
             e.target.value = "";
           }}
         />
-        <UploadCloud className="w-6 h-6 text-brand-teal mx-auto" />
+        <UploadCloud className="w-6 h-6 text-sky-600 mx-auto" />
         <p className="text-xs font-semibold text-ink">
           Kéo thả nhiều tệp vào đây hoặc nhấn để chọn tệp từ máy tính
         </p>
@@ -221,10 +221,10 @@ export function MultiFileAssetUploader({
           {queue.map((item) => (
             <div
               key={item.localId}
-              className="p-3 rounded-lg bg-surface border border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs"
+              className="p-3 rounded-xl bg-surface border border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs"
             >
               <div className="flex items-start gap-2.5 min-w-0">
-                <FileText className="w-4 h-4 text-brand-teal shrink-0 mt-0.5" />
+                <FileText className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
                 <div className="min-w-0 space-y-0.5">
                   <div className="font-semibold text-ink truncate">
                     {item.asset?.safeFileName || item.file.name}
@@ -234,7 +234,7 @@ export function MultiFileAssetUploader({
                   </div>
 
                   {item.status === "UPLOADING" && (
-                    <div className="text-[11px] text-brand-teal font-medium">
+                    <div className="text-[11px] text-sky-700 font-medium">
                       Đang kiểm tra chữ ký nhị phân & tải lên ({item.progress}%)...
                     </div>
                   )}
@@ -275,17 +275,17 @@ export function MultiFileAssetUploader({
                         href={`/api/assets/${item.asset.id}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-2.5 py-1 rounded bg-canvas hover:bg-surface-muted border border-border text-[11px] font-semibold text-ink flex items-center gap-1"
+                        className="px-2.5 py-1 rounded-lg bg-canvas hover:bg-sky-50 border border-border text-[11px] font-semibold text-ink flex items-center gap-1"
                       >
-                        <Eye className="w-3 h-3 text-brand-teal" />
+                        <Eye className="w-3 h-3 text-sky-600" />
                         <span>Xem</span>
                       </a>
                     )}
                     <a
                       href={`/api/assets/${item.asset.id}?download=1`}
-                      className="px-2.5 py-1 rounded bg-canvas hover:bg-surface-muted border border-border text-[11px] font-semibold text-ink flex items-center gap-1"
+                      className="px-2.5 py-1 rounded-lg bg-canvas hover:bg-sky-50 border border-border text-[11px] font-semibold text-ink flex items-center gap-1"
                     >
-                      <Download className="w-3 h-3 text-brand-teal" />
+                      <Download className="w-3 h-3 text-sky-600" />
                       <span>Tải về</span>
                     </a>
                   </>
@@ -295,7 +295,7 @@ export function MultiFileAssetUploader({
                   <button
                     type="button"
                     onClick={() => uploadSingleFile(item.localId, item.file)}
-                    className="px-2.5 py-1 rounded bg-canvas hover:bg-surface-muted border border-border text-[11px] font-semibold text-brand-teal flex items-center gap-1"
+                    className="px-2.5 py-1 rounded-lg bg-canvas hover:bg-ocean-50 border border-border text-[11px] font-semibold text-ocean-600 flex items-center gap-1"
                   >
                     <RefreshCw className="w-3 h-3" />
                     <span>Thử lại</span>

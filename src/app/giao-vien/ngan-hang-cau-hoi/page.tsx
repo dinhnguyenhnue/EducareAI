@@ -212,12 +212,12 @@ export default function TeacherQuestionBankPage() {
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
               <Database className="w-3.5 h-3.5" />
               NGÂN HÀNG CÂU HỎI & MA TRẬN ĐỀ TIN HỌC
             </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
-              <ShieldCheck className="w-3.5 h-3.5 text-teal-700" />
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+              <ShieldCheck className="w-3.5 h-3.5 text-ocean-600" />
               Chốt phiên bản câu hỏi (Version Pinning) • AI chỉ tạo bản nháp chờ duyệt
             </span>
           </div>
@@ -233,7 +233,7 @@ export default function TeacherQuestionBankPage() {
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-teal-700 hover:bg-teal-800 text-white"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-ocean-600 hover:bg-ocean-700 text-white shadow-sm"
           >
             <Plus className="w-4 h-4" />
             Thêm câu hỏi / Bản nháp AI
@@ -242,12 +242,12 @@ export default function TeacherQuestionBankPage() {
       </div>
 
       {feedbackMsg && (
-        <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-xs font-semibold text-teal-900 flex items-center justify-between">
+        <div className="rounded-xl border border-ocean-200 bg-sky-50 px-4 py-3 text-xs font-semibold text-ocean-800 flex items-center justify-between">
           <span>{feedbackMsg}</span>
           <button
             type="button"
             onClick={() => setFeedbackMsg(null)}
-            className="text-teal-700 underline"
+            className="text-ocean-600 underline"
           >
             Đóng
           </button>
@@ -255,10 +255,10 @@ export default function TeacherQuestionBankPage() {
       )}
 
       {/* Matrix Assessment Builder Bar */}
-      <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-3 shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-teal-700" />
+            <Layers className="w-4 h-4 text-amber-600" />
             <h2 className="text-sm font-bold text-slate-900">
               Đóng gói Đề Luyện tập / Đề Kiểm tra từ các câu hỏi đang chọn ({selectedIds.length} câu)
             </h2>
@@ -272,7 +272,7 @@ export default function TeacherQuestionBankPage() {
                   .map((q) => q.id)
               )
             }
-            className="text-xs font-semibold text-teal-700 hover:underline"
+            className="text-xs font-semibold text-ocean-600 hover:underline"
           >
             Chọn tất cả câu Đã Duyệt
           </button>
@@ -308,7 +308,7 @@ export default function TeacherQuestionBankPage() {
           <button
             type="button"
             onClick={handleCreateAssessmentFromSelected}
-            className="md:col-span-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-bold px-3 py-2"
+            className="md:col-span-2 rounded-lg bg-ocean-600 hover:bg-ocean-700 text-white font-bold px-3 py-2"
           >
             Phát hành đề
           </button>
@@ -341,7 +341,7 @@ export default function TeacherQuestionBankPage() {
             </select>
           </div>
           <span className="text-xs text-slate-500 flex items-center gap-1.5">
-            <FileSpreadsheet className="w-3.5 h-3.5 text-teal-700" />
+            <FileSpreadsheet className="w-3.5 h-3.5 text-cyan-600" />
             Hỗ trợ đồng bộ Google Sheets & tạo Google Forms qua gói Apps Script đính kèm
           </span>
         </div>
@@ -361,7 +361,7 @@ export default function TeacherQuestionBankPage() {
                     q.isAiDraft && q.status !== "APPROVED"
                       ? "border-amber-300 bg-amber-50/40"
                       : isChecked
-                      ? "border-teal-600 bg-teal-50/30"
+                      ? "border-ocean-500 bg-sky-50/50"
                       : "border-slate-200 bg-white"
                   }`}
                 >
@@ -372,12 +372,12 @@ export default function TeacherQuestionBankPage() {
                         checked={isChecked}
                         disabled={q.status !== "APPROVED"}
                         onChange={() => toggleSelect(q.id)}
-                        className="rounded border-slate-300 text-teal-700"
+                        className="rounded border-slate-300 text-ocean-600"
                       />
                       <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded">
                         {q.code} (v{q.version})
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-teal-100 text-teal-800">
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-ocean-100 text-ocean-700">
                         {q.cognitiveLevel}
                       </span>
                       <span
@@ -403,7 +403,7 @@ export default function TeacherQuestionBankPage() {
                         <button
                           type="button"
                           onClick={() => handleApproveAiDraft(q.id)}
-                          className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold bg-teal-700 hover:bg-teal-800 text-white"
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold bg-ocean-600 hover:bg-ocean-700 text-white"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           Duyệt câu hỏi AI này
@@ -433,13 +433,13 @@ export default function TeacherQuestionBankPage() {
                       <strong>Nguồn:</strong> {q.sourceBook} ({q.sourcePage})
                     </span>
                     <span>•</span>
-                    <span className="text-teal-800 font-semibold">
+                    <span className="text-ocean-700 font-semibold">
                       Đáp án đúng (Chỉ GV thấy): {q.correctAnswer}
                     </span>
                   </div>
 
                   <div className="rounded-lg bg-slate-50 border border-slate-200/80 p-2.5 text-xs text-slate-700 flex items-start gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5 text-teal-700 shrink-0 mt-0.5" />
+                    <BookOpen className="w-3.5 h-3.5 text-sky-600 shrink-0 mt-0.5" />
                     <span>
                       <strong>Giải thích sư phạm:</strong> {q.explanation}
                     </span>
@@ -616,7 +616,7 @@ export default function TeacherQuestionBankPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-teal-700 text-white font-bold"
+                  className="px-4 py-2 rounded-lg bg-ocean-600 hover:bg-ocean-700 text-white font-bold"
                 >
                   Lưu câu hỏi
                 </button>

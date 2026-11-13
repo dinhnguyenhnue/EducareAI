@@ -111,7 +111,7 @@ export default function SandboxedHtmlGamePlayer({
       {/* Top Sandbox Security Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-slate-900 text-slate-100 border-b border-slate-800">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-teal-950/90 text-teal-300 border border-teal-700/60">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-indigo-950/90 text-sky-300 border border-sky-700/60">
             <Lock className="w-3.5 h-3.5" />
             Sandbox Cô Lập (sandbox=&quot;allow-scripts&quot;)
           </span>
@@ -140,7 +140,7 @@ export default function SandboxedHtmlGamePlayer({
               href={`/embed/tro-choi/${slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-teal-300 transition-colors"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-sky-300 transition-colors"
               title="Mở trang chơi độc lập (Dùng khi nhúng Google Sites hoặc màn hình nhỏ)"
             >
               <ExternalLink className="w-3.5 h-3.5" />
@@ -151,7 +151,7 @@ export default function SandboxedHtmlGamePlayer({
           <button
             type="button"
             onClick={handleToggleFullscreen}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-teal-700 hover:bg-teal-600 text-white transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-ocean-600 hover:bg-ocean-700 text-white transition-colors"
           >
             {isFullscreen ? (
               <>
@@ -200,7 +200,7 @@ export default function SandboxedHtmlGamePlayer({
               <span
                 className={`font-semibold ${
                   scanReport.riskLevel === "LOW"
-                    ? "text-teal-700"
+                    ? "text-emerald-700"
                     : scanReport.riskLevel === "MEDIUM"
                     ? "text-amber-700"
                     : "text-rose-700"

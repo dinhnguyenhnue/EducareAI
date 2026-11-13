@@ -165,9 +165,9 @@ export default function TeacherGoogleWorkspacePage() {
     <AppShell>
       <div className="space-y-6">
         {/* Top Architecture Header */}
-        <div className="p-6 rounded-panel bg-surface border border-border shadow-card flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="p-6 rounded-2xl bg-surface border border-border shadow-card flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-brand-teal">
+            <div className="flex items-center gap-2 text-xs font-semibold text-cyan-700">
               <Network className="w-4 h-4" />
               <span>
                 KIẾN TRÚC 3 TẦNG DỮ LIỆU THỐNG NHẤT • SUPABASE + GOOGLE SHEETS + GOOGLE DRIVE + CLASSROOM
@@ -193,7 +193,7 @@ export default function TeacherGoogleWorkspacePage() {
                 <button
                   onClick={handleRevokeOAuth}
                   disabled={actionLoading === "REVOKE"}
-                  className="px-3 py-1.5 rounded-button border border-red-200 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100 transition-colors flex items-center gap-1.5"
+                  className="px-3 py-1.5 rounded-xl border border-red-200 bg-red-50 text-red-700 text-xs font-semibold hover:bg-red-100 transition-colors flex items-center gap-1.5"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Ngắt kết nối
@@ -203,7 +203,7 @@ export default function TeacherGoogleWorkspacePage() {
               <button
                 onClick={handleReconnectOAuth}
                 disabled={actionLoading === "RECONNECT"}
-                className="px-4 py-2 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors flex items-center gap-2"
+                className="px-4 py-2 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 shadow-sm transition-colors flex items-center gap-2"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Kết nối Google OAuth 2.0
@@ -213,9 +213,9 @@ export default function TeacherGoogleWorkspacePage() {
         </div>
 
         {/* Account Mode Configuration Banner (Workspace vs Personal Gmail Hybrid) */}
-        <div className="p-4 rounded-panel bg-slate-900 text-white flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="p-5 rounded-2xl bg-ocean-900 text-white flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-md">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-xs font-bold text-teal-300">
+            <div className="flex items-center gap-2 text-xs font-bold text-sky-300">
               <ShieldCheck className="w-4 h-4" />
               <span>CHẾ ĐỘ TÀI KHOẢN TRIỂN KHAI TẠI TRƯỜNG UNIGO (HỖ TRỢ ĐỒNG THỜI CẢ 2 MÔ HÌNH)</span>
             </div>
@@ -235,9 +235,9 @@ export default function TeacherGoogleWorkspacePage() {
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setAccountMode("PERSONAL_GMAIL_HYBRID")}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 accountMode === "PERSONAL_GMAIL_HYBRID"
-                  ? "bg-teal-500 text-slate-950 shadow-sm"
+                  ? "bg-sky-400 text-slate-950 shadow-sm"
                   : "bg-slate-800 text-slate-300 hover:bg-slate-700"
               }`}
             >
@@ -246,9 +246,9 @@ export default function TeacherGoogleWorkspacePage() {
             </button>
             <button
               onClick={() => setAccountMode("WORKSPACE_DOMAIN")}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 accountMode === "WORKSPACE_DOMAIN"
-                  ? "bg-teal-500 text-slate-950 shadow-sm"
+                  ? "bg-sky-400 text-slate-950 shadow-sm"
                   : "bg-slate-800 text-slate-300 hover:bg-slate-700"
               }`}
             >
@@ -260,8 +260,8 @@ export default function TeacherGoogleWorkspacePage() {
 
         {/* Feedback Banner */}
         {feedbackMsg && (
-          <div className="p-4 rounded-card bg-brand-teal-soft border border-brand-teal/30 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 text-xs font-semibold text-brand-teal">
+          <div className="p-4 rounded-2xl bg-sky-50 border border-ocean-200 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 text-xs font-semibold text-ocean-700">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>{feedbackMsg}</span>
             </div>
@@ -292,9 +292,9 @@ export default function TeacherGoogleWorkspacePage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-3.5 py-2.5 rounded-t-lg text-xs font-semibold flex items-center gap-2 whitespace-nowrap border-b-2 transition-colors ${
+                className={`px-3.5 py-2.5 rounded-t-xl text-xs font-semibold flex items-center gap-2 whitespace-nowrap border-b-2 transition-colors ${
                   active
-                    ? "border-brand-teal text-brand-teal bg-brand-teal-soft/40"
+                    ? "border-ocean-600 text-ocean-700 bg-sky-50/70"
                     : "border-transparent text-ink-muted hover:text-ink hover:bg-canvas"
                 }`}
               >
@@ -310,12 +310,12 @@ export default function TeacherGoogleWorkspacePage() {
           <div className="space-y-6">
             {/* 3-Tier Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-5 rounded-panel bg-surface border border-border shadow-card space-y-2">
+              <div className="p-5 rounded-2xl bg-surface border border-border shadow-card space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded bg-teal-50 text-teal-800 border border-teal-200">
+                  <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-ocean-50 text-ocean-700 border border-ocean-200">
                     Tầng 1 · Nguồn dữ liệu chuẩn
                   </span>
-                  <Database className="w-4 h-4 text-brand-teal" />
+                  <Database className="w-4 h-4 text-ocean-600" />
                 </div>
                 <h3 className="text-base font-bold text-ink">Supabase (PostgreSQL + RLS)</h3>
                 <p className="text-xs text-ink-muted leading-relaxed">
@@ -368,7 +368,7 @@ export default function TeacherGoogleWorkspacePage() {
                       runWorkspaceAction("PROVISION_DRIVE_6_FOLDERS", { accountMode })
                     }
                     disabled={actionLoading !== null}
-                    className="px-3.5 py-2 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors"
+                    className="px-3.5 py-2 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 transition-colors"
                   >
                     Khởi tạo Cây Drive 6 Nhánh
                   </button>
@@ -447,7 +447,7 @@ export default function TeacherGoogleWorkspacePage() {
                     ].map((row, idx) => (
                       <tr key={idx} className="hover:bg-canvas/60">
                         <td className="py-2.5 px-3 font-semibold text-ink">{row.type}</td>
-                        <td className="py-2.5 px-3 text-brand-teal font-medium">{row.primary}</td>
+                        <td className="py-2.5 px-3 text-ocean-600 font-medium">{row.primary}</td>
                         <td className="py-2.5 px-3 text-ink-muted">{row.mirror}</td>
                         <td className="py-2.5 px-3 text-slate-700">{row.rule}</td>
                       </tr>
@@ -476,7 +476,7 @@ export default function TeacherGoogleWorkspacePage() {
                     {syncCadencePolicy.map((item: any, idx: number) => (
                       <tr key={idx} className="hover:bg-canvas/60">
                         <td className="py-2.5 px-3 font-bold text-ink">{item.cadence}</td>
-                        <td className="py-2.5 px-3 font-medium text-brand-teal">{item.layer}</td>
+                        <td className="py-2.5 px-3 font-medium text-cyan-700">{item.layer}</td>
                         <td className="py-2.5 px-3 text-ink-muted">{item.activity}</td>
                         <td className="py-2.5 px-3">
                           <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
@@ -499,10 +499,10 @@ export default function TeacherGoogleWorkspacePage() {
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
                       Spreadsheet Tự động theo Lớp
                     </span>
-                    <code className="text-xs font-mono text-brand-teal font-bold">
+                    <code className="text-xs font-mono text-ocean-600 font-bold">
                       {currentTrackingSheet?.spreadsheetTitle || `EDUCARE_AI_Tracking_${selectedClass}`}
                     </code>
                   </div>
@@ -523,7 +523,7 @@ export default function TeacherGoogleWorkspacePage() {
                   <select
                     value={selectedClass}
                     onChange={(e) => setSelectedClass(e.target.value)}
-                    className="px-3 py-2 rounded-button border border-border bg-canvas text-xs font-semibold text-ink"
+                    className="px-3 py-2 rounded-xl border border-border bg-canvas text-xs font-semibold text-ink"
                   >
                     <option value="7A1">Lớp 7A1 (THCS UNIGO)</option>
                     <option value="6A1">Lớp 6A1 (THCS UNIGO)</option>
@@ -536,7 +536,7 @@ export default function TeacherGoogleWorkspacePage() {
                       })
                     }
                     disabled={actionLoading !== null}
-                    className="px-4 py-2 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 transition-colors flex items-center gap-1.5"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     Tạo / Đồng bộ Bảng Tracking {selectedClass} (6 Tabs)
@@ -605,7 +605,7 @@ export default function TeacherGoogleWorkspacePage() {
                         className: selectedClass,
                       })
                     }
-                    className="px-4 py-2 rounded-button bg-brand-teal text-white text-xs font-semibold"
+                    className="px-4 py-2 rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white text-xs font-semibold"
                   >
                     Khởi tạo EDUCARE_AI_Tracking_{selectedClass} ngay
                   </button>
@@ -727,7 +727,7 @@ export default function TeacherGoogleWorkspacePage() {
                   runWorkspaceAction("PROVISION_DRIVE_6_FOLDERS", { accountMode })
                 }
                 disabled={actionLoading !== null}
-                className="px-4 py-2 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors flex items-center gap-2"
+                className="px-4 py-2 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 transition-colors flex items-center gap-2"
               >
                 <FolderOpen className="w-3.5 h-3.5" />
                 Tự động Tạo & Đồng bộ 21 Thư mục Chuẩn
@@ -736,7 +736,7 @@ export default function TeacherGoogleWorkspacePage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Visual ASCII Tree from User Specification */}
-              <div className="p-4 rounded-lg bg-slate-950 text-teal-300 font-mono text-xs leading-relaxed overflow-x-auto">
+              <div className="p-4 rounded-xl bg-slate-950 text-sky-300 font-mono text-xs leading-relaxed overflow-x-auto">
                 <pre>{`EDUCARE_AI/
 ├── 01_QUAN_TRI/                [RESTRICTED_ADMIN_ONLY]
 │   ├── Danh_sach_lop/
@@ -782,7 +782,7 @@ export default function TeacherGoogleWorkspacePage() {
                         <td className="py-2 px-3 font-mono font-semibold text-ink">
                           {node.folderPath}
                         </td>
-                        <td className="py-2 px-3 font-mono text-brand-teal">
+                        <td className="py-2 px-3 font-mono text-ocean-600">
                           {node.googleFolderId || `Chờ khởi tạo (${node.folderCode})`}
                         </td>
                         <td className="py-2 px-3">
@@ -824,7 +824,7 @@ export default function TeacherGoogleWorkspacePage() {
                   <button
                     onClick={() => runWorkspaceAction("CREATE_ENCRYPTED_BACKUP")}
                     disabled={actionLoading !== null}
-                    className="px-4 py-2 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors flex items-center gap-1.5"
+                    className="px-4 py-2 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 transition-colors flex items-center gap-1.5"
                   >
                     <HardDrive className="w-3.5 h-3.5" />
                     Tạo Bản Backup Mã hóa Mới
@@ -881,7 +881,7 @@ export default function TeacherGoogleWorkspacePage() {
                             {bk.backupCode}
                           </td>
                           <td className="py-2.5 px-3">
-                            <span className="font-semibold text-brand-teal">
+                            <span className="font-semibold text-ocean-600">
                               {bk.encryptionAlgorithm}
                             </span>{" "}
                             • <code className="text-ink-muted">{bk.driveFolderPath}</code>
@@ -898,7 +898,7 @@ export default function TeacherGoogleWorkspacePage() {
                             <span
                               className={`px-2 py-0.5 rounded font-semibold ${
                                 bk.restoreDrillStatus === "DRILL_PASSED"
-                                  ? "bg-teal-50 text-teal-800 border border-teal-200"
+                                  ? "bg-ocean-50 text-ocean-700 border border-ocean-200"
                                   : "bg-slate-100 text-slate-700"
                               }`}
                             >
@@ -926,7 +926,7 @@ export default function TeacherGoogleWorkspacePage() {
 
         {/* TAB 5: GOOGLE CLASSROOM */}
         {activeTab === "CLASSROOM" && (
-          <div className="p-6 rounded-panel bg-surface border border-border shadow-card space-y-4">
+          <div className="p-6 rounded-2xl bg-surface border border-border shadow-card space-y-4">
             <h2 className="text-lg font-bold text-ink">
               Đồng bộ Bài tập Google Classroom (Chống Trùng lặp Idempotent)
             </h2>
@@ -934,11 +934,11 @@ export default function TeacherGoogleWorkspacePage() {
               {(workspaceData?.assignments || []).map((asg: any) => (
                 <div
                   key={asg.id}
-                  className="p-4 rounded-card border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  className="p-4 rounded-xl border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                 >
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-brand-teal">
+                      <span className="text-xs font-bold text-ocean-600">
                         {asg.subject?.name} • Lớp {asg.schoolClass?.name}
                       </span>
                       <span className="text-[11px] px-2 py-0.5 rounded bg-canvas border border-border font-mono">
@@ -952,7 +952,7 @@ export default function TeacherGoogleWorkspacePage() {
                       runWorkspaceAction("SYNC_CLASSROOM", { assignmentId: asg.id })
                     }
                     disabled={actionLoading !== null}
-                    className="px-3.5 py-2 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover"
+                    className="px-3.5 py-2 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700"
                   >
                     {asg.classroomCourseworkId
                       ? "Cập nhật Idempotent Classroom"
@@ -1003,12 +1003,12 @@ export default function TeacherGoogleWorkspacePage() {
                 })
               }
               disabled={actionLoading !== null}
-              className="px-4 py-2 rounded-button bg-brand-teal text-white text-xs font-semibold"
+              className="px-4 py-2 rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white text-xs font-semibold"
             >
               Nhân bản Mẫu Google Docs & Lưu fileId vào Supabase
             </button>
             {createdDoc && (
-              <div className="p-4 rounded-lg bg-canvas border border-border text-xs space-y-1">
+              <div className="p-4 rounded-xl bg-canvas border border-border text-xs space-y-1">
                 <p className="font-bold text-ink">
                   Đã tạo: {createdDoc.title} (Google Doc ID: <code>{createdDoc.docId}</code>)
                 </p>
@@ -1022,7 +1022,7 @@ export default function TeacherGoogleWorkspacePage() {
 
         {/* TAB 7: GOOGLE CALENDAR */}
         {activeTab === "CALENDAR" && (
-          <div className="p-6 rounded-panel bg-surface border border-border shadow-card space-y-4">
+          <div className="p-6 rounded-2xl bg-surface border border-border shadow-card space-y-4">
             <h2 className="text-lg font-bold text-ink">
               Đồng bộ Lịch Kiểm tra & Nhắc hạn nộp Google Calendar
             </h2>
@@ -1034,7 +1034,7 @@ export default function TeacherGoogleWorkspacePage() {
                 <input
                   value={calTitle}
                   onChange={(e) => setCalTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-button border border-border text-xs"
+                  className="w-full px-3 py-2 rounded-xl border border-border text-xs"
                 />
               </div>
               <div>
@@ -1044,7 +1044,7 @@ export default function TeacherGoogleWorkspacePage() {
                 <input
                   value={calClass}
                   onChange={(e) => setCalClass(e.target.value)}
-                  className="w-full px-3 py-2 rounded-button border border-border text-xs"
+                  className="w-full px-3 py-2 rounded-xl border border-border text-xs"
                 />
               </div>
             </div>
@@ -1058,7 +1058,7 @@ export default function TeacherGoogleWorkspacePage() {
                 })
               }
               disabled={actionLoading !== null}
-              className="px-4 py-2 rounded-button bg-brand-teal text-white text-xs font-semibold"
+              className="px-4 py-2 rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white text-xs font-semibold"
             >
               Tạo Sự kiện Lịch Lớp {calClass}
             </button>
@@ -1067,7 +1067,7 @@ export default function TeacherGoogleWorkspacePage() {
 
         {/* TAB 8: SYNC LOGS */}
         {activeTab === "LOGS" && (
-          <div className="p-6 rounded-panel bg-surface border border-border shadow-card space-y-4">
+          <div className="p-6 rounded-2xl bg-surface border border-border shadow-card space-y-4">
             <h2 className="text-lg font-bold text-ink">
               Nhật ký Đồng bộ Liên thông (Supabase ↔ Google Sheets / Drive / Classroom)
             </h2>
@@ -1088,7 +1088,7 @@ export default function TeacherGoogleWorkspacePage() {
                       <td className="py-2 px-3 text-ink-muted">
                         {new Date(log.createdAt).toLocaleString("vi-VN")}
                       </td>
-                      <td className="py-2 px-3 font-bold text-brand-teal">{log.service}</td>
+                      <td className="py-2 px-3 font-bold text-cyan-700">{log.service}</td>
                       <td className="py-2 px-3 font-mono text-ink">{log.action}</td>
                       <td className="py-2 px-3 font-mono text-ink-muted">{log.resourceId}</td>
                       <td className="py-2 px-3">

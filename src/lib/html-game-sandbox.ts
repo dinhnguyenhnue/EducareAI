@@ -162,18 +162,18 @@ export const SAMPLE_QUIZ_10_GAME_HTML = `<!DOCTYPE html>
     * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
     body { margin: 0; padding: 16px; background: #F6F7F8; color: #202428; }
     .card { max-width: 680px; margin: 0 auto; background: #FFFFFF; border: 1px solid #E1E5E8; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-    .badge { display: inline-block; background: #E7F2F1; color: #197C78; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; }
+    .badge { display: inline-block; background: #E0F2FE; color: #2563EB; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; }
     h1 { font-size: 18px; margin: 10px 0 6px; color: #202428; }
     .progress { font-size: 12px; color: #68717A; margin-bottom: 14px; display: flex; justify-content: space-between; }
     .q-box { font-size: 15px; font-weight: 700; margin-bottom: 14px; line-height: 1.5; }
     .options { display: flex; flex-direction: column; gap: 8px; }
     .opt-btn { text-align: left; padding: 11px 14px; border-radius: 8px; border: 1px solid #E1E5E8; background: #F6F7F8; cursor: pointer; font-size: 13px; color: #202428; transition: background 0.15s; }
-    .opt-btn:hover:not(:disabled) { background: #E7F2F1; border-color: #197C78; }
+    .opt-btn:hover:not(:disabled) { background: #E0F2FE; border-color: #2563EB; }
     .opt-btn.correct { background: #E6F4EA; border-color: #1E8E3E; color: #137333; font-weight: 700; }
     .opt-btn.wrong { background: #FCE8E6; border-color: #D93025; color: #C5221F; }
-    .explain { margin-top: 14px; padding: 12px; border-radius: 8px; background: #E7F2F1; border-left: 4px solid #197C78; font-size: 13px; line-height: 1.5; display: none; }
+    .explain { margin-top: 14px; padding: 12px; border-radius: 8px; background: #E0F2FE; border-left: 4px solid #2563EB; font-size: 13px; line-height: 1.5; display: none; }
     .footer { margin-top: 16px; display: flex; justify-content: space-between; align-items: center; }
-    .next-btn { background: #197C78; color: #fff; border: none; padding: 9px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; display: none; }
+    .next-btn { background: #2563EB; color: #fff; border: none; padding: 9px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; display: none; }
     .disclaimer { font-size: 11px; color: #68717A; margin-top: 12px; border-top: 1px solid #E1E5E8; padding-top: 8px; }
   </style>
 </head>
@@ -281,17 +281,17 @@ export const SAMPLE_SIMULATION_3_TASKS_HTML = `<!DOCTYPE html>
     * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
     body { margin: 0; padding: 16px; background: #F6F7F8; color: #202428; }
     .panel { max-width: 680px; margin: 0 auto; background: #fff; border: 1px solid #E1E5E8; border-radius: 12px; padding: 20px; }
-    .badge { background: #E7F2F1; color: #197C78; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+    .badge { background: #E0F2FE; color: #2563EB; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; }
     h1 { font-size: 18px; margin: 10px 0 6px; }
     .task-tabs { display: flex; gap: 8px; margin: 12px 0; }
     .tab { padding: 8px 12px; border-radius: 8px; border: 1px solid #E1E5E8; font-size: 12px; font-weight: 600; background: #F6F7F8; }
-    .tab.active { background: #197C78; color: #fff; border-color: #197C78; }
+    .tab.active { background: #2563EB; color: #fff; border-color: #2563EB; }
     .tab.done { border-color: #1E8E3E; color: #137333; background: #E6F4EA; }
     .array-row { display: flex; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
-    .cell { width: 58px; height: 58px; border-radius: 10px; border: 2px solid #197C78; background: #E7F2F1; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; cursor: pointer; }
+    .cell { width: 58px; height: 58px; border-radius: 10px; border: 2px solid #2563EB; background: #E0F2FE; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; cursor: pointer; }
     .cell small { font-size: 10px; color: #68717A; font-weight: 400; }
     .msg { padding: 12px; border-radius: 8px; background: #F0F2F4; font-size: 13px; line-height: 1.5; }
-    .btn { background: #197C78; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; margin-top: 12px; }
+    .btn { background: #2563EB; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; margin-top: 12px; }
   </style>
 </head>
 <body>
@@ -303,7 +303,7 @@ export const SAMPLE_SIMULATION_3_TASKS_HTML = `<!DOCTYPE html>
       <div id="t2" class="tab">Nhiệm vụ 2: Tìm kiếm nhị phân</div>
       <div id="t3" class="tab">Nhiệm vụ 3: Đổi chỗ sắp xếp</div>
     </div>
-    <p id="taskGoal" style="font-size:13px;font-weight:600;color:#197C78;"></p>
+    <p id="taskGoal" style="font-size:13px;font-weight:600;color:#2563EB;"></p>
     <div id="board" class="array-row"></div>
     <div id="feedback" class="msg">Hãy thực hiện thao tác trên các ô dữ liệu theo đúng thứ tự thuật toán.</div>
     <button id="nextTaskBtn" class="btn" style="display:none;" onclick="advanceTask()">Chuyển sang nhiệm vụ tiếp theo →</button>

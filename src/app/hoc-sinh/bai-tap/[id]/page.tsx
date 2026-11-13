@@ -2,24 +2,33 @@ import React from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "@/lib/auth";
 import { AssignmentSubmissionForm } from "./AssignmentSubmissionForm";
 import {
   ArrowLeft,
   Calendar,
-  Clock,
   CheckCircle2,
-  FileText,
   Award,
   Sparkles,
-  ExternalLink,
 } from "lucide-react";
 
 interface Props {
   params: Promise<{ id: string }>;
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function StudentAssignmentDetailPage({ params }: Props) {
   const { id } = await params;
+  const session = await getServerSession();
+  const isStudentSession =
+    session?.user.role === "STUDENT" && !session.isSuperAdmin;
+
+  const submissionWhere = {
+    student: isStudentSession
+      ? { userId: session.user.id }
+      : { user: { email: "minhanh.nguyen@unigo.edu.vn" } },
+  };
 
   let assignment = await prisma.assignment.findUnique({
     where: { id },
@@ -27,11 +36,7 @@ export default async function StudentAssignmentDetailPage({ params }: Props) {
       subject: true,
       schoolClass: true,
       teacher: { include: { user: true } },
-      submissions: {
-        where: {
-          student: { user: { email: "minhanh.nguyen@unigo.edu.vn" } },
-        },
-      },
+      submissions: { where: submissionWhere },
     },
   });
 
@@ -41,11 +46,7 @@ export default async function StudentAssignmentDetailPage({ params }: Props) {
         subject: true,
         schoolClass: true,
         teacher: { include: { user: true } },
-        submissions: {
-          where: {
-            student: { user: { email: "minhanh.nguyen@unigo.edu.vn" } },
-          },
-        },
+        submissions: { where: submissionWhere },
       },
     });
   }
@@ -53,7 +54,7 @@ export default async function StudentAssignmentDetailPage({ params }: Props) {
   if (!assignment) {
     return (
       <AppShell>
-        <div className="p-8 text-center">Không tìm thấy bài tập.</div>
+        <div className="p-8 text-center text-sm text-ink-muted">Không tìm thấy bài tập.</div>
       </AppShell>
     );
   }
@@ -65,7 +66,7 @@ export default async function StudentAssignmentDetailPage({ params }: Props) {
     if (assignment.rubric) {
       rubric = JSON.parse(assignment.rubric);
     }
-  } catch (e) {
+  } catch {
     rubric = [];
   }
 
@@ -74,28 +75,28 @@ export default async function StudentAssignmentDetailPage({ params }: Props) {
     if (submission?.rubricScores) {
       rubricScores = JSON.parse(submission.rubricScores);
     }
-  } catch (e) {}
+  } catch {}
 
   return (
     <AppShell>
       <div className="space-y-6">
         {/* Navigation Breadcrumb */}
         <div className="flex items-center gap-2 text-xs text-ink-muted">
-          <Link href="/hoc-sinh/bai-tap" className="hover:text-brand-teal flex items-center gap-1">
+          <Link href="/hoc-sinh/bai-tap" className="hover:text-orange-700 font-medium flex items-center gap-1 transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Danh sách bài tập</span>
           </Link>
           <span>/</span>
-          <span className="text-ink font-medium">{assignment.title}</span>
+          <span className="text-ink font-semibold">{assignment.title}</span>
         </div>
 
         {/* 12-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Main Assignment & Submission Form (7 cols) */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="p-8 rounded-panel bg-surface border border-border shadow-card">
-              <div className="flex flex-wrap items-center gap-2 pb-4 border-b border-border">
-                <span className="text-xs font-semibold bg-brand-teal-soft text-brand-teal px-2.5 py-1 rounded">
+            <div className="p-8 rounded-2xl bg-surface border border-slate-200 shadow-card">
+              <div className="flex flex-wrap items-center gap-2 pb-4 border-b border-slate-100">
+                <span className="text-xs font-bold bg-orange-50 text-orange-700 border border-orange-200 px-2.5 py-1 rounded-full">
                   {assignment.subject.name}
                 </span>
                 <span className="text-xs text-ink-muted">
@@ -170,15 +171,15 @@ export default async function StudentAssignmentDetailPage({ params }: Props) {
 
           {/* Rubric & Self-Evaluation Guide (5 cols) */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="p-6 rounded-panel bg-surface border border-border shadow-card">
-              <div className="flex items-center justify-between pb-3 border-b border-border">
+            <div className="p-6 rounded-2xl bg-surface border border-slate-200 shadow-card">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <Award className="w-4 h-4 text-brand-teal" />
+                  <Award className="w-4 h-4 text-amber-600" />
                   <h3 className="text-sm font-bold text-ink uppercase tracking-wide">
                     Tiêu chí đánh giá (Rubric)
                   </h3>
                 </div>
-                <span className="text-xs text-brand-teal font-semibold">Tổ THCS UNIGO</span>
+                <span className="text-xs text-amber-700 font-bold">Tổ THCS UNIGO</span>
               </div>
 
               <div className="mt-4 space-y-4">
@@ -187,16 +188,16 @@ export default async function StudentAssignmentDetailPage({ params }: Props) {
                   return (
                     <div
                       key={crit.id}
-                      className="p-3.5 rounded-panel bg-canvas border border-border/80 text-xs space-y-1.5"
+                      className="p-3.5 rounded-xl bg-canvas border border-slate-200/80 text-xs space-y-1.5"
                     >
                       <div className="flex items-center justify-between font-bold text-ink">
                         <span>{crit.name}</span>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] font-semibold text-brand-teal bg-brand-teal-soft px-1.5 py-0.2 rounded">
+                          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
                             {crit.weight}%
                           </span>
                           {studentScore !== undefined && (
-                            <span className="font-mono text-status-success">
+                            <span className="font-mono text-emerald-700 font-bold">
                               {studentScore} đ
                             </span>
                           )}
@@ -209,9 +210,9 @@ export default async function StudentAssignmentDetailPage({ params }: Props) {
               </div>
 
               {/* Socratic Hint */}
-              <div className="mt-6 p-4 rounded-panel bg-brand-teal-soft/40 border border-brand-teal/20 text-xs space-y-2">
-                <div className="flex items-center gap-1.5 font-bold text-brand-teal">
-                  <Sparkles className="w-4 h-4" />
+              <div className="mt-6 p-4 rounded-xl bg-violet-50/70 border border-violet-200 text-xs space-y-2">
+                <div className="flex items-center gap-1.5 font-bold text-violet-800">
+                  <Sparkles className="w-4 h-4 text-violet-600" />
                   <span>Lời khuyên tự đánh giá</span>
                 </div>
                 <p className="text-ink leading-relaxed">

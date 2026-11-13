@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageHeader } from "@/components/ui";
 import {
   FileCheck2,
   Clock,
@@ -254,32 +255,25 @@ export default function StudentAssessmentsPage() {
     <AppShell>
     <div className="space-y-6">
       {/* Header */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
-              <FileCheck2 className="w-3.5 h-3.5" />
-              LUYỆN TẬP & KIỂM TRA TIN HỌC
-            </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700">
-              <ShieldCheck className="w-3.5 h-3.5 text-teal-700" />
-              Tính giờ & chấm điểm tại máy chủ • Tự động khôi phục khi tải lại trang
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Làm Bài Luyện Tập & Kiểm Tra Định Kỳ
-          </h1>
-          <p className="text-sm text-slate-600">
-            Phân biệt rõ chế độ <strong>Luyện tập (PRACTICE)</strong> (làm nhiều lần, xem giải thích ngay) và <strong>Kiểm tra chính thức (EXAM)</strong> (giới hạn lượt làm, tính giờ máy chủ, bảo mật đáp án).
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        tone="assessments"
+        badge="Luyện tập & Kiểm tra Tin học"
+        badgeIcon={<FileCheck2 className="w-3.5 h-3.5" />}
+        title="Làm Bài Luyện Tập & Kiểm Tra Định Kỳ"
+        description="Phân biệt rõ chế độ Luyện tập (PRACTICE) làm nhiều lần có giải thích ngay và Kiểm tra chính thức (EXAM) giới hạn lượt làm, tính giờ máy chủ, bảo mật đáp án."
+        meta={
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200">
+            <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+            Tính giờ & chấm điểm tại máy chủ • Tự động khôi phục khi tải lại trang
+          </span>
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left List of Assessments */}
         <div className="lg:col-span-4 space-y-3">
           {loading ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
               Đang tải danh sách bài tập & đề kiểm tra...
             </div>
           ) : (
@@ -311,18 +305,18 @@ export default function StudentAssessmentsPage() {
                       setActiveAttempt(asm.attempts?.[0] || null);
                     }
                   }}
-                  className={`w-full text-left rounded-xl border p-4 transition-all space-y-2 ${
+                  className={`w-full text-left rounded-2xl border p-4 transition-all space-y-2 ${
                     isSelected
-                      ? "border-teal-600 bg-teal-50/40 shadow-sm"
-                      : "border-slate-200 bg-white hover:border-slate-300"
+                      ? "border-amber-500 bg-amber-50/50 shadow-sm ring-1 ring-amber-400/30"
+                      : "border-slate-200 bg-white hover:border-amber-300"
                   }`}
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span
-                      className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                      className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
                         asm.mode === "EXAM"
                           ? "bg-rose-100 text-rose-800"
-                          : "bg-teal-100 text-teal-800"
+                          : "bg-sky-100 text-sky-800"
                       }`}
                     >
                       {asm.mode === "EXAM"
@@ -330,7 +324,7 @@ export default function StudentAssessmentsPage() {
                         : "BÀI LUYỆN TẬP (PRACTICE)"}
                     </span>
                     {asm.isDemoData && (
-                      <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-800">
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800">
                         DỮ LIỆU MẪU
                       </span>
                     )}
@@ -367,10 +361,10 @@ export default function StudentAssessmentsPage() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`px-2.5 py-0.5 rounded text-xs font-bold ${
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
                         selectedAssessment.mode === "EXAM"
                           ? "bg-rose-100 text-rose-800"
-                          : "bg-teal-100 text-teal-800"
+                          : "bg-sky-100 text-sky-800"
                       }`}
                     >
                       {selectedAssessment.mode === "EXAM"
@@ -389,8 +383,8 @@ export default function StudentAssessmentsPage() {
                 <div className="flex items-center gap-3">
                   {activeAttempt?.status === "IN_PROGRESS" &&
                     remainingSeconds !== null && (
-                      <div className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold">
-                        <Clock className="w-4 h-4 text-teal-400" />
+                      <div className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-ocean-950 text-white text-xs font-bold">
+                        <Clock className="w-4 h-4 text-sky-400" />
                         Thời gian máy chủ còn:{" "}
                         {Math.floor(remainingSeconds / 60)}:
                         {String(remainingSeconds % 60).padStart(2, "0")}
@@ -402,7 +396,7 @@ export default function StudentAssessmentsPage() {
                     <button
                       type="button"
                       onClick={() => handleStartOrResume(selectedAssessment)}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-teal-700 hover:bg-teal-800 text-white"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-ocean-600 hover:bg-ocean-700 active:scale-[0.98] transition-all text-white shadow-sm"
                     >
                       <Play className="w-4 h-4" />
                       {selectedAssessment.attempts?.length
@@ -417,7 +411,7 @@ export default function StudentAssessmentsPage() {
                 <div
                   className={`rounded-xl p-3.5 text-xs font-medium border ${
                     statusBanner.type === "success"
-                      ? "bg-teal-50 border-teal-200 text-teal-900"
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-900"
                       : statusBanner.type === "error"
                       ? "bg-rose-50 border-rose-200 text-rose-900"
                       : "bg-sky-50 border-sky-200 text-sky-900"
@@ -429,7 +423,7 @@ export default function StudentAssessmentsPage() {
 
               {autoSaveMsg && activeAttempt?.status === "IN_PROGRESS" && (
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <RefreshCw className="w-3.5 h-3.5 text-teal-600" />
+                  <RefreshCw className="w-3.5 h-3.5 text-ocean-600" />
                   <span>{autoSaveMsg}</span>
                 </div>
               )}
@@ -473,9 +467,9 @@ export default function StudentAssessmentsPage() {
                                 onClick={() =>
                                   handleSelectOption(item.id, opt.id)
                                 }
-                                className={`text-left px-3.5 py-2.5 rounded-lg border text-xs font-medium transition-colors flex items-center justify-between ${
+                                className={`text-left px-3.5 py-2.5 rounded-xl border text-xs font-medium transition-all flex items-center justify-between ${
                                   isSelected
-                                    ? "border-teal-600 bg-teal-50 text-teal-950 font-semibold"
+                                    ? "border-ocean-600 bg-ocean-50 text-ocean-950 font-semibold"
                                     : "border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
                                 }`}
                               >
@@ -483,7 +477,7 @@ export default function StudentAssessmentsPage() {
                                   <strong>{opt.id}.</strong> {opt.text.replace(/^[A-D]\.\s*/, "")}
                                 </span>
                                 {isSelected && (
-                                  <span className="text-[11px] px-2 py-0.5 rounded bg-teal-700 text-white">
+                                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-ocean-600 text-white">
                                     Đã chọn
                                   </span>
                                 )}
@@ -495,16 +489,16 @@ export default function StudentAssessmentsPage() {
                         {/* Server-graded Feedback (Shown after submission) */}
                         {isSubmitted && submittedAns && (
                           <div
-                            className={`rounded-lg p-3 text-xs border ${
+                            className={`rounded-xl p-3.5 text-xs border ${
                               submittedAns.isCorrect
-                                ? "bg-teal-50/80 border-teal-200 text-teal-900"
+                                ? "bg-emerald-50/90 border-emerald-200 text-emerald-900"
                                 : "bg-rose-50/80 border-rose-200 text-rose-900"
                             }`}
                           >
                             <div className="flex items-center gap-1.5 font-bold">
                               {submittedAns.isCorrect ? (
                                 <>
-                                  <CheckCircle2 className="w-4 h-4 text-teal-700" />
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                                   Chính xác (+{submittedAns.earnedPoints} điểm)
                                 </>
                               ) : (
@@ -549,7 +543,7 @@ export default function StudentAssessmentsPage() {
                         type="button"
                         disabled={submitting}
                         onClick={handleSubmitAttempt}
-                        className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold bg-teal-700 hover:bg-teal-800 text-white disabled:opacity-50"
+                        className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold bg-ocean-600 hover:bg-ocean-700 active:scale-[0.98] transition-all text-white disabled:opacity-50 shadow-sm"
                       >
                         <Send className="w-4 h-4" />
                         {submitting

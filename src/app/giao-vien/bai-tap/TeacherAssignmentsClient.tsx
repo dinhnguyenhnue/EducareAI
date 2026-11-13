@@ -107,7 +107,7 @@ export function TeacherAssignmentsClient({
             <h1 className="text-2xl font-bold text-ink">
               Quản lý Bài tập & Nhiệm vụ thực hành
             </h1>
-            <span className="text-xs font-semibold bg-brand-teal-soft text-brand-teal px-2 py-0.5 rounded">
+            <span className="text-xs font-semibold bg-orange-100 text-orange-700 px-2.5 py-0.5 rounded-full">
               Assessment & Google Classroom Sync
             </span>
           </div>
@@ -120,7 +120,7 @@ export function TeacherAssignmentsClient({
           type="button"
           data-testid="create-assignment-btn"
           onClick={() => setShowModal(true)}
-          className="px-4 py-2.5 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors shadow-sm flex items-center gap-1.5 shrink-0"
+          className="px-4 py-2.5 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 transition-colors shadow-sm flex items-center gap-1.5 shrink-0"
         >
           <PlusCircle className="w-4 h-4" />
           <span>Tạo bài tập mới</span>
@@ -154,11 +154,11 @@ export function TeacherAssignmentsClient({
           return (
             <div
               key={a.id}
-              className="p-6 rounded-panel bg-surface border border-border shadow-card flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-brand-teal/40 transition-colors"
+              className="p-6 rounded-2xl bg-surface border border-border shadow-card flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-orange-300 transition-all"
             >
               <div className="space-y-2 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold bg-brand-teal-soft text-brand-teal px-2 py-0.5 rounded">
+                  <span className="text-xs font-semibold bg-orange-100 text-orange-700 px-2.5 py-0.5 rounded-full">
                     {a.subject?.name}
                   </span>
                   <span className="text-xs font-bold text-ink">
@@ -200,10 +200,10 @@ export function TeacherAssignmentsClient({
                   type="button"
                   onClick={() => handleSyncClassroom(a.id)}
                   disabled={syncingId === a.id}
-                  className="px-3 py-2 rounded-button bg-canvas hover:bg-surface-muted border border-border text-ink text-xs font-semibold transition-colors flex items-center gap-1.5"
+                  className="px-3 py-2 rounded-xl bg-canvas hover:bg-cyan-50 border border-border text-ink text-xs font-semibold transition-colors flex items-center gap-1.5"
                 >
                   <RefreshCw
-                    className={`w-3.5 h-3.5 text-brand-teal ${
+                    className={`w-3.5 h-3.5 text-cyan-600 ${
                       syncingId === a.id ? "animate-spin" : ""
                     }`}
                   />
@@ -212,7 +212,7 @@ export function TeacherAssignmentsClient({
 
                 <Link
                   href="/giao-vien/cham-bai"
-                  className="px-4 py-2 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors shadow-sm"
+                  className="px-4 py-2 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 transition-colors shadow-sm"
                 >
                   Vào chấm điểm →
                 </Link>
@@ -306,8 +306,8 @@ export function TeacherAssignmentsClient({
             </div>
 
             {/* Contextual Google Workspace Options (Section X) */}
-            <div className="p-3.5 rounded-panel bg-brand-teal-soft/40 border border-brand-teal/30 space-y-2">
-              <div className="font-bold text-brand-teal flex items-center gap-1.5">
+            <div className="p-3.5 rounded-2xl bg-cyan-50/70 border border-cyan-200 space-y-2">
+              <div className="font-bold text-cyan-700 flex items-center gap-1.5">
                 <Network className="w-3.5 h-3.5" />
                 <span>Tích hợp Google Workspace theo ngữ cảnh:</span>
               </div>
@@ -316,7 +316,7 @@ export function TeacherAssignmentsClient({
                   type="checkbox"
                   checked={syncClassroom}
                   onChange={(e) => setSyncClassroom(e.target.checked)}
-                  className="accent-brand-teal"
+                  className="accent-ocean-600"
                 />
                 <span>
                   Đồng bộ sang <strong>Google Classroom</strong> (Chế độ{" "}
@@ -328,7 +328,7 @@ export function TeacherAssignmentsClient({
                   type="checkbox"
                   checked={syncCalendar}
                   onChange={(e) => setSyncCalendar(e.target.checked)}
-                  className="accent-brand-teal"
+                  className="accent-ocean-600"
                 />
                 <span>
                   Tạo sự kiện hạn nộp và nhắc việc trên{" "}
@@ -341,14 +341,14 @@ export function TeacherAssignmentsClient({
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 rounded-button bg-canvas text-ink font-semibold"
+                className="px-4 py-2 rounded-xl bg-canvas text-ink font-semibold"
               >
                 Hủy
               </button>
               <button
                 type="submit"
                 disabled={isCreating}
-                className="px-5 py-2 rounded-button bg-brand-teal text-white font-semibold"
+                className="px-5 py-2 rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white font-semibold"
               >
                 {isCreating ? "Đang tạo & đồng bộ..." : "Giao bài tập ngay"}
               </button>

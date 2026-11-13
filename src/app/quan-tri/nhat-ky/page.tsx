@@ -1,7 +1,8 @@
 import React from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/prisma";
-import { Database, ShieldCheck, Network, Lock } from "lucide-react";
+import { ShieldCheck, Network, Lock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -27,24 +28,19 @@ export default async function AdminAuditLogsPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-ink">
-              Nhật ký Bảo mật, Phiên Đăng nhập & Đồng bộ Google API
-            </h1>
-            <span className="text-xs font-semibold bg-brand-teal-soft text-brand-teal px-2 py-0.5 rounded">
-              Security & Audit Trail
-            </span>
-          </div>
-          <p className="text-xs text-ink-muted mt-1">
-            Theo dõi thời gian thực mọi sự kiện xác thực OIDC, chuyển đổi góc nhìn Super Admin, kiểm soát RBAC và đồng bộ Google Workspace.
-          </p>
-        </div>
+        <PageHeader
+          variant="card"
+          tone="overview"
+          badge="Security & Audit Trail"
+          badgeIcon={<ShieldCheck className="w-3.5 h-3.5" />}
+          title="Nhật ký Bảo mật, Phiên Đăng nhập & Đồng bộ Google API"
+          description="Theo dõi thời gian thực mọi sự kiện xác thực OIDC, chuyển đổi góc nhìn Super Admin, kiểm soát RBAC và đồng bộ Google Workspace."
+        />
 
         {/* Active Sessions */}
-        <div className="p-6 rounded-panel bg-surface border border-border shadow-card space-y-4">
+        <div className="p-6 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b border-border">
-            <Lock className="w-4 h-4 text-brand-teal" />
+            <Lock className="w-4 h-4 text-ocean-600" />
             <h2 className="text-sm font-bold text-ink uppercase tracking-wide">
               Phiên Đăng nhập Đang Hoạt động ({activeSessions.length})
             </h2>
@@ -67,7 +63,7 @@ export default async function AdminAuditLogsPage() {
                     <td className="py-2.5 px-3 font-semibold text-ink">
                       {s.user.fullName} ({s.user.email})
                     </td>
-                    <td className="py-2.5 px-3 font-mono text-brand-teal font-bold">
+                    <td className="py-2.5 px-3 font-mono text-ocean-600 font-bold">
                       {s.user.role}
                     </td>
                     <td className="py-2.5 px-3 font-mono text-ink">
@@ -87,9 +83,9 @@ export default async function AdminAuditLogsPage() {
         </div>
 
         {/* Security Audit Logs */}
-        <div className="p-6 rounded-panel bg-surface border border-border shadow-card space-y-4">
+        <div className="p-6 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b border-border">
-            <ShieldCheck className="w-4 h-4 text-brand-teal" />
+            <ShieldCheck className="w-4 h-4 text-ocean-600" />
             <h2 className="text-sm font-bold text-ink uppercase tracking-wide">
               Nhật ký Kiểm toán Bảo mật (AuditLog - {auditLogs.length} sự kiện gần nhất)
             </h2>
@@ -149,9 +145,9 @@ export default async function AdminAuditLogsPage() {
         </div>
 
         {/* Google Workspace Sync Logs */}
-        <div className="p-6 rounded-panel bg-surface border border-border shadow-card space-y-4">
+        <div className="p-6 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b border-border">
-            <Network className="w-4 h-4 text-brand-teal" />
+            <Network className="w-4 h-4 text-cyan-600" />
             <h2 className="text-sm font-bold text-ink uppercase tracking-wide">
               Nhật ký Đồng bộ Google Workspace API (SyncLog)
             </h2>
@@ -174,7 +170,7 @@ export default async function AdminAuditLogsPage() {
                     <td className="py-2.5 px-3 font-mono text-ink-muted">
                       {new Date(s.createdAt).toLocaleString("vi-VN")}
                     </td>
-                    <td className="py-2.5 px-3 font-mono font-bold text-brand-teal">
+                    <td className="py-2.5 px-3 font-mono font-bold text-cyan-700">
                       {s.service}
                     </td>
                     <td className="py-2.5 px-3 font-mono text-ink">

@@ -5,6 +5,13 @@ import { prisma } from "@/lib/prisma";
 import { getGoogleOAuthConfig } from "@/lib/google-workspace";
 import { SuperAdminViewCards } from "./SuperAdminViewCards";
 import {
+  PageHeader,
+  StatCard,
+  ChartCard,
+  EmptyState,
+  OceanButtonLink,
+} from "@/components/ui";
+import {
   ShieldCheck,
   Users,
   Layers,
@@ -61,208 +68,245 @@ export default async function SuperAdminOverviewPage() {
   const grade7Classes = classes.filter((c) => c.gradeLevel === 7).length;
   const grade8Classes = classes.filter((c) => c.gradeLevel === 8).length;
 
+  const classDistribution = classes.slice(0, 8).map((c) => ({
+    label: c.name,
+    value: c._count.students,
+    hint: c.academicYear?.name || `Khối ${c.gradeLevel}`,
+    tone: (c.gradeLevel === 6
+      ? "materials"
+      : c.gradeLevel === 7
+      ? "overview"
+      : "progress") as "materials" | "overview" | "progress",
+  }));
+
   return (
     <AppShell>
       <div className="space-y-6">
-        {/* Top Banner */}
-        <div className="p-6 rounded-panel bg-surface border border-border shadow-card flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-1">
+        <PageHeader
+          badge="SUPER_ADMIN CONSOLE"
+          badgeIcon={<ShieldCheck className="w-3.5 h-3.5" />}
+          tone="security"
+          title="Trung tâm Điều hành Tối cao EDUCARE AI – UNIGO"
+          description="Toàn bộ chỉ số được truy vấn trực tiếp từ PostgreSQL thực tế (Năm học 2026–2027). Không sử dụng số liệu cố định."
+          meta={
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-brand-teal-soft text-brand-teal px-2.5 py-0.5 rounded">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>SUPER_ADMIN CONSOLE</span>
-              </span>
               <span className="text-xs font-mono text-ink-muted">
                 dinhnguyenhnue@gmail.com
               </span>
               <span
-                className={`text-[11px] font-semibold px-2 py-0.5 rounded ${
+                className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
                   superAdminUser?.accountStatus === "ACTIVE" &&
                   superAdminUser?.googleSub
-                    ? "bg-status-success-soft text-status-success"
-                    : "bg-status-warning-soft text-status-warning"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-amber-50 text-amber-800 border-amber-200"
                 }`}
               >
                 {superAdminUser?.googleSub
                   ? "Đã xác minh Google OIDC sub"
-                  : "PENDING_ACTIVATION (Chờ liên kết Google OIDC lần đầu)"}
+                  : "PENDING_ACTIVATION (Chờ liên kết Google OIDC)"}
               </span>
             </div>
-            <h1 className="text-2xl font-bold text-ink">
-              Trung tâm Điều hành Tối cao EDUCARE AI – UNIGO
-            </h1>
-            <p className="text-xs text-ink-muted">
-              Toàn bộ chỉ số dưới đây được truy vấn trực tiếp từ CSDL thực tế (Năm học 2026–2027). Không sử dụng số liệu cố định (hardcode).
-            </p>
-          </div>
+          }
+          actions={
+            <>
+              <OceanButtonLink
+                href="/quan-tri/nguoi-dung"
+                variant="gradient"
+                icon={<FileSpreadsheet className="w-4 h-4" />}
+              >
+                Nhập Excel Học sinh
+              </OceanButtonLink>
+              <OceanButtonLink
+                href="/admin/settings/integrations"
+                variant="secondary"
+                icon={<Network className="w-4 h-4 text-cyan-600" />}
+              >
+                Tích hợp Google
+              </OceanButtonLink>
+              <OceanButtonLink
+                href="/quan-tri/nhat-ky"
+                variant="secondary"
+                icon={<Database className="w-4 h-4 text-amber-600" />}
+              >
+                Audit Logs
+              </OceanButtonLink>
+            </>
+          }
+        />
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Link
-              href="/quan-tri/nguoi-dung"
-              className="px-4 py-2.5 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors shadow-sm flex items-center gap-2"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>Nhập Excel Học sinh 2026–2027</span>
-            </Link>
-            <Link
-              href="/quan-tri/nhat-ky"
-              className="px-4 py-2.5 rounded-button bg-canvas border border-border text-ink text-xs font-semibold hover:bg-surface-muted transition-colors flex items-center gap-2"
-            >
-              <Database className="w-4 h-4 text-brand-teal" />
-              <span>Audit Logs</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Real Database KPIs (Zero Hardcoded Numbers) */}
+        {/* Real Database KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted">
-              <span>Tổng tài khoản trong CSDL</span>
-              <Users className="w-4 h-4 text-brand-teal" />
+          <StatCard
+            label="Tổng tài khoản trong CSDL"
+            value={`${totalUsers} tài khoản`}
+            testId="kpi-total-users"
+            hint={`${teachersCount} Giáo viên • ${studentsCount} Học sinh • ${parentsCount} Phụ huynh`}
+            icon={<Users className="w-4 h-4" />}
+            tone="overview"
+            href="/quan-tri/nguoi-dung"
+          />
+          <StatCard
+            label="Lớp học Năm 2026–2027"
+            value={`${classes.length} lớp`}
+            testId="kpi-total-classes"
+            hint={`Khối 6 (${grade6Classes}) • Khối 7 (${grade7Classes}) • Khối 8 (${grade8Classes})`}
+            icon={<Layers className="w-4 h-4" />}
+            tone="progress"
+            href="/quan-tri/lop-hoc"
+          />
+          <StatCard
+            label="Học phần & Bài nộp thực"
+            value={`${assignmentsCount} / ${submissionsCount}`}
+            hint={`${assignmentsCount} bài tập & ${submissionsCount} bài nộp thuộc ${subjectsCount} môn học`}
+            icon={<Sparkles className="w-4 h-4" />}
+            tone="assignments"
+          />
+          <div className="p-5 rounded-panel bg-surface border border-border shadow-card hover:shadow-card-hover hover:border-cyan-300 transition-all">
+            <div className="flex items-start justify-between gap-3">
+              <span className="text-xs font-medium text-ink-muted">
+                Google OAuth & Workspace
+              </span>
+              <span className="w-9 h-9 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center shrink-0">
+                <Network className="w-4 h-4" />
+              </span>
             </div>
-            <div
-              data-testid="kpi-total-users"
-              className="text-2xl font-bold text-ink mt-2 font-mono"
-            >
-              {totalUsers} tài khoản
-            </div>
-            <p className="text-[11px] text-ink-muted mt-1">
-              {teachersCount} Giáo viên • {studentsCount} Học sinh •{" "}
-              {parentsCount} Phụ huynh
-            </p>
-          </div>
-
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted">
-              <span>Lớp học Năm 2026–2027</span>
-              <Layers className="w-4 h-4 text-brand-teal" />
-            </div>
-            <div
-              data-testid="kpi-total-classes"
-              className="text-2xl font-bold text-ink mt-2 font-mono"
-            >
-              {classes.length} lớp
-            </div>
-            <p className="text-[11px] text-ink-muted mt-1">
-              Khối 6 ({grade6Classes}) • Khối 7 ({grade7Classes}) • Khối 8 (
-              {grade8Classes})
-            </p>
-          </div>
-
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted">
-              <span>Học phần & Bài nộp thực</span>
-              <Sparkles className="w-4 h-4 text-brand-teal" />
-            </div>
-            <div className="text-2xl font-bold text-ink mt-2 font-mono">
-              {assignmentsCount} bài tập / {submissionsCount} bài nộp
-            </div>
-            <p className="text-[11px] text-ink-muted mt-1">
-              Thuộc {subjectsCount} môn học đang triển khai
-            </p>
-          </div>
-
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted">
-              <span>Google OAuth & Workspace</span>
-              <Network className="w-4 h-4 text-brand-teal" />
-            </div>
-            <div className="mt-2">
+            <div className="mt-2.5">
               {oauthConfig.isConfigured ? (
-                <span className="text-lg font-bold text-status-success flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4" />
+                <span className="text-base font-extrabold text-emerald-700 flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
                   OAuth Configured
                 </span>
               ) : (
-                <span className="text-sm font-bold text-status-warning flex items-center gap-1.5">
-                  <AlertCircle className="w-4 h-4" />
-                  Chờ GOOGLE_CLIENT_ID
+                <span className="text-sm font-extrabold text-amber-700 flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  Chưa cấu hình OAuth
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-ink-muted mt-1">
+            <p className="text-[11px] text-ink-muted mt-1.5">
               Tách biệt Sign-In & Incremental Scopes
             </p>
           </div>
         </div>
 
-        {/* Section VI: Super Admin Multi-View Switcher Interactive Cards */}
+        {/* Interactive Charts & Role Distribution */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <ChartCard
+            className="lg:col-span-7"
+            title="Sĩ số học sinh theo lớp học (CSDL thực)"
+            subtitle="Số lượng học sinh đang theo học từng lớp trong năm học"
+            data={classDistribution}
+            unit=" HS"
+            variant="vertical"
+            tone="overview"
+            action={
+              <Link
+                href="/quan-tri/lop-hoc"
+                className="text-xs font-semibold text-ocean-600 hover:underline"
+              >
+                Quản lý lớp →
+              </Link>
+            }
+          />
+          <ChartCard
+            className="lg:col-span-5"
+            title="Cơ cấu tài khoản theo vai trò"
+            subtitle="Thống kê người dùng thực tế trong hệ sinh thái UNIGO"
+            data={[
+              { label: "Học sinh", value: studentsCount, tone: "progress" },
+              { label: "Phụ huynh", value: parentsCount, tone: "aiTutor" },
+              { label: "Giáo viên", value: teachersCount, tone: "overview" },
+            ]}
+            unit=" TK"
+            variant="horizontal"
+            tone="progress"
+          />
+        </div>
+
+        {/* Multi-View Switcher */}
         <SuperAdminViewCards />
 
-        {/* 12-Column Grid: RBAC Role Matrix & Recent Security Audit Logs */}
+        {/* RBAC Role Matrix & Audit Logs */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left: 6 RBAC Roles in Database (6 cols) */}
-          <div className="lg:col-span-6 p-6 rounded-panel bg-surface border border-border shadow-card space-y-4">
+          <section className="lg:col-span-6 p-6 rounded-panel bg-surface border border-border shadow-card space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-brand-teal" />
+                <span className="w-7 h-7 rounded-lg bg-ocean-light text-ocean-600 flex items-center justify-center">
+                  <Lock className="w-4 h-4" />
+                </span>
                 <h2 className="text-sm font-bold text-ink uppercase tracking-wide">
-                  Ma trận 6 Vai trò RBAC trong CSDL (Section IV)
+                  Ma trận Vai trò RBAC trong CSDL
                 </h2>
               </div>
               <Link
                 href="/quan-tri/nguoi-dung"
-                className="text-xs font-semibold text-brand-teal hover:underline"
+                className="text-xs font-semibold text-ocean-600 hover:underline"
               >
                 Quản lý người dùng →
               </Link>
             </div>
 
-            <div className="divide-y divide-border/60 text-xs">
-              {roles.map((r) => (
-                <div
-                  key={r.id}
-                  className="py-3 first:pt-0 last:pb-0 flex items-start justify-between gap-4"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-brand-teal bg-brand-teal-soft px-2 py-0.5 rounded text-[11px]">
-                        {r.code}
-                      </span>
-                      <span className="font-semibold text-ink">{r.name}</span>
+            {roles.length === 0 ? (
+              <EmptyState title="Chưa có định nghĩa vai trò RBAC" tone="security" />
+            ) : (
+              <div className="divide-y divide-border/70 text-xs">
+                {roles.map((r) => (
+                  <div
+                    key={r.id}
+                    className="py-3 first:pt-0 last:pb-0 flex items-start justify-between gap-4"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-ocean-700 bg-ocean-light px-2 py-0.5 rounded text-[11px]">
+                          {r.code}
+                        </span>
+                        <span className="font-bold text-ink">{r.name}</span>
+                      </div>
+                      <p className="text-[11px] text-ink-muted mt-1 leading-relaxed">
+                        {r.description}
+                      </p>
                     </div>
-                    <p className="text-[11px] text-ink-muted mt-1">
-                      {r.description}
-                    </p>
+                    <div className="text-right shrink-0 font-mono text-[11px]">
+                      <div className="font-bold text-ink">
+                        {r._count.rolePermissions} quyền
+                      </div>
+                      <div className="text-ink-muted">
+                        {r._count.userRoles} tài khoản
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right shrink-0 font-mono text-[11px]">
-                    <div className="font-bold text-ink">
-                      {r._count.rolePermissions} quyền
-                    </div>
-                    <div className="text-ink-muted">
-                      {r._count.userRoles} tài khoản
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+                ))}
+              </div>
+            )}
+          </section>
 
-          {/* Right: Recent Security & Audit Logs (6 cols) */}
-          <div className="lg:col-span-6 p-6 rounded-panel bg-surface border border-border shadow-card space-y-4">
+          <section className="lg:col-span-6 p-6 rounded-panel bg-surface border border-border shadow-card space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <Database className="w-4 h-4 text-brand-teal" />
+                <span className="w-7 h-7 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+                  <Database className="w-4 h-4" />
+                </span>
                 <h2 className="text-sm font-bold text-ink uppercase tracking-wide">
-                  Nhật ký Bảo mật & Điều hành Gần nhất (AuditLog)
+                  Nhật ký Bảo mật & Điều hành (AuditLog)
                 </h2>
               </div>
               <Link
                 href="/quan-tri/nhat-ky"
-                className="text-xs font-semibold text-brand-teal hover:underline"
+                className="text-xs font-semibold text-ocean-600 hover:underline"
               >
                 Xem toàn bộ →
               </Link>
             </div>
 
-            <div className="divide-y divide-border/60 text-xs">
-              {recentAudits.length === 0 ? (
-                <p className="py-6 text-center text-ink-muted">
-                  Chưa có bản ghi nhật ký nào.
-                </p>
-              ) : (
-                recentAudits.map((log) => (
+            {recentAudits.length === 0 ? (
+              <EmptyState
+                title="Chưa có bản ghi nhật ký nào"
+                description="Các thao tác đăng nhập, chuyển góc nhìn và đồng bộ sẽ xuất hiện tại đây."
+                tone="assessments"
+              />
+            ) : (
+              <div className="divide-y divide-border/70 text-xs">
+                {recentAudits.map((log) => (
                   <div
                     key={log.id}
                     className="py-2.5 first:pt-0 last:pb-0 flex items-center justify-between gap-3"
@@ -273,31 +317,29 @@ export default async function SuperAdminOverviewPage() {
                           {log.action}
                         </span>
                         <span
-                          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                             log.status === "SUCCESS"
-                              ? "bg-status-success-soft text-status-success"
-                              : "bg-status-danger-soft text-status-danger"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-red-50 text-red-700 border border-red-200"
                           }`}
                         >
                           {log.status}
                         </span>
                       </div>
                       <p className="text-[11px] text-ink-muted truncate mt-0.5">
-                        Thực hiện bởi: {log.actorEmail} ({log.actorRole}) • Tài nguyên:{" "}
-                        {log.resource}
+                        {log.actorEmail} ({log.actorRole}) • {log.resource}
                       </p>
                     </div>
                     <span className="text-[11px] font-mono text-ink-muted shrink-0">
                       {new Date(log.createdAt).toLocaleTimeString("vi-VN")}
                     </span>
                   </div>
-                ))
-              )}
-            </div>
-          </div>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       </div>
     </AppShell>
   );
 }
-

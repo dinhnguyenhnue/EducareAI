@@ -4,12 +4,23 @@ import { AppShell } from "@/components/layout/AppShell";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth";
 import {
+  PageHeader,
+  StatCard,
+  FeatureCard,
+  AIWidget,
+  EmptyState,
+  OceanButtonLink,
+} from "@/components/ui";
+import {
   CheckSquare,
   Users,
-  Sparkles,
   ArrowRight,
   AlertCircle,
   Network,
+  FileEdit,
+  BookOpen,
+  LineChart,
+  Briefcase,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -42,9 +53,15 @@ export default async function TeacherDashboardPage() {
     prisma.submission.findMany({
       where: { status: "SUBMITTED" },
       include: {
-        student: { include: { user: { select: { fullName: true } }, schoolClass: { select: { name: true } } } },
+        student: {
+          include: {
+            user: { select: { fullName: true } },
+            schoolClass: { select: { name: true } },
+          },
+        },
         assignment: { select: { title: true } },
       },
+      orderBy: { submittedAt: "desc" },
     }),
   ]);
 
@@ -52,148 +69,115 @@ export default async function TeacherDashboardPage() {
   const classStudentCount = homeroomClass?.students.length || 0;
   const studentsWithoutSubmissions =
     homeroomClass?.students.filter((s) => s._count.submissions === 0).length || 0;
+  const isGoogleConnected = teacher?.googleConnection?.status === "CONNECTED";
 
   return (
     <AppShell>
       <div className="space-y-6">
-        {/* Welcome Header */}
-        <div className="p-6 rounded-panel bg-surface border border-border shadow-card flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-brand-teal">
-              <span className="w-2 h-2 rounded-full bg-brand-teal"></span>
-              <span>Bàn làm việc Sư phạm • Tổ Tin học & Công nghệ THCS</span>
-            </div>
-            <h1 className="text-2xl font-bold text-ink mt-1">
-              Kính chào {teacher?.fullName ?? "Thầy Trần Minh Tuấn"}!
-            </h1>
-            <p className="text-xs text-ink-muted mt-1">
-              Hôm nay thầy có{" "}
-              <strong className="text-ink">
-                {pendingSubmissions.length} bài nộp cần chấm
-              </strong>{" "}
-              và lớp {homeroomClass?.name || "7A1"} đang có{" "}
-              <strong className="text-ink">
-                {teacher?.teacherProfile?._count.assignments || 0} nhiệm vụ
-              </strong>{" "}
-              trong CSDL.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
+        <PageHeader
+          badge="Bàn làm việc Sư phạm • Tổ Tin học & Công nghệ THCS"
+          badgeIcon={<Briefcase className="w-3.5 h-3.5" />}
+          tone="overview"
+          title={`Kính chào ${teacher?.fullName ?? "Thầy/Cô"}!`}
+          description={`Hôm nay có ${pendingSubmissions.length} bài nộp đang chờ chấm và lớp ${homeroomClass?.name || "7A1"} hiện có ${teacher?.teacherProfile?._count.assignments || 0} nhiệm vụ trong CSDL.`}
+          actions={
+            <OceanButtonLink
               href="/giao-vien/cham-bai"
-              className="px-4 py-2.5 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors shadow-sm flex items-center gap-2"
+              variant="gradient"
+              icon={<CheckSquare className="w-4 h-4" />}
             >
-              <span>Vào hàng đợi chấm bài ({pendingSubmissions.length})</span>
+              <span>Hàng đợi chấm bài ({pendingSubmissions.length})</span>
               <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
+            </OceanButtonLink>
+          }
+        />
 
-        {/* Real DB Priority KPI Work Queue */}
+        {/* Semantic Priority KPI Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted">
-              <span>Hàng đợi bài cần chấm</span>
-              <CheckSquare className="w-4 h-4 text-brand-teal" />
-            </div>
-            <div className="text-2xl font-bold text-ink mt-2 font-mono">
-              {pendingSubmissions.length} bài
-            </div>
-            <p className="text-[11px] text-brand-teal font-medium mt-1">
-              Ưu tiên chấm theo Rubric 4 tiêu chí
-            </p>
-          </div>
-
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted">
-              <span>Lớp phụ trách / Chủ nhiệm</span>
-              <Users className="w-4 h-4 text-brand-teal" />
-            </div>
-            <div className="text-2xl font-bold text-ink mt-2 font-mono">
-              Lớp {homeroomClass?.name || "7A1"}
-            </div>
-            <p className="text-[11px] text-ink-muted mt-1">
-              Sĩ số thực tế trong CSDL: {classStudentCount} học sinh
-            </p>
-          </div>
-
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted">
-              <span>Học sinh chưa có bài nộp</span>
-              <AlertCircle className="w-4 h-4 text-status-warning" />
-            </div>
-            <div className="text-2xl font-bold text-ink mt-2 font-mono">
-              {studentsWithoutSubmissions} học sinh
-            </div>
-            <p className="text-[11px] text-status-warning mt-1">
-              Theo dõi thực tế từ bảng Submission
-            </p>
-          </div>
-
-          <div className="p-5 rounded-panel bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted">
-              <span>Google Workspace</span>
-              <Network className="w-4 h-4 text-brand-teal" />
-            </div>
-            <div className="text-2xl font-bold text-status-success mt-2">
-              {teacher?.googleConnection?.status === "CONNECTED"
-                ? "Đã kết nối"
-                : "Chưa kết nối"}
-            </div>
-            <p className="text-[11px] text-ink-muted mt-1">
-              Drive • Classroom • Sheets
-            </p>
-          </div>
+          <StatCard
+            label="Hàng đợi bài cần chấm"
+            value={`${pendingSubmissions.length} bài`}
+            hint="Ưu tiên chấm theo Rubric 4 tiêu chí"
+            icon={<CheckSquare className="w-4 h-4" />}
+            tone="assignments"
+            href="/giao-vien/cham-bai"
+          />
+          <StatCard
+            label="Lớp phụ trách / Chủ nhiệm"
+            value={`Lớp ${homeroomClass?.name || "Chưa gán"}`}
+            hint={`Sĩ số thực tế trong CSDL: ${classStudentCount} học sinh`}
+            icon={<Users className="w-4 h-4" />}
+            tone="overview"
+            href="/giao-vien/lop-hoc"
+          />
+          <StatCard
+            label="Học sinh chưa có bài nộp"
+            value={`${studentsWithoutSubmissions} học sinh`}
+            hint="Theo dõi thực tế từ bảng Submission"
+            icon={<AlertCircle className="w-4 h-4" />}
+            tone="assessments"
+          />
+          <StatCard
+            label="Google Workspace"
+            value={isGoogleConnected ? "Đã kết nối" : "Chưa kết nối"}
+            hint="Drive • Classroom • Sheets"
+            icon={<Network className="w-4 h-4" />}
+            tone="workspace"
+            href="/giao-vien/google-workspace"
+            valueClassName={
+              isGoogleConnected ? "text-emerald-700 text-lg font-sans" : "text-amber-700 text-lg font-sans"
+            }
+          />
         </div>
 
-        {/* 12-Column Main Workplace */}
+        {/* 12-Column Productivity Workplace */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Urgent Submissions Waiting for Review (8 cols) */}
           <div className="lg:col-span-8 space-y-6">
-            <div className="p-6 rounded-panel bg-surface border border-border shadow-card">
+            {/* Grading Queue */}
+            <section className="p-6 rounded-panel bg-surface border border-border shadow-card">
               <div className="flex items-center justify-between pb-4 border-b border-border">
                 <div className="flex items-center gap-2">
-                  <CheckSquare className="w-4 h-4 text-brand-teal" />
+                  <span className="w-7 h-7 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center">
+                    <CheckSquare className="w-4 h-4" />
+                  </span>
                   <h2 className="text-sm font-bold text-ink uppercase tracking-wide">
                     Bài nộp học sinh chờ chấm điểm & nhận xét
                   </h2>
                 </div>
                 <Link
                   href="/giao-vien/cham-bai"
-                  className="text-xs font-semibold text-brand-teal hover:underline"
+                  className="text-xs font-bold text-orange-700 hover:underline"
                 >
                   Xem tất cả ({pendingSubmissions.length}) →
                 </Link>
               </div>
 
-              <div className="mt-4 divide-y divide-border/60">
+              <div className="mt-4 divide-y divide-border/70">
                 {pendingSubmissions.length === 0 ? (
-                  <p className="py-6 text-center text-xs text-ink-muted">
-                    Hiện không có bài nộp nào đang chờ chấm.
-                  </p>
+                  <EmptyState
+                    title="Không có bài nộp đang chờ chấm"
+                    description="Khi học sinh nộp bài tập hoặc sản phẩm thực hành, danh sách chấm Rubric sẽ tự động hiển thị tại đây."
+                    tone="assignments"
+                  />
                 ) : (
                   pendingSubmissions.map((sub) => (
                     <div
                       key={sub.id}
                       className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                     >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="text-xs font-bold text-ink">
                             {sub.student.user.fullName}
                           </span>
-                          <span className="text-[11px] bg-canvas text-ink-muted px-2 py-0.5 rounded border border-border">
+                          <span className="text-[11px] font-semibold bg-ocean-light text-ocean-700 px-2 py-0.5 rounded-full">
                             Lớp {sub.student.schoolClass?.name ?? "7A1"}
                           </span>
-                          <span className="text-xs text-ink-muted">
-                            Nộp lúc:{" "}
-                            {new Date(sub.submittedAt).toLocaleTimeString(
-                              "vi-VN"
-                            )}
+                          <span className="text-[11px] text-ink-muted font-mono">
+                            {new Date(sub.submittedAt).toLocaleTimeString("vi-VN")}
                           </span>
                         </div>
-                        <p className="text-xs text-brand-teal font-medium">
+                        <p className="text-xs text-orange-700 font-semibold truncate">
                           {sub.assignment.title}
                         </p>
                         <p className="text-xs text-ink-muted line-clamp-1">
@@ -201,104 +185,76 @@ export default async function TeacherDashboardPage() {
                         </p>
                       </div>
 
-                      <Link
+                      <OceanButtonLink
                         href={`/giao-vien/cham-bai?id=${sub.id}`}
-                        className="px-3.5 py-1.5 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors shrink-0"
+                        variant="primary"
+                        size="sm"
+                        className="shrink-0"
                       >
                         Chấm bài ngay
-                      </Link>
+                      </OceanButtonLink>
                     </div>
                   ))
                 )}
               </div>
-            </div>
+            </section>
 
-            {/* Quick Actions for Teachers */}
+            {/* Colored Teacher Productivity Tools */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Link
+              <FeatureCard
+                title="Giao bài tập mới"
+                description="Gắn rubric 4 tiêu chí, thời hạn và giới hạn lượt nộp."
                 href="/giao-vien/bai-tap"
-                className="p-4 rounded-panel bg-surface border border-border shadow-card hover:border-brand-teal transition-colors flex flex-col justify-between"
-              >
-                <div>
-                  <h4 className="text-xs font-bold text-ink">Tạo bài tập mới</h4>
-                  <p className="text-[11px] text-ink-muted mt-1">
-                    Gắn rubric 4 tiêu chí và đồng bộ Google Classroom / Calendar.
-                  </p>
-                </div>
-                <span className="text-xs font-semibold text-brand-teal mt-3">
-                  Giao bài →
-                </span>
-              </Link>
-
-              <Link
+                ctaLabel="Giao bài"
+                tone="assignments"
+                icon={<FileEdit className="w-5 h-5" />}
+              />
+              <FeatureCard
+                title="Bài giảng & Học liệu"
+                description="Tải tài liệu đa định dạng an toàn hoặc nhúng bài học số."
                 href="/giao-vien/bai-giang"
-                className="p-4 rounded-panel bg-surface border border-border shadow-card hover:border-brand-teal transition-colors flex flex-col justify-between"
-              >
-                <div>
-                  <h4 className="text-xs font-bold text-ink">
-                    Soạn kế hoạch bài dạy
-                  </h4>
-                  <p className="text-[11px] text-ink-muted mt-1">
-                    Tạo tài liệu Google Docs từ mẫu chuẩn và gắn Drive.
-                  </p>
-                </div>
-                <span className="text-xs font-semibold text-brand-teal mt-3">
-                  Biên tập bài →
-                </span>
-              </Link>
-
-              <Link
+                ctaLabel="Biên tập bài"
+                tone="materials"
+                icon={<BookOpen className="w-5 h-5" />}
+              />
+              <FeatureCard
+                title="Phân tích Yêu cầu cần đạt"
+                description="Theo dõi điểm trung bình thực tế và mức độ tiến bộ theo lớp."
                 href="/giao-vien/phan-tich"
-                className="p-4 rounded-panel bg-surface border border-border shadow-card hover:border-brand-teal transition-colors flex flex-col justify-between"
-              >
-                <div>
-                  <h4 className="text-xs font-bold text-ink">
-                    Báo cáo Yêu cầu cần đạt
-                  </h4>
-                  <p className="text-[11px] text-ink-muted mt-1">
-                    Theo dõi điểm trung bình thực tế và các kỹ năng cần củng cố.
-                  </p>
-                </div>
-                <span className="text-xs font-semibold text-brand-teal mt-3">
-                  Xem phân tích →
-                </span>
-              </Link>
+                ctaLabel="Xem phân tích"
+                tone="progress"
+                icon={<LineChart className="w-5 h-5" />}
+              />
             </div>
           </div>
 
-          {/* Right Column: AI Pedagogical Assistant & Alerts (4 cols) */}
+          {/* Right Column: AI Pedagogical Assistant */}
           <div className="lg:col-span-4 space-y-6">
-            <div className="p-6 rounded-panel bg-brand-teal-soft/40 border border-brand-teal/20 shadow-card space-y-4">
-              <div className="flex items-center gap-2 pb-2 border-b border-brand-teal/20">
-                <Sparkles className="w-4 h-4 text-brand-teal" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-brand-teal">
-                  Trợ lý Sư phạm AI gợi ý
-                </h3>
-              </div>
-
-              <div className="text-xs text-ink leading-relaxed space-y-2">
+            <AIWidget
+              title="Trợ lý Sư phạm AI"
+              badge="Rubric Copilot"
+              description={
                 <p>
-                  Hệ thống ghi nhận{" "}
-                  <strong className="font-semibold text-ink">
+                  Hệ thống đang ghi nhận{" "}
+                  <strong className="text-ink font-bold">
                     {pendingSubmissions.length} bài nộp
                   </strong>{" "}
-                  đang chờ thầy phê duyệt nhận xét.
+                  chờ Thầy/Cô xem xét và phê duyệt nhận xét.
                 </p>
+              }
+              principle={
                 <p>
-                  <strong className="text-brand-teal font-semibold">
+                  <strong className="font-bold text-violet-800">
                     Nguyên tắc AI Sư phạm:
                   </strong>{" "}
-                  AI chỉ gợi ý bản nháp nhận xét theo 4 tiêu chí Rubric; Giáo viên là người kiểm duyệt và quyết định điểm số cuối cùng.
+                  AI chỉ gợi ý bản nháp nhận xét theo 4 tiêu chí Rubric; Giáo viên luôn là người kiểm duyệt và quyết định điểm số cuối cùng.
                 </p>
-              </div>
-
-              <Link
-                href="/giao-vien/cham-bai"
-                className="block text-center w-full py-2 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors"
-              >
-                Duyệt & Gửi nhận xét
-              </Link>
-            </div>
+              }
+              primaryHref="/giao-vien/cham-bai"
+              primaryLabel="Duyệt & Gửi nhận xét"
+              secondaryHref="/giao-vien/prompt-library"
+              secondaryLabel="Mở Thư viện Prompt GV"
+            />
           </div>
         </div>
       </div>

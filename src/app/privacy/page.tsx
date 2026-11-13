@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 import {
   ShieldCheck,
   Lock,
@@ -69,34 +70,21 @@ export default function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen bg-canvas text-ink flex flex-col">
       {/* Top Header */}
-      <header className="sticky top-0 z-30 h-16 bg-surface border-b border-border px-6 sm:px-12 flex items-center justify-between">
+      <header className="sticky top-0 z-30 h-16 bg-surface/95 backdrop-blur-md border-b border-border px-6 sm:px-12 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-button bg-brand-teal flex items-center justify-center text-white font-bold text-base">
-              EA
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-ink tracking-tight text-base">EDUCARE AI</span>
-                <span className="text-[11px] font-semibold bg-brand-teal-soft text-brand-teal px-1.5 py-0.5 rounded">
-                  UNIGO
-                </span>
-              </div>
-              <p className="text-[11px] text-ink-muted">Cổng Pháp lý & Bảo vệ Dữ liệu Học đường</p>
-            </div>
-          </Link>
+          <BrandLogo size="md" subtitle="Cổng Pháp lý & Bảo vệ Dữ liệu Học đường" />
         </div>
 
         <div className="flex items-center gap-3 text-xs font-semibold">
           <Link
             href="/terms"
-            className="px-3 py-1.5 rounded-button bg-canvas hover:bg-surface-muted border border-border text-ink transition-colors"
+            className="px-3 py-1.5 rounded-xl bg-canvas hover:bg-surface-muted border border-border text-ink transition-colors"
           >
             Điều khoản sử dụng (Terms)
           </Link>
           <Link
             href="/dang-nhap"
-            className="px-4 py-2 rounded-button bg-brand-teal text-white hover:bg-brand-teal-hover transition-colors"
+            className="px-4 py-2 rounded-xl bg-ocean-600 text-white hover:bg-ocean-700 shadow-sm transition-colors"
           >
             Đăng nhập OAuth
           </Link>
@@ -109,7 +97,7 @@ export default function PrivacyPolicyPage() {
         <div className="flex items-center justify-between">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-teal hover:underline"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-ocean-600 hover:text-ocean-700 hover:underline"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Quay lại Trang chủ EDUCARE AI</span>
@@ -120,8 +108,8 @@ export default function PrivacyPolicyPage() {
         </div>
 
         {/* Hero Title Card */}
-        <section className="p-8 rounded-panel bg-surface border border-border shadow-card space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-teal-soft text-brand-teal text-xs font-semibold">
+        <section className="p-8 rounded-2xl bg-surface border border-border shadow-card space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-ocean-50 border border-ocean-200 text-ocean-700 text-xs font-semibold">
             <ShieldCheck className="w-4 h-4" />
             <span>Tuân thủ Nghị định 13/2023/NĐ-CP & Google API Limited Use Policy</span>
           </div>
@@ -135,8 +123,8 @@ export default function PrivacyPolicyPage() {
           </p>
 
           {/* Mandatory Google Limited Use Disclosure Box */}
-          <div className="p-5 rounded-panel bg-brand-teal-soft/50 border-2 border-brand-teal/40 space-y-2">
-            <div className="flex items-center gap-2 text-brand-teal font-bold text-xs uppercase tracking-wider">
+          <div className="p-5 rounded-2xl bg-sky-50/70 border-2 border-ocean-200 space-y-2">
+            <div className="flex items-center gap-2 text-ocean-700 font-bold text-xs uppercase tracking-wider">
               <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>Cam kết Tuân thủ Chính sách Dữ liệu Người dùng Google API (Google API Services User Data Policy Disclosure)</span>
             </div>
@@ -146,19 +134,19 @@ export default function PrivacyPolicyPage() {
                 href="https://developers.google.com/terms/api-services-user-data-policy"
                 target="_blank"
                 rel="noreferrer"
-                className="text-brand-teal underline font-bold"
+                className="text-ocean-600 hover:text-ocean-700 underline font-bold"
               >
                 Chính sách dữ liệu người dùng của Dịch vụ API của Google (Google API Services User Data Policy)
               </a>
               , bao gồm cả các yêu cầu về <strong>Sử dụng Hạn chế (Limited Use requirements)</strong>.
             </p>
-            <p className="text-xs text-ink-muted leading-relaxed italic border-t border-brand-teal/20 pt-2">
+            <p className="text-xs text-ink-muted leading-relaxed italic border-t border-ocean-200 pt-2">
               <strong>English (For Google OAuth Verification Reviewers):</strong> EDUCARE AI&apos;s use and transfer to any other app of information received from Google APIs will adhere to the{" "}
               <a
                 href="https://developers.google.com/terms/api-services-user-data-policy#additional_requirements_for_specific_api_scopes"
                 target="_blank"
                 rel="noreferrer"
-                className="text-brand-teal underline font-semibold"
+                className="text-ocean-600 hover:text-ocean-700 underline font-semibold"
               >
                 Google API Services User Data Policy
               </a>
@@ -168,9 +156,9 @@ export default function PrivacyPolicyPage() {
         </section>
 
         {/* Section 1: Legal Basis in Vietnam & Educational Privacy */}
-        <section className="p-8 rounded-panel bg-surface border border-border shadow-card space-y-4">
+        <section className="p-8 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center gap-2.5 pb-3 border-b border-border">
-            <Scale className="w-5 h-5 text-brand-teal" />
+            <Scale className="w-5 h-5 text-ocean-600" />
             <h2 className="text-lg font-bold text-ink">
               1. Căn cứ pháp lý và Nguyên tắc bảo vệ dữ liệu trẻ em (Học sinh Tiểu học & THCS)
             </h2>
@@ -207,9 +195,9 @@ export default function PrivacyPolicyPage() {
         </section>
 
         {/* Section 2: Google OAuth Scopes Table */}
-        <section className="p-8 rounded-panel bg-surface border border-border shadow-card space-y-4">
+        <section className="p-8 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center gap-2.5 pb-3 border-b border-border">
-            <Lock className="w-5 h-5 text-brand-teal" />
+            <Lock className="w-5 h-5 text-ocean-600" />
             <h2 className="text-lg font-bold text-ink">
               2. Chi tiết các Quyền truy cập Google OAuth (Scopes) và Mục đích sử dụng
             </h2>
@@ -219,7 +207,7 @@ export default function PrivacyPolicyPage() {
             Theo nguyên tắc <strong>Cấp quyền tối thiểu (Least Privilege)</strong>, EDUCARE AI chỉ yêu cầu các quyền (scopes) cần thiết tương ứng với vai trò của người dùng. Dưới đây là bảng minh bạch từng quyền truy cập:
           </p>
 
-          <div className="overflow-x-auto border border-border rounded-panel">
+          <div className="overflow-x-auto border border-border rounded-2xl">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-canvas border-b border-border text-ink font-bold">
@@ -233,7 +221,7 @@ export default function PrivacyPolicyPage() {
                 {googleScopes.map((item, idx) => (
                   <tr key={idx} className="hover:bg-canvas/50">
                     <td className="py-3.5 px-4 align-top">
-                      <span className="font-bold text-brand-teal block">{item.service}</span>
+                      <span className="font-bold text-ocean-600 block">{item.service}</span>
                       <code className="text-[10px] font-mono bg-surface-muted px-1.5 py-0.5 rounded text-ink mt-1 inline-block break-all">
                         {item.scope}
                       </code>
@@ -249,30 +237,30 @@ export default function PrivacyPolicyPage() {
         </section>
 
         {/* Section 3: AI & Gemini Data Protection */}
-        <section className="p-8 rounded-panel bg-surface border border-border shadow-card space-y-4">
+        <section className="p-8 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center gap-2.5 pb-3 border-b border-border">
-            <EyeOff className="w-5 h-5 text-brand-teal" />
+            <EyeOff className="w-5 h-5 text-violet-600" />
             <h2 className="text-lg font-bold text-ink">
               3. Bảo mật dữ liệu khi sử dụng Trí tuệ nhân tạo (Google Gemini AI)
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-            <div className="p-4 rounded-button bg-canvas border border-border space-y-1.5">
+            <div className="p-4 rounded-xl bg-canvas border border-border space-y-1.5">
               <span className="font-bold text-ink block">Không dùng dữ liệu HS để huấn luyện AI</span>
               <p className="text-ink-muted leading-relaxed">
                 EDUCARE AI sử dụng Gemini API ở chế độ bảo mật doanh nghiệp/giáo dục (Paid Tier). Mọi câu hỏi, bài làm của học sinh <strong>không được sử dụng để huấn luyện (train)</strong> các mô hình AI công cộng.
               </p>
             </div>
 
-            <div className="p-4 rounded-button bg-canvas border border-border space-y-1.5">
+            <div className="p-4 rounded-xl bg-canvas border border-border space-y-1.5">
               <span className="font-bold text-ink block">Bảo vệ không gian hỏi đáp của Học sinh</span>
               <p className="text-ink-muted leading-relaxed">
                 Phụ huynh chỉ xem báo cáo tiến độ, điểm số và nhận xét chính thức của giáo viên. Lịch sử hội thoại chi tiết giữa học sinh và AI Tutor được giữ riêng tư cho mục đích sư phạm để học sinh không ngại đặt câu hỏi.
               </p>
             </div>
 
-            <div className="p-4 rounded-button bg-canvas border border-border space-y-1.5">
+            <div className="p-4 rounded-xl bg-canvas border border-border space-y-1.5">
               <span className="font-bold text-ink block">Không lưu API Key ở Frontend</span>
               <p className="text-ink-muted leading-relaxed">
                 Toàn bộ khóa kết nối Google OAuth và Gemini API được bảo vệ nghiêm ngặt ở tầng máy chủ (Backend Server-side) và mã hóa token theo chuẩn AES-256.
@@ -282,9 +270,9 @@ export default function PrivacyPolicyPage() {
         </section>
 
         {/* Section 4: User Rights & Revoking Access */}
-        <section className="p-8 rounded-panel bg-surface border border-border shadow-card space-y-4">
+        <section className="p-8 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center gap-2.5 pb-3 border-b border-border">
-            <UserCheck className="w-5 h-5 text-brand-teal" />
+            <UserCheck className="w-5 h-5 text-ocean-600" />
             <h2 className="text-lg font-bold text-ink">
               4. Quyền của Người dùng: Xem, Chỉnh sửa, Thu hồi quyền OAuth và Xóa dữ liệu
             </h2>
@@ -297,7 +285,7 @@ export default function PrivacyPolicyPage() {
             <ul className="space-y-2 list-disc list-inside text-ink-muted">
               <li>
                 <strong className="text-ink">Quyền thu hồi kết nối Google (Revoke Access) bất kỳ lúc nào:</strong> Người dùng có thể ngắt kết nối trực tiếp tại mục{" "}
-                <Link href="/giao-vien/google-workspace" className="text-brand-teal underline font-semibold">
+                <Link href="/giao-vien/google-workspace" className="text-ocean-600 hover:text-ocean-700 underline font-semibold">
                   Google Workspace Center
                 </Link>{" "}
                 trong EDUCARE AI, hoặc truy cập trực tiếp trang quản lý bảo mật của Google tại:{" "}
@@ -305,7 +293,7 @@ export default function PrivacyPolicyPage() {
                   href="https://myaccount.google.com/permissions"
                   target="_blank"
                   rel="noreferrer"
-                  className="text-brand-teal underline font-mono"
+                  className="text-ocean-600 hover:text-ocean-700 underline font-mono"
                 >
                   https://myaccount.google.com/permissions
                 </a>
@@ -322,7 +310,7 @@ export default function PrivacyPolicyPage() {
         </section>
 
         {/* Contact Info Footer Card */}
-        <section className="p-6 rounded-panel bg-canvas border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+        <section className="p-6 rounded-2xl bg-canvas border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
           <div className="space-y-1">
             <h3 className="font-bold text-ink text-sm">Thông tin Liên hệ Bộ phận Bảo vệ Dữ liệu (DPO) — UNIGO</h3>
             <p className="text-ink-muted">
@@ -330,7 +318,7 @@ export default function PrivacyPolicyPage() {
             </p>
             <p className="text-ink-muted">
               Email hỗ trợ pháp lý & quyền riêng tư:{" "}
-              <a href="mailto:privacy@unigo.edu.vn" className="text-brand-teal font-semibold underline">
+              <a href="mailto:privacy@unigo.edu.vn" className="text-ocean-600 hover:text-ocean-700 font-semibold underline">
                 privacy@unigo.edu.vn
               </a>{" "}
               • Điện thoại: (024) 7300-8899

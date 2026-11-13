@@ -20,3 +20,16 @@
 | **Mục 6** Chỗ chờ Gems & Agents (`IntegrationSlot`) | **THIẾU MODEL** | `prisma/schema.prisma`, `src/app/admin/settings/integrations/page.tsx` | Thêm model `IntegrationSlot` (`code`, `name`, `kind` `GEM_LINK`/`AGENT_API`, `provider`, `externalUrl`, `endpointRef`, `configJson`, `secretRef`, `allowedRoles`, `classScope`, `status` `DISCONNECTED`/`CONFIGURED`/`HEALTHY`/`ERROR`/`DISABLED`, `version`, `lastCheckedAt`) + API & UI quản trị + đặt slot theo ngữ cảnh kèm prompt dự phòng. |
 | **Mục 7** CSDL & Google Sheets (`SheetImportSource`, `StudentExternalIdentity`, `AssessmentExternalIdentity`, `SheetImportRun`, `SheetImportRow`, `ImportedAttempt`, `AttemptCorrection`, `StudentAssessmentMetric`, `StudentInsight`, `ImportedAssessmentSummary`) | **THIẾU MODEL & PIPELINE** | `prisma/schema.prisma`, `docs/LMS_DATA_DESIGN.md` | Bổ sung đầy đủ các bảng theo `docs/LMS_DATA_DESIGN.md`, chuyển khóa nghiệp vụ `ClassTrackingSheet` sang `(classId, academicYearId, purpose)`, viết pipeline nhập Sheets chuẩn (staging → validate → map `StudentProfile.userId` → dedupe theo `(sourceId, sourceRecordId)` → transaction → tính metric first/latest/best/mean/improvement tách `PRACTICE`/`EXAM`, chống formula injection `=,+,-,@`). |
 | **Phân quyền / Chống IDOR** | **CẦN CỦNG CỐ** | `src/app/api/tin-hoc/assessments/route.ts:40-58`, `src/app/api/grading/route.ts:40-56`, `src/app/api/google/workspace/route.ts:126-134` | Kiểm tra quyền Giáo viên theo lớp được phân công (homeroom/assignment) khi chấm bài, xem danh sách lượt làm hoặc đồng bộ lớp; Học sinh chỉ xem lớp mình; Phụ huynh chỉ xem con đã xác minh (`ParentStudent.isVerified = true`). |
+
+
+---
+
+## Phase A Audit — EDUCARE AI 3.0 (Ocean Blue Design System, 2026-11-13)
+- **Màu sắc hiện tại**: Toàn bộ codebase (~55 file) dùng `--brand-teal: #197C78`, `--brand-teal-soft: #E7F2F1`, `--brand-teal-hover: #146562`, `--canvas: #F6F7F8`, `--ink: #202428` (1 sắc thái đơn điệu, chưa phân màu ngữ nghĩa theo chức năng).
+- **Font & Performance (`src/app/layout.tsx`)**: Đang load `<link>` Google Fonts thủ công thay vì `next/font/google`; `body` ghi đè `font-family: -apple-system...` gây lệch font & CLS nhẹ; thiếu `images.remotePatterns` trong `next.config.ts`.
+- **Component & Motion**: Đã cài `framer-motion@14.12.0` (`package.json`). Hiện chưa có thư viện component chuẩn hóa (`PageHeader`, `StatCard`, `FeatureCard`, `CourseCard`, `ProgressCard`, `DataTable`, `ChartCard`, `Modal`, `Drawer`, `Tabs`, `Toast`, `Skeleton`, `EmptyState`, `ErrorState`, `AIWidget`, `RoleSwitcher`) và chưa có animation tokens (`prefers-reduced-motion`, `LazyMotion`).
+- **Layout bugs / leftovers phát hiện**:
+  - `src/components/layout/AppHeader.tsx:456`: link "Cấu hình OAuth & Quyền kết nối" trong Profile Menu vẫn trỏ `/dang-nhap` thay vì `/admin/settings/integrations` (cho Super Admin) hoặc `/giao-vien/google-workspace`.
+  - `src/app/dang-ky/page.tsx` và `src/app/quen-mat-khau/page.tsx`: vẫn dùng card giữa trang đơn lẻ, chưa đồng bộ split-screen Ocean Blue + minh họa vector 3D như `/dang-nhap`.
+  - `src/app/page.tsx`: giao diện còn mang tính landing đơn giản màu teal, chưa thể hiện chiều sâu Ocean Blue 3.0.
+  - Thiếu `loading.tsx` skeleton cho các route phân hệ (`/admin`, `/quan-tri`, `/giao-vien`, `/hoc-sinh`, `/phu-huynh`).

@@ -86,7 +86,7 @@ export function TeacherLessonsClient({
             <h1 className="text-2xl font-bold text-ink">
               Biên soạn Bài giảng & Học liệu Số
             </h1>
-            <span className="text-xs font-semibold bg-brand-teal-soft text-brand-teal px-2 py-0.5 rounded">
+            <span className="text-xs font-semibold bg-sky-100 text-sky-700 px-2.5 py-0.5 rounded-full">
               Lesson Studio + Google Docs/Drive
             </span>
           </div>
@@ -98,7 +98,7 @@ export function TeacherLessonsClient({
         <button
           type="button"
           onClick={() => setShowModal(true)}
-          className="px-4 py-2.5 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors shadow-sm flex items-center gap-1.5"
+          className="px-4 py-2.5 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 transition-colors shadow-sm flex items-center gap-1.5"
         >
           <PlusCircle className="w-4 h-4" />
           <span>Soạn bài giảng mới</span>
@@ -106,7 +106,7 @@ export function TeacherLessonsClient({
       </div>
 
       {notice && (
-        <div className="p-3.5 rounded-panel bg-status-success-soft border border-status-success/30 text-xs text-status-success font-medium flex items-center gap-2">
+        <div className="p-3.5 rounded-2xl bg-status-success-soft border border-status-success/30 text-xs text-status-success font-medium flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 shrink-0" />
           <span>{notice}</span>
         </div>
@@ -116,29 +116,29 @@ export function TeacherLessonsClient({
         {lessons.map((l) => (
           <div
             key={l.id}
-            className="p-6 rounded-panel bg-surface border border-border shadow-card flex flex-col justify-between space-y-4"
+            className="p-6 rounded-2xl bg-surface border border-border hover:border-sky-300 shadow-card transition-all flex flex-col justify-between space-y-4"
           >
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-semibold bg-brand-teal-soft text-brand-teal px-2 py-0.5 rounded">
+                <span className="text-[11px] font-semibold bg-sky-100 text-sky-700 px-2.5 py-0.5 rounded-full">
                   {l.topic?.subject?.name} • {l.topic?.name}
                 </span>
-                <span className="text-[11px] font-semibold bg-status-success-soft text-status-success px-2 py-0.5 rounded">
+                <span className="text-[11px] font-semibold bg-status-success-soft text-status-success px-2.5 py-0.5 rounded-full">
                   {l.status}
                 </span>
               </div>
 
               <h3 className="text-base font-bold text-ink">{l.title}</h3>
               <p className="text-xs text-ink-muted">
-                Giáo viên biên soạn: {l.teacher?.user?.fullName || "Thầy Trần Minh Tuấn"}
+                Giáo viên biên soạn: {l.teacher?.user?.fullName || "Chưa có dữ liệu"}
               </p>
 
               {l.googleDocId && (
-                <div className="p-2.5 rounded bg-canvas border border-border text-xs flex items-center justify-between">
+                <div className="p-2.5 rounded-xl bg-canvas border border-border text-xs flex items-center justify-between">
                   <span className="font-mono text-[11px] text-ink">
                     Google Docs ID: <strong>{l.googleDocId}</strong>
                   </span>
-                  <span className="text-[10px] font-semibold text-brand-teal">
+                  <span className="text-[10px] font-semibold text-cyan-700">
                     Đã liên kết Docs
                   </span>
                 </div>
@@ -148,7 +148,7 @@ export function TeacherLessonsClient({
             <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs">
               <Link
                 href={`/hoc-sinh/mon-hoc/${l.id}`}
-                className="font-semibold text-brand-teal hover:underline flex items-center gap-1"
+                className="font-semibold text-sky-700 hover:text-ocean-600 hover:underline flex items-center gap-1"
               >
                 <span>Xem giao diện bài học của Học sinh</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -243,8 +243,8 @@ export function TeacherLessonsClient({
               />
             </div>
 
-            <div className="p-3.5 rounded-panel bg-brand-teal-soft/40 border border-brand-teal/30 space-y-2">
-              <div className="font-bold text-brand-teal flex items-center gap-1.5">
+            <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 space-y-2">
+              <div className="font-bold text-sky-700 flex items-center gap-1.5">
                 <Network className="w-3.5 h-3.5" />
                 <span>Tích hợp Google Docs theo ngữ cảnh:</span>
               </div>
@@ -253,7 +253,7 @@ export function TeacherLessonsClient({
                   type="checkbox"
                   checked={createGoogleDoc}
                   onChange={(e) => setCreateGoogleDoc(e.target.checked)}
-                  className="accent-brand-teal"
+                  className="accent-ocean-600"
                 />
                 <span>
                   Tự động khởi tạo <strong>Giáo án / Phiếu học tập Google Docs</strong> từ mẫu chuẩn UNIGO
@@ -265,14 +265,14 @@ export function TeacherLessonsClient({
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 rounded-button bg-canvas text-ink font-semibold"
+                className="px-4 py-2 rounded-xl bg-canvas text-ink font-semibold"
               >
                 Hủy
               </button>
               <button
                 type="submit"
                 disabled={isSaving}
-                className="px-5 py-2 rounded-button bg-brand-teal text-white font-semibold"
+                className="px-5 py-2 rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white font-semibold"
               >
                 {isSaving ? "Đang xuất bản..." : "Xuất bản bài giảng"}
               </button>

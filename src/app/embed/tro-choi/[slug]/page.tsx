@@ -54,7 +54,7 @@ export default function EmbedGamePage() {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-200 flex items-center justify-center p-6">
         <div className="text-center space-y-2">
-          <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="w-8 h-8 border-2 border-sky-400 border-t-transparent rounded-full animate-spin mx-auto" />
           <p className="text-sm text-slate-400">
             Đang khởi tạo khung Sandbox cô lập cho trò chơi...
           </p>
@@ -84,11 +84,11 @@ export default function EmbedGamePage() {
       <div className="rounded-xl border border-slate-800 bg-slate-900/90 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-xs font-semibold bg-teal-950 text-teal-300 border border-teal-800">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-950 text-sky-300 border border-sky-700/70">
               CỔNG HỌC TẬP TIN HỌC • KHỐI {project.gradeLevel}
             </span>
             {project.isDemoData && (
-              <span className="px-2 py-0.5 rounded text-xs font-medium bg-amber-950 text-amber-300 border border-amber-800">
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-950 text-amber-300 border border-amber-800">
                 DỮ LIỆU MẪU THỬ NGHIỆM
               </span>
             )}
@@ -108,7 +108,7 @@ export default function EmbedGamePage() {
           href={`/embed/tro-choi/${project.slug}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-teal-700 hover:bg-teal-600 text-white transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-ocean-600 hover:bg-ocean-700 text-white transition-colors"
         >
           <ExternalLink className="w-3.5 h-3.5" />
           Mở trong tab mới (Dự phòng Google Sites)
@@ -129,7 +129,7 @@ export default function EmbedGamePage() {
       {/* Footer Pedagogical Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
         <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3.5">
-          <div className="flex items-center gap-1.5 font-semibold text-teal-300 mb-1">
+          <div className="flex items-center gap-1.5 font-semibold text-sky-300 mb-1">
             <BookOpen className="w-3.5 h-3.5" />
             Hướng dẫn cách chơi & Mục tiêu cần đạt
           </div>
@@ -139,7 +139,7 @@ export default function EmbedGamePage() {
           </p>
         </div>
         <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3.5">
-          <div className="flex items-center gap-1.5 font-semibold text-teal-300 mb-1">
+          <div className="flex items-center gap-1.5 font-semibold text-sky-300 mb-1">
             <ShieldCheck className="w-3.5 h-3.5" />
             Kiến thức cốt lõi & Cơ chế cô lập bảo mật
           </div>

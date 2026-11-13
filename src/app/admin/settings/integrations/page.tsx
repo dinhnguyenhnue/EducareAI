@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getGoogleOAuthConfig } from "@/lib/google-workspace";
+import { PageHeader, StatCard } from "@/components/ui";
 import {
   ShieldCheck,
   CheckCircle2,
@@ -62,99 +63,63 @@ export default async function AdminIntegrationsSettingsPage() {
 
   return (
     <AppShell>
-      <div className="space-y-8 max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-ink tracking-tight">
-                Cấu hình Tích hợp & Kết nối Google Workspace
-              </h1>
-              <span className="text-[11px] font-semibold bg-brand-teal-soft text-brand-teal px-2 py-0.5 rounded">
-                Super Admin Only
-              </span>
-            </div>
-            <p className="text-xs text-ink-muted mt-1">
-              Trung tâm giám sát bảo mật OAuth 2.0, OpenID Connect và đồng bộ 3 tầng dữ liệu cho toàn bộ hệ sinh thái UNIGO.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-status-success-soft text-status-success border border-status-success/20">
+      <div className="space-y-6 max-w-6xl mx-auto">
+        <PageHeader
+          variant="card"
+          tone="workspace"
+          badge="Super Admin Only"
+          badgeIcon={<ShieldCheck className="w-3.5 h-3.5" />}
+          title="Cấu hình Tích hợp & Kết nối Google Workspace"
+          description="Trung tâm giám sát bảo mật OAuth 2.0, OpenID Connect và đồng bộ 3 tầng dữ liệu cho toàn bộ hệ sinh thái UNIGO."
+          actions={
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
               <ShieldCheck className="w-4 h-4" />
               RBAC Cấp 1 Tối cao
             </span>
-          </div>
-        </div>
+          }
+        />
 
         {/* Status Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="p-4 rounded-xl bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted mb-2">
-              <span>Google OAuth 2.0</span>
-              <Cloud className="w-4 h-4 text-brand-teal" />
-            </div>
-            <div className="text-lg font-bold text-ink">
-              {oauthConfig.isConfigured ? "Đã kết nối" : "Chưa cấu hình"}
-            </div>
-            <div className="text-[11px] text-ink-muted mt-1 flex items-center gap-1">
-              {oauthConfig.isConfigured ? (
-                <span className="text-status-success flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> OIDC Sẵn sàng
-                </span>
-              ) : (
-                <span className="text-status-warning flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" /> Cần cấu hình .env
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted mb-2">
-              <span>Thư mục Drive</span>
-              <FolderTree className="w-4 h-4 text-brand-teal" />
-            </div>
-            <div className="text-lg font-bold text-ink">{driveNodesCount} / 19 Thư mục</div>
-            <div className="text-[11px] text-ink-muted mt-1">
-              Cây thư mục 6 nhánh chuẩn
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted mb-2">
-              <span>Bảng tính Sheets</span>
-              <FileSpreadsheet className="w-4 h-4 text-brand-teal" />
-            </div>
-            <div className="text-lg font-bold text-ink">{sheetsCount} Lớp đã sync</div>
-            <div className="text-[11px] text-ink-muted mt-1">
-              Tracking 6 tab chuẩn UNIGO
-            </div>
-          </div>
-
-          <div className="p-4 rounded-xl bg-surface border border-border shadow-card">
-            <div className="flex items-center justify-between text-xs text-ink-muted mb-2">
-              <span>Cơ sở dữ liệu</span>
-              <Database className="w-4 h-4 text-brand-teal" />
-            </div>
-            <div className="text-lg font-bold text-ink">
-              {process.env.DATABASE_URL?.startsWith("file:") ? "SQLite (Local)" : "PostgreSQL"}
-            </div>
-            <div className="text-[11px] text-status-success mt-1 flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Prisma ORM Active
-            </div>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            tone="workspace"
+            label="Google OAuth 2.0"
+            value={oauthConfig.isConfigured ? "Đã kết nối" : "Chưa cấu hình"}
+            hint={oauthConfig.isConfigured ? "OIDC Sẵn sàng" : "Cần cấu hình .env"}
+            icon={<Cloud className="w-4 h-4" />}
+          />
+          <StatCard
+            tone="materials"
+            label="Thư mục Drive"
+            value={`${driveNodesCount} / 19 Thư mục`}
+            hint="Cây thư mục 6 nhánh chuẩn"
+            icon={<FolderTree className="w-4 h-4" />}
+          />
+          <StatCard
+            tone="progress"
+            label="Bảng tính Sheets"
+            value={`${sheetsCount} Lớp đã sync`}
+            hint="Tracking 6 tab chuẩn UNIGO"
+            icon={<FileSpreadsheet className="w-4 h-4" />}
+          />
+          <StatCard
+            tone="overview"
+            label="Cơ sở dữ liệu"
+            value={process.env.DATABASE_URL?.startsWith("file:") ? "SQLite (Local)" : "PostgreSQL"}
+            hint="Prisma ORM Active"
+            icon={<Database className="w-4 h-4" />}
+          />
         </div>
 
         {/* Section 1: Google OAuth Security Configuration */}
-        <div className="p-6 rounded-xl bg-surface border border-border shadow-card space-y-4">
+        <div className="p-6 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center gap-2 border-b border-border pb-3">
-            <Key className="w-5 h-5 text-brand-teal" />
+            <Key className="w-5 h-5 text-cyan-600" />
             <h2 className="text-base font-bold text-ink">Thông tin Xác thực Google OAuth 2.0 / OpenID Connect</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            <div className="p-3.5 rounded-lg bg-canvas border border-border space-y-1.5">
+            <div className="p-3.5 rounded-xl bg-canvas border border-border space-y-1.5">
               <span className="text-ink-muted font-semibold uppercase">Google Client ID</span>
               <div className="font-mono text-ink font-medium break-all">
                 {hasClientId
@@ -163,16 +128,16 @@ export default async function AdminIntegrationsSettingsPage() {
               </div>
             </div>
 
-            <div className="p-3.5 rounded-lg bg-canvas border border-border space-y-1.5">
+            <div className="p-3.5 rounded-xl bg-canvas border border-border space-y-1.5">
               <span className="text-ink-muted font-semibold uppercase">Google Client Secret</span>
               <div className="font-mono text-ink font-medium">
                 {hasClientSecret ? "•••••••••••••••• (Bảo mật máy chủ)" : "Chưa cấu hình (Thiếu GOOGLE_CLIENT_SECRET)"}
               </div>
             </div>
 
-            <div className="p-3.5 rounded-lg bg-canvas border border-border space-y-1.5 md:col-span-2">
+            <div className="p-3.5 rounded-xl bg-canvas border border-border space-y-1.5 md:col-span-2">
               <span className="text-ink-muted font-semibold uppercase">Authorized Redirect URI (Callback)</span>
-              <div className="font-mono text-brand-teal font-medium break-all">
+              <div className="font-mono text-ocean-600 font-medium break-all">
                 {oauthConfig.redirectUri}
               </div>
               <p className="text-[11px] text-ink-muted mt-1">
@@ -183,9 +148,9 @@ export default async function AdminIntegrationsSettingsPage() {
         </div>
 
         {/* Section 2: Vercel Environment Variables Guide */}
-        <div className="p-6 rounded-xl bg-surface border border-border shadow-card space-y-4">
+        <div className="p-6 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center gap-2 border-b border-border pb-3">
-            <Network className="w-5 h-5 text-brand-teal" />
+            <Network className="w-5 h-5 text-ocean-600" />
             <h2 className="text-base font-bold text-ink">Hướng dẫn cấu hình Biến môi trường trên Vercel</h2>
           </div>
 
@@ -225,10 +190,10 @@ export default async function AdminIntegrationsSettingsPage() {
         </div>
 
         {/* Section 3: Sanitized Security Audit Logs */}
-        <div className="p-6 rounded-xl bg-surface border border-border shadow-card space-y-4">
+        <div className="p-6 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center justify-between border-b border-border pb-3">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-brand-teal" />
+              <ShieldCheck className="w-5 h-5 text-ocean-600" />
               <h2 className="text-base font-bold text-ink">Nhật ký Xác thực & Tích hợp Hệ thống (Sanitized Audit Logs)</h2>
             </div>
             <span className="text-xs text-ink-muted">10 sự kiện gần nhất</span>

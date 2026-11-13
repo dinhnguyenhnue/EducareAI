@@ -1,8 +1,20 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { AppShell } from "@/components/layout/AppShell";
-import SandboxedHtmlGamePlayer from "@/components/game/SandboxedHtmlGamePlayer";
+
+const SandboxedHtmlGamePlayer = dynamic(
+  () => import("@/components/game/SandboxedHtmlGamePlayer"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[460px] rounded-2xl border border-indigo-200 bg-indigo-50/40 animate-pulse flex items-center justify-center text-xs font-semibold text-indigo-700">
+        Đang nạp khung kiểm duyệt Sandbox...
+      </div>
+    ),
+  }
+);
 import {
   ShieldCheck,
   CheckCircle2,
@@ -171,7 +183,7 @@ export default function TeacherGameModerationPage() {
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
               <ShieldCheck className="w-3.5 h-3.5" />
               KIỂM DUYỆT TRÒ CHƠI HTML & QUẢN TRỊ DỮ LIỆU MẪU
             </span>
@@ -205,7 +217,7 @@ export default function TeacherGameModerationPage() {
       </div>
 
       {statusBanner && (
-        <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-xs font-semibold text-teal-900">
+        <div className="rounded-xl border border-ocean-200 bg-sky-50 px-4 py-3 text-xs font-semibold text-ocean-800">
           {statusBanner}
         </div>
       )}
@@ -240,15 +252,15 @@ export default function TeacherGameModerationPage() {
                   }}
                   className={`w-full text-left rounded-xl border p-4 transition-all space-y-1.5 ${
                     isSelected
-                      ? "border-teal-600 bg-teal-50/40 shadow-sm"
+                      ? "border-ocean-500 bg-sky-50/70 shadow-sm ring-1 ring-ocean-200"
                       : "border-slate-200 bg-white hover:border-slate-300"
                   }`}
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span
-                      className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                      className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
                         proj.status === "APPROVED"
-                          ? "bg-teal-100 text-teal-800"
+                          ? "bg-emerald-100 text-emerald-800"
                           : proj.status === "PENDING_REVIEW"
                           ? "bg-amber-100 text-amber-800"
                           : "bg-rose-100 text-rose-800"
@@ -282,7 +294,7 @@ export default function TeacherGameModerationPage() {
           {/* Moderation Log Audit Trail */}
           <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2.5">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-              <History className="w-3.5 h-3.5 text-teal-700" />
+              <History className="w-3.5 h-3.5 text-ocean-600" />
               Nhật ký kiểm duyệt gần nhất
             </h3>
             <div className="space-y-2 max-h-60 overflow-y-auto">
@@ -390,7 +402,7 @@ export default function TeacherGameModerationPage() {
                         onClick={() =>
                           handleModerate("APPROVE", selectedVersion.id)
                         }
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-teal-700 hover:bg-teal-800 text-white"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-ocean-600 hover:bg-ocean-700 text-white shadow-sm"
                       >
                         <CheckCircle2 className="w-4 h-4" />
                         Duyệt công khai v{selectedVersion.versionNumber}
@@ -448,7 +460,7 @@ export default function TeacherGameModerationPage() {
               </div>
 
               {showRawCode && (
-                <pre className="rounded-xl border border-slate-800 bg-slate-950 text-teal-300 p-4 text-xs font-mono max-h-72 overflow-y-auto whitespace-pre-wrap">
+                <pre className="rounded-xl border border-slate-800 bg-slate-950 text-sky-300 p-4 text-xs font-mono max-h-72 overflow-y-auto whitespace-pre-wrap">
                   {selectedVersion.htmlSourceCode}
                 </pre>
               )}

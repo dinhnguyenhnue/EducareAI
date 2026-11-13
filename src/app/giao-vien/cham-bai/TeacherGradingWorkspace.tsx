@@ -129,9 +129,9 @@ export function TeacherGradingWorkspace({ initialSubmissions }: { initialSubmiss
                   setSelectedId(sub.id);
                   setComment(sub.teacherComment || "");
                 }}
-                className={`w-full p-3 rounded-button text-left text-xs transition-colors flex flex-col gap-1 border ${
+                className={`w-full p-3 rounded-xl text-left text-xs transition-colors flex flex-col gap-1 border ${
                   isSelected
-                    ? "bg-brand-teal-soft border-brand-teal font-semibold text-brand-teal"
+                    ? "bg-orange-50 border-orange-400 font-semibold text-orange-800 shadow-xs"
                     : "bg-canvas border-border text-ink hover:bg-surface-muted"
                 }`}
               >
@@ -172,14 +172,14 @@ export function TeacherGradingWorkspace({ initialSubmissions }: { initialSubmiss
                     Lớp {selectedSub.student.schoolClass?.name ?? "7A1"} • Mã HS: {selectedSub.student.studentCode}
                   </span>
                 </div>
-                <p className="text-xs text-brand-teal font-medium mt-0.5">
+                <p className="text-xs text-orange-700 font-medium mt-0.5">
                   Bài tập: {selectedSub.assignment.title}
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
                 <span className="text-xs text-ink-muted">Điểm tổng kết:</span>
-                <span className="text-2xl font-mono font-extrabold text-brand-teal">
+                <span className="text-2xl font-mono font-extrabold text-ocean-600">
                   {totalScore}
                   <span className="text-xs text-ink-muted font-normal"> / 10</span>
                 </span>
@@ -187,7 +187,7 @@ export function TeacherGradingWorkspace({ initialSubmissions }: { initialSubmiss
             </div>
 
             {/* Submission Content & Attachments */}
-            <div className="p-4 rounded-panel bg-canvas border border-border space-y-3">
+            <div className="p-4 rounded-xl bg-canvas border border-border space-y-3">
               <span className="text-xs font-bold text-ink uppercase tracking-wide block">
                 Nội dung bài làm & Thuyết minh:
               </span>
@@ -206,7 +206,7 @@ export function TeacherGradingWorkspace({ initialSubmissions }: { initialSubmiss
                       href={att.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded text-xs text-brand-teal hover:underline font-medium"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border rounded-lg text-xs text-ocean-600 hover:underline font-medium mr-2"
                     >
                       <span>{att.title || "Mở tệp Google Drive"}</span>
                       <ExternalLink className="w-3.5 h-3.5" />
@@ -220,7 +220,7 @@ export function TeacherGradingWorkspace({ initialSubmissions }: { initialSubmiss
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-bold text-ink uppercase tracking-wide flex items-center gap-1.5">
-                  <Award className="w-4 h-4 text-brand-teal" />
+                  <Award className="w-4 h-4 text-amber-600" />
                   <span>Đánh giá theo 4 Tiêu chí Rubric</span>
                 </h3>
                 <span className="text-[11px] text-ink-muted">Thang điểm 10.0</span>
@@ -228,10 +228,10 @@ export function TeacherGradingWorkspace({ initialSubmissions }: { initialSubmiss
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 {/* Criterion 1 */}
-                <div className="p-3.5 rounded-panel bg-canvas border border-border space-y-2">
+                <div className="p-3.5 rounded-xl bg-canvas border border-border space-y-2">
                   <div className="flex justify-between font-bold text-ink">
                     <span>1. Tính chính xác & khoa học (30%)</span>
-                    <span className="font-mono text-brand-teal">{crit1} / 3.0</span>
+                    <span className="font-mono text-ocean-600">{crit1} / 3.0</span>
                   </div>
                   <input
                     type="range"
@@ -240,16 +240,16 @@ export function TeacherGradingWorkspace({ initialSubmissions }: { initialSubmiss
                     step="0.1"
                     value={crit1}
                     onChange={(e) => setCrit1(parseFloat(e.target.value))}
-                    className="w-full accent-brand-teal"
+                    className="w-full accent-ocean-600"
                   />
                   <p className="text-[10px] text-ink-muted">Thông tin chính xác, logic, có căn cứ.</p>
                 </div>
 
                 {/* Criterion 2 */}
-                <div className="p-3.5 rounded-panel bg-canvas border border-border space-y-2">
+                <div className="p-3.5 rounded-xl bg-canvas border border-border space-y-2">
                   <div className="flex justify-between font-bold text-ink">
                     <span>2. Tính sáng tạo & thẩm mỹ (30%)</span>
-                    <span className="font-mono text-brand-teal">{crit2} / 3.0</span>
+                    <span className="font-mono text-ocean-600">{crit2} / 3.0</span>
                   </div>
                   <input
                     type="range"
@@ -258,16 +258,16 @@ export function TeacherGradingWorkspace({ initialSubmissions }: { initialSubmiss
                     step="0.1"
                     value={crit2}
                     onChange={(e) => setCrit2(parseFloat(e.target.value))}
-                    className="w-full accent-brand-teal"
+                    className="w-full accent-ocean-600"
                   />
                   <p className="text-[10px] text-ink-muted">Bố cục bắt mắt, thể hiện độc đáo.</p>
                 </div>
 
                 {/* Criterion 3 */}
-                <div className="p-3.5 rounded-panel bg-canvas border border-border space-y-2">
+                <div className="p-3.5 rounded-xl bg-canvas border border-border space-y-2">
                   <div className="flex justify-between font-bold text-ink">
                     <span>3. Ứng dụng thực tiễn & phản biện (25%)</span>
-                    <span className="font-mono text-brand-teal">{crit3} / 2.5</span>
+                    <span className="font-mono text-ocean-600">{crit3} / 2.5</span>
                   </div>
                   <input
                     type="range"
@@ -276,16 +276,16 @@ export function TeacherGradingWorkspace({ initialSubmissions }: { initialSubmiss
                     step="0.1"
                     value={crit3}
                     onChange={(e) => setCrit3(parseFloat(e.target.value))}
-                    className="w-full accent-brand-teal"
+                    className="w-full accent-ocean-600"
                   />
                   <p className="text-[10px] text-ink-muted">Giải quyết tình huống thực tế UNIGO.</p>
                 </div>
 
                 {/* Criterion 4 */}
-                <div className="p-3.5 rounded-panel bg-canvas border border-border space-y-2">
+                <div className="p-3.5 rounded-xl bg-canvas border border-border space-y-2">
                   <div className="flex justify-between font-bold text-ink">
                     <span>4. Tự đánh giá & trách nhiệm (15%)</span>
-                    <span className="font-mono text-brand-teal">{crit4} / 1.5</span>
+                    <span className="font-mono text-ocean-600">{crit4} / 1.5</span>
                   </div>
                   <input
                     type="range"
@@ -294,7 +294,7 @@ export function TeacherGradingWorkspace({ initialSubmissions }: { initialSubmiss
                     step="0.1"
                     value={crit4}
                     onChange={(e) => setCrit4(parseFloat(e.target.value))}
-                    className="w-full accent-brand-teal"
+                    className="w-full accent-ocean-600"
                   />
                   <p className="text-[10px] text-ink-muted">Học sinh tự nhận xét trung thực.</p>
                 </div>
@@ -311,7 +311,7 @@ export function TeacherGradingWorkspace({ initialSubmissions }: { initialSubmiss
                 <button
                   type="button"
                   onClick={handleGenerateAISuggestion}
-                  className="px-2.5 py-1 rounded bg-brand-teal-soft text-brand-teal hover:bg-brand-teal-soft/80 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                  className="px-3 py-1.5 rounded-lg bg-violet-100 text-violet-700 hover:bg-violet-200/70 text-xs font-semibold flex items-center gap-1.5 transition-colors"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>AI Gợi ý nhận xét</span>
@@ -323,13 +323,13 @@ export function TeacherGradingWorkspace({ initialSubmissions }: { initialSubmiss
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Nhập lời nhận xét khích lệ, chỉ ra điểm mạnh và định hướng hoàn thiện tiếp theo..."
-                className="w-full p-3 bg-canvas border border-border rounded-button text-xs text-ink focus:outline-none focus:border-brand-teal leading-relaxed"
+                className="w-full p-3 bg-canvas border border-border rounded-xl text-xs text-ink focus:outline-none focus:ring-2 focus:ring-ocean-500/20 focus:border-ocean-500 leading-relaxed"
               />
             </div>
 
             {/* Actions */}
             {sheetsSyncMsg && (
-              <div className="p-3 rounded bg-status-success-soft text-status-success text-xs font-medium flex items-center gap-2">
+              <div className="p-3 rounded-xl bg-status-success-soft text-status-success text-xs font-medium flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>{sheetsSyncMsg}</span>
               </div>
@@ -345,7 +345,7 @@ export function TeacherGradingWorkspace({ initialSubmissions }: { initialSubmiss
                   type="button"
                   onClick={handleExportToGoogleSheets}
                   disabled={isSyncingSheets}
-                  className="px-3.5 py-2 rounded-button bg-canvas hover:bg-surface-muted border border-border text-ink text-xs font-semibold transition-colors"
+                  className="px-3.5 py-2 rounded-xl bg-canvas hover:bg-cyan-50 border border-border text-ink text-xs font-semibold transition-colors"
                 >
                   {isSyncingSheets
                     ? "Đang đồng bộ Sheets..."
@@ -356,7 +356,7 @@ export function TeacherGradingWorkspace({ initialSubmissions }: { initialSubmiss
               <button
                 onClick={handleSaveGrade}
                 disabled={isSaving}
-                className="px-6 py-2.5 rounded-button bg-brand-teal text-white text-xs font-semibold hover:bg-brand-teal-hover transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
+                className="px-6 py-2.5 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
               >
                 <Save className="w-4 h-4" />
                 <span>{isSaving ? "Đang lưu..." : "Phê duyệt & Lưu điểm"}</span>

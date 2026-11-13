@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRole } from "@/context/RoleContext";
-import { Sparkles, X, Send, Maximize2 } from "lucide-react";
 import Link from "next/link";
+import { AnimatePresence, m } from "framer-motion";
+import { useRole } from "@/context/RoleContext";
+import { modalPanelVariants, OCEAN_TRANSITION } from "@/lib/motion";
+import { Sparkles, X, Send, Maximize2 } from "lucide-react";
 
 export function FloatingAIAssistant() {
   const { role } = useRole();
@@ -62,147 +64,163 @@ export function FloatingAIAssistant() {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-40">
-      {!isOpen && (
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-brand-teal text-white shadow-dialog hover:bg-brand-teal-hover transition-colors"
-        >
-          <Sparkles className="w-4 h-4 text-brand-teal-soft" />
-          <span className="text-xs font-semibold tracking-wide">
-            Trợ lý AI Socratic
-          </span>
-          <span className="w-2 h-2 rounded-full bg-status-success"></span>
-        </button>
-      )}
-
-      {isOpen && (
-        <div className="w-[380px] h-[500px] max-h-[80vh] bg-surface rounded-panel border border-border shadow-dialog flex flex-col overflow-hidden">
-          <div className="p-3.5 bg-canvas border-b border-border flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-button bg-brand-teal text-white flex items-center justify-center">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-ink flex items-center gap-1.5">
-                  <span>Trợ lý AI • UNIGO</span>
-                  <span className="text-[10px] bg-brand-teal-soft text-brand-teal font-medium px-1.5 py-0.5 rounded">
-                    Socratic Mode
-                  </span>
-                </h4>
-                <p className="text-[10px] text-ink-muted">
-                  {role === "STUDENT"
-                    ? "Đồng hành gợi mở • Không giải hộ"
-                    : "Hỗ trợ chuyên môn"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <Link
-                href="/hoc-sinh/ai-tutor"
-                title="Mở toàn màn hình"
-                className="p-1.5 text-ink-muted hover:text-ink hover:bg-surface-muted rounded"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-              </Link>
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                title="Thu nhỏ"
-                className="p-1.5 text-ink-muted hover:text-ink hover:bg-surface-muted rounded"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="flex-1 p-3.5 overflow-y-auto space-y-3 bg-canvas/30 text-xs">
-            {messages.map((m, idx) => (
-              <div
-                key={idx}
-                className={`flex ${
-                  m.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-[85%] p-3 rounded-panel leading-relaxed ${
-                    m.role === "user"
-                      ? "bg-brand-teal text-white"
-                      : "bg-surface border border-border text-ink shadow-sm"
-                  }`}
-                >
-                  {m.text}
+    <div className="fixed bottom-5 right-5 z-40">
+      <AnimatePresence mode="wait">
+        {!isOpen ? (
+          <m.button
+            key="ai-fab"
+            type="button"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            whileHover={{ y: -2, scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={OCEAN_TRANSITION.micro}
+            onClick={() => setIsOpen(true)}
+            className="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-gradient-ai text-white shadow-ai hover:brightness-105 transition-all"
+          >
+            <Sparkles className="w-4 h-4 text-amber-200" />
+            <span className="text-xs font-bold tracking-wide">
+              Trợ lý AI Socratic
+            </span>
+            <span className="w-2 h-2 rounded-full bg-emerald-300" />
+          </m.button>
+        ) : (
+          <m.div
+            key="ai-panel"
+            variants={modalPanelVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="w-[calc(100vw-2.5rem)] sm:w-[390px] h-[510px] max-h-[82vh] bg-surface rounded-panel border border-violet-200 shadow-dialog flex flex-col overflow-hidden"
+          >
+            <div className="p-3.5 bg-gradient-ai text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-sm text-white flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-amber-200" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold flex items-center gap-1.5">
+                    <span>Trợ lý AI • UNIGO</span>
+                    <span className="text-[10px] bg-white/20 text-white font-semibold px-2 py-0.5 rounded-full">
+                      Socratic
+                    </span>
+                  </h4>
+                  <p className="text-[10px] text-white/80">
+                    {role === "STUDENT"
+                      ? "Đồng hành gợi mở • Không giải hộ"
+                      : "Hỗ trợ chuyên môn"}
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
+              <div className="flex items-center gap-1">
+                <Link
+                  href="/hoc-sinh/ai-tutor"
+                  title="Mở toàn màn hình"
+                  className="p-1.5 text-white/80 hover:text-white hover:bg-white/15 rounded-lg transition-colors"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  aria-label="Thu nhỏ trợ lý AI"
+                  title="Thu nhỏ"
+                  className="p-1.5 text-white/80 hover:text-white hover:bg-white/15 rounded-lg transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
 
-          <div className="px-3 py-1.5 bg-surface border-t border-border/60 flex items-center gap-1.5 overflow-x-auto text-[11px] text-brand-teal">
-            {role === "STUDENT" ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleSend("Gợi ý cho em 3 câu hỏi để phân tích bài Tin học 7")
-                  }
-                  className="px-2 py-1 bg-brand-teal-soft rounded whitespace-nowrap hover:bg-brand-teal-soft/80 font-medium"
+            <div className="flex-1 p-3.5 overflow-y-auto space-y-3 bg-canvas/50 text-xs">
+              {messages.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`flex ${
+                    msg.role === "user" ? "justify-end" : "justify-start"
+                  }`}
                 >
-                  Câu hỏi gợi mở
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleSend("Làm sao để tự đánh giá bài làm theo Rubric?")
-                  }
-                  className="px-2 py-1 bg-brand-teal-soft rounded whitespace-nowrap hover:bg-brand-teal-soft/80 font-medium"
-                >
-                  Kiểm tra Rubric
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleSend("Đề xuất nhận xét khích lệ cho bài nộp dự án")
-                  }
-                  className="px-2 py-1 bg-brand-teal-soft rounded whitespace-nowrap hover:bg-brand-teal-soft/80 font-medium"
-                >
-                  Gợi ý nhận xét
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleSend("Sinh câu hỏi vận dụng thực tiễn môn Tin học 7")
-                  }
-                  className="px-2 py-1 bg-brand-teal-soft rounded whitespace-nowrap hover:bg-brand-teal-soft/80 font-medium"
-                >
-                  Sinh câu hỏi phân hóa
-                </button>
-              </>
-            )}
-          </div>
+                  <div
+                    className={`max-w-[85%] p-3 rounded-2xl leading-relaxed ${
+                      msg.role === "user"
+                        ? "bg-ocean-600 text-white rounded-br-sm"
+                        : "bg-surface border border-border text-ink shadow-xs rounded-bl-sm"
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+            </div>
 
-          <div className="p-2.5 bg-surface border-t border-border flex items-center gap-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder="Nhập câu hỏi hoặc yêu cầu..."
-              className="flex-1 px-3 py-2 bg-canvas border border-border rounded-button text-xs text-ink focus:outline-none focus:border-brand-teal"
-            />
-            <button
-              type="button"
-              onClick={() => handleSend()}
-              className="p-2 rounded-button bg-brand-teal text-white hover:bg-brand-teal-hover transition-colors"
-            >
-              <Send className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
+            <div className="px-3 py-2 bg-surface border-t border-border/70 flex items-center gap-1.5 overflow-x-auto text-[11px] text-violet-700">
+              {role === "STUDENT" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSend("Gợi ý cho em 3 câu hỏi để phân tích bài Tin học 7")
+                    }
+                    className="px-2.5 py-1 bg-violet-50 border border-violet-200 rounded-full whitespace-nowrap hover:bg-violet-100 font-semibold transition-colors"
+                  >
+                    Câu hỏi gợi mở
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSend("Làm sao để tự đánh giá bài làm theo Rubric?")
+                    }
+                    className="px-2.5 py-1 bg-violet-50 border border-violet-200 rounded-full whitespace-nowrap hover:bg-violet-100 font-semibold transition-colors"
+                  >
+                    Kiểm tra Rubric
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSend("Đề xuất nhận xét khích lệ cho bài nộp dự án")
+                    }
+                    className="px-2.5 py-1 bg-violet-50 border border-violet-200 rounded-full whitespace-nowrap hover:bg-violet-100 font-semibold transition-colors"
+                  >
+                    Gợi ý nhận xét
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleSend("Sinh câu hỏi vận dụng thực tiễn môn Tin học 7")
+                    }
+                    className="px-2.5 py-1 bg-violet-50 border border-violet-200 rounded-full whitespace-nowrap hover:bg-violet-100 font-semibold transition-colors"
+                  >
+                    Sinh câu hỏi phân hóa
+                  </button>
+                </>
+              )}
+            </div>
+
+            <div className="p-2.5 bg-surface border-t border-border flex items-center gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                placeholder="Nhập câu hỏi hoặc yêu cầu..."
+                className="flex-1 px-3 py-2 bg-canvas border border-border rounded-button text-xs text-ink focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100 transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => handleSend()}
+                aria-label="Gửi tin nhắn"
+                className="p-2.5 rounded-button bg-gradient-ai text-white hover:brightness-105 transition-all active:scale-95"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </m.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import React from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/prisma";
-import { BookOpen, FileText, CheckSquare } from "lucide-react";
+import { BookOpen } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -20,19 +21,14 @@ export default async function AdminSubjectsPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-ink">
-              Quản lý Môn học, Học liệu & Ngân hàng Đề
-            </h1>
-            <span className="text-xs font-semibold bg-brand-teal-soft text-brand-teal px-2 py-0.5 rounded">
-              Curriculum & Assessment Bank
-            </span>
-          </div>
-          <p className="text-xs text-ink-muted mt-1">
-            Danh mục môn học, chủ đề, bài giảng số và bài tập gắn Rubric 4 tiêu chí.
-          </p>
-        </div>
+        <PageHeader
+          variant="card"
+          tone="materials"
+          badge="Curriculum & Assessment Bank"
+          badgeIcon={<BookOpen className="w-3.5 h-3.5" />}
+          title="Quản lý Môn học, Học liệu & Ngân hàng Đề"
+          description="Danh mục môn học, chủ đề, bài giảng số và bài tập gắn Rubric 4 tiêu chí."
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {subjects.map((sub) => {
@@ -43,34 +39,34 @@ export default async function AdminSubjectsPage() {
             return (
               <div
                 key={sub.id}
-                className="p-6 rounded-panel bg-surface border border-border shadow-card space-y-4"
+                className="p-6 rounded-2xl bg-surface border border-border hover:border-sky-300 shadow-card transition-all space-y-4"
               >
                 <div className="flex items-center justify-between pb-3 border-b border-border">
                   <div>
-                    <span className="text-[11px] font-mono font-bold bg-brand-teal-soft text-brand-teal px-2 py-0.5 rounded">
+                    <span className="text-[11px] font-mono font-bold bg-sky-100 text-sky-700 px-2.5 py-0.5 rounded-full">
                       {sub.code}
                     </span>
                     <h2 className="text-base font-bold text-ink mt-1.5">
                       {sub.name} (Khối {sub.gradeLevel})
                     </h2>
                   </div>
-                  <BookOpen className="w-5 h-5 text-brand-teal" />
+                  <BookOpen className="w-5 h-5 text-sky-600" />
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                  <div className="p-2.5 rounded bg-canvas border border-border">
+                  <div className="p-2.5 rounded-xl bg-canvas border border-border">
                     <div className="font-mono font-bold text-ink text-sm">
                       {sub.topics.length}
                     </div>
                     <div className="text-[10px] text-ink-muted">Chủ đề</div>
                   </div>
-                  <div className="p-2.5 rounded bg-canvas border border-border">
+                  <div className="p-2.5 rounded-xl bg-canvas border border-border">
                     <div className="font-mono font-bold text-ink text-sm">
                       {lessonCount}
                     </div>
                     <div className="text-[10px] text-ink-muted">Bài giảng</div>
                   </div>
-                  <div className="p-2.5 rounded bg-canvas border border-border">
+                  <div className="p-2.5 rounded-xl bg-canvas border border-border">
                     <div className="font-mono font-bold text-ink text-sm">
                       {sub.assignments.length}
                     </div>
@@ -90,12 +86,12 @@ export default async function AdminSubjectsPage() {
                     sub.topics.map((t) => (
                       <div
                         key={t.id}
-                        className="p-2.5 rounded bg-canvas border border-border/70 flex items-center justify-between"
+                        className="p-2.5 rounded-xl bg-canvas border border-border/70 flex items-center justify-between"
                       >
                         <span className="font-medium text-ink truncate">
                           {t.name}
                         </span>
-                        <span className="text-[10px] font-mono text-brand-teal shrink-0 ml-2">
+                        <span className="text-[10px] font-mono text-sky-700 font-semibold shrink-0 ml-2">
                           {t.lessons.length} bài
                         </span>
                       </div>
