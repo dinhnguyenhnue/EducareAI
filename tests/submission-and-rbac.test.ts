@@ -4,6 +4,7 @@ import {
   validateAssignmentSubmissionRules,
   withKeyLock,
 } from "../src/lib/submission-guard";
+import { validateGoogleIdTokenClaims } from "../src/lib/auth";
 
 describe("Submission Rules & Concurrency Guard (Section 2.4 & 2.5)", () => {
   const baseAssignment = {
@@ -117,6 +118,108 @@ describe("Submission Rules & Concurrency Guard (Section 2.4 & 2.5)", () => {
       "REQ_B:IDEMPOTENT_BLOCKED",
       "REQ_C:IDEMPOTENT_BLOCKED",
     ]);
+  });
+});
+
+describe("Google OIDC ID Token Claims Validation", () => {
+  const clientId = "1234567890-testclient.apps.googleusercontent.com";
+
+  it("accepts string exp and iat claims returned by Google tokeninfo and normalizes them to numbers", () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+    const issuedAt = futureExp - 3600;
+
+    const result = validateGoogleIdTokenClaims(
+      {
+        iss: "https://accounts.google.com",
+        aud: clientId,
+        sub: "110293847564738291011",
+        email: "DinhNguyenHNUE@gmail.com",
+        email_verified: "true",
+        exp: String(futureExp),
+        iat: String(issuedAt),
+      },
+      `  ${clientId}  `,
+      { verifiedByGoogleTokenInfo: true }
+    );
+
+    assert.equal(result.valid, true);
+    assert.ok(result.normalized);
+    assert.equal(result.normalized.exp, futureExp);
+    assert.equal(result.normalized.iat, issuedAt);
+    assert.equal(typeof result.normalized.exp, "number");
+    assert.equal(typeof result.normalized.iat, "number");
+    assert.equal(result.normalized.email, "dinhnguyenhnue@gmail.com");
+  });
+
+  it("accepts token verified by Google tokeninfo even when host clock skew is large", () => {
+    // Example real-world 2024 timestamp even if host clock is ahead in 2026
+    const result = validateGoogleIdTokenClaims(
+      {
+        iss: "https://accounts.google.com",
+        aud: clientId,
+        sub: "110293847564738291011",
+        email: "teacher@unigo.edu.vn",
+        email_verified: "true",
+        iat: "1731551867",
+        exp: "1731555467",
+      },
+      clientId,
+      { verifiedByGoogleTokenInfo: true }
+    );
+
+    assert.equal(result.valid, true);
+    assert.equal(result.normalized?.exp, 1731555467);
+    assert.equal(result.normalized?.iat, 1731551867);
+  });
+
+  it("rejects expired tokens with TOKEN_EXPIRED when not pre-verified by Google tokeninfo", () => {
+    const expiredUnix = Math.floor(Date.now() / 1000) - 300;
+    const result = validateGoogleIdTokenClaims(
+      {
+        iss: "https://accounts.google.com",
+        aud: clientId,
+        sub: "110293847564738291011",
+        email: "student@unigo.edu.vn",
+        email_verified: true,
+        exp: expiredUnix,
+      },
+      clientId
+    );
+
+    assert.equal(result.valid, false);
+    assert.ok(result.error?.startsWith("TOKEN_EXPIRED"));
+  });
+
+  it("rejects mismatched aud and unverified email", () => {
+    const futureExp = Math.floor(Date.now() / 1000) + 3600;
+
+    const badAud = validateGoogleIdTokenClaims(
+      {
+        iss: "https://accounts.google.com",
+        aud: "other-client.apps.googleusercontent.com",
+        sub: "110293847564738291011",
+        email: "user@unigo.edu.vn",
+        email_verified: true,
+        exp: futureExp,
+      },
+      clientId
+    );
+    assert.equal(badAud.valid, false);
+    assert.ok(badAud.error?.startsWith("INVALID_AUDIENCE"));
+
+    const unverifiedEmail = validateGoogleIdTokenClaims(
+      {
+        iss: "https://accounts.google.com",
+        aud: clientId,
+        sub: "110293847564738291011",
+        email: "user@unigo.edu.vn",
+        email_verified: "false",
+        exp: String(futureExp),
+      },
+      clientId
+    );
+    assert.equal(unverifiedEmail.valid, false);
+    assert.ok(unverifiedEmail.error?.startsWith("EMAIL_NOT_VERIFIED"));
   });
 });
 

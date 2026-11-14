@@ -1,7 +1,12 @@
 # BÀN GIAO PHIÊN LÀM VIỆC (SESSION HANDOFF) — EDUCARE AI
 
-> **Cập nhật lần cuối**: `2026-11-13T17:22:00+07:00`
-> **Trạng thái**: **HOÀN TẤT EDUCARE AI 3.0 (Ocean Blue Design System & Fluid Motion — Phase A–H)** — Tất cả build/typecheck/unit tests/HTTP SSR & RBAC checks đạt. Còn 1 mục chặn ngoài code: `chrome_devtools` MCP chưa kết nối được Chrome để chụp ảnh AFTER & đo Web Vitals do Chrome chưa bật `chrome://inspect/#remote-debugging` (`DevToolsActivePort` ENOENT).
+> **Cập nhật lần cuối**: `2026-11-14T09:57:00+07:00`
+> **Trạng thái**: **ĐÃ SỬA LỖI GOOGLE OAUTH CALLBACK (`[GOOGLE_ID_TOKEN_INVALID] TOKEN_EXPIRED`) + HOÀN TẤT EDUCARE AI 3.0** — `prisma validate` PASS, `tsc --noEmit` PASS, `pnpm test` 37/37 PASS, `pnpm build` PASS.
+
+## 0. Bản vá mới nhất (`fix(auth)` Google OAuth Callback)
+- [src/lib/auth.ts](file:///d:/Educare_AI/src/lib/auth.ts): `validateGoogleIdTokenClaims` hỗ trợ ép kiểu `exp`/`iat` dạng `string` từ Google `tokeninfo`, kiểm tra `options.verifiedByGoogleTokenInfo` tránh hết hạn giả do lệch đồng hồ hệ thống, chuẩn hóa `.trim()` cho `aud`/`iss`, và `authenticateVerifiedGoogleUser` cho phép nâng cấp `googleSub` giả lập cũ (`google-oidc-sub-...`) sang Google `sub` thật dạng số (`/^\d+$/`).
+- [src/app/api/auth/google/callback/route.ts](file:///d:/Educare_AI/src/app/api/auth/google/callback/route.ts): Truyền `{ verifiedByGoogleTokenInfo: tokenInfoRes.ok }`, lưu `googleSub` vào `GoogleConnection`, bọc `prisma.googleConnection.upsert` trong `try/catch` để không chặn luồng tạo phiên đăng nhập.
+- [tests/submission-and-rbac.test.ts](file:///d:/Educare_AI/tests/submission-and-rbac.test.ts): Bổ sung 4 unit tests kiểm thử `validateGoogleIdTokenClaims` (37/37 PASS trên 7 suites).
 
 ## 1. Tiến độ EDUCARE AI 3.0 hiện tại
 - **Phase A–C (`complete`)**: Cài `framer-motion@14.12.0`, nâng cấp `tailwind.config.ts` (đã gỡ alias `brand.teal` và hoàn thiện thang `ocean-50..950`), `globals.css`, `next.config.ts`, tạo `src/lib/motion.ts` & `src/lib/theme.ts`, dựng toàn bộ thư viện `src/components/ui/*` (20 components + `AuthSplitShell` + `RoleSwitcher`) và nâng cấp `AppShell`, `AppSidebar`, `AppHeader`, `FloatingAIAssistant`, `loading.tsx`.

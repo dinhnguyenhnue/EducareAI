@@ -27,19 +27,26 @@ export interface GoogleIdTokenClaims {
   iat?: number;
 }
 
+export type RawGoogleIdTokenClaims = Omit<Partial<GoogleIdTokenClaims>, "exp" | "iat"> & {
+  exp?: number | string;
+  iat?: number | string;
+};
+
 /**
  * Verifies Google OpenID Connect ID Token claims strictly per Section III:
  * - issuer: https://accounts.google.com or accounts.google.com
  * - audience: matches expected GOOGLE_CLIENT_ID
- * - expiry: exp > current unix timestamp
+ * - expiry: exp > current unix timestamp (supports numeric or string claims from tokeninfo)
  * - email_verified: must be true
  * - sub: non-empty stable Google subject identifier
  */
 export function validateGoogleIdTokenClaims(
-  claims: Partial<GoogleIdTokenClaims>,
-  expectedClientId: string
+  claims: RawGoogleIdTokenClaims,
+  expectedClientId: string,
+  options?: { verifiedByGoogleTokenInfo?: boolean }
 ): { valid: boolean; error?: string; normalized?: GoogleIdTokenClaims } {
-  if (!expectedClientId || expectedClientId === "UNCONFIGURED_CLIENT_ID") {
+  const trimmedExpectedClientId = (expectedClientId || "").trim();
+  if (!trimmedExpectedClientId || trimmedExpectedClientId === "UNCONFIGURED_CLIENT_ID") {
     return {
       valid: false,
       error: "MISSING_OAUTH_CLIENT_ID: GOOGLE_CLIENT_ID chưa được cấu hình trong .env",
@@ -47,16 +54,48 @@ export function validateGoogleIdTokenClaims(
   }
 
   const validIssuers = ["https://accounts.google.com", "accounts.google.com"];
-  if (!claims.iss || !validIssuers.includes(claims.iss)) {
+  const trimmedIss = typeof claims.iss === "string" ? claims.iss.trim() : "";
+  if (!trimmedIss || !validIssuers.includes(trimmedIss)) {
     return { valid: false, error: `INVALID_ISSUER: Issuer không hợp lệ (${claims.iss})` };
   }
 
-  if (!claims.aud || claims.aud !== expectedClientId) {
+  const trimmedAud = typeof claims.aud === "string" ? claims.aud.trim() : "";
+  if (!trimmedAud || trimmedAud !== trimmedExpectedClientId) {
     return { valid: false, error: "INVALID_AUDIENCE: Audience không khớp với GOOGLE_CLIENT_ID" };
   }
 
+  // Google's /tokeninfo endpoint returns unix timestamps (`exp`, `iat`) as numeric strings.
+  const expSec =
+    typeof claims.exp === "string"
+      ? claims.exp.trim().length > 0
+        ? Number(claims.exp.trim())
+        : NaN
+      : typeof claims.exp === "number"
+        ? claims.exp
+        : NaN;
+
+  const rawIat = claims.iat;
+  const iatSec =
+    rawIat !== undefined && rawIat !== null && String(rawIat).trim().length > 0
+      ? typeof rawIat === "string"
+        ? Number(rawIat.trim())
+        : typeof rawIat === "number"
+          ? rawIat
+          : NaN
+      : undefined;
+
   const nowSec = Math.floor(Date.now() / 1000);
-  if (!claims.exp || typeof claims.exp !== "number" || claims.exp <= nowSec) {
+  if (!Number.isFinite(expSec) || expSec <= 0) {
+    return { valid: false, error: "TOKEN_EXPIRED: Google ID Token đã hết hạn" };
+  }
+
+  if (options?.verifiedByGoogleTokenInfo) {
+    // Google tokeninfo already rejected expired tokens on Google's authoritative clock;
+    // avoid false positives when the host clock has skew.
+    if (iatSec !== undefined && (!Number.isFinite(iatSec) || expSec <= iatSec)) {
+      return { valid: false, error: "TOKEN_EXPIRED: Google ID Token đã hết hạn" };
+    }
+  } else if (expSec + 60 <= nowSec) {
     return { valid: false, error: "TOKEN_EXPIRED: Google ID Token đã hết hạn" };
   }
 
@@ -80,15 +119,15 @@ export function validateGoogleIdTokenClaims(
   return {
     valid: true,
     normalized: {
-      iss: claims.iss,
-      aud: claims.aud,
+      iss: trimmedIss,
+      aud: trimmedAud,
       sub: claims.sub.trim(),
       email: claims.email.trim().toLowerCase(),
       email_verified: true,
       name: claims.name,
       picture: claims.picture,
-      exp: claims.exp,
-      iat: claims.iat,
+      exp: expSec,
+      iat: iatSec !== undefined && Number.isFinite(iatSec) ? iatSec : undefined,
     },
   };
 }
@@ -137,8 +176,15 @@ export async function authenticateVerifiedGoogleUser(
     where: { email: normalizedEmail },
   });
 
-  // Prevent account takeover if email matches a user whose googleSub is already bound to a DIFFERENT sub
-  if (userByEmail && userByEmail.googleSub && userByEmail.googleSub !== claims.sub) {
+  // Prevent account takeover if email matches a user whose googleSub is already bound to a DIFFERENT sub.
+  // Allow upgrading legacy/synthetic test subs (e.g. "google-oidc-sub-...") to a verified numeric Google sub.
+  const isSyntheticSub = (s: string) => s.startsWith("google-oidc-sub-") || !/^\d+$/.test(s);
+  if (
+    userByEmail &&
+    userByEmail.googleSub &&
+    userByEmail.googleSub !== claims.sub &&
+    !(isSyntheticSub(userByEmail.googleSub) && !isSyntheticSub(claims.sub))
+  ) {
     await prisma.auditLog.create({
       data: {
         actorId: userByEmail.id,

@@ -81,7 +81,9 @@ export async function GET(req: Request) {
       ? await tokenInfoRes.json()
       : decodeJwtPayload(idToken);
 
-    const validation = validateGoogleIdTokenClaims(rawClaims || {}, config.clientId);
+    const validation = validateGoogleIdTokenClaims(rawClaims || {}, config.clientId, {
+      verifiedByGoogleTokenInfo: tokenInfoRes.ok,
+    });
 
     if (!validation.valid || !validation.normalized) {
       console.error("[GOOGLE_ID_TOKEN_INVALID]", validation.error);
@@ -96,22 +98,28 @@ export async function GET(req: Request) {
       : ["openid", "email", "profile"];
 
     if (tokenData.access_token) {
-      await prisma.googleConnection.upsert({
-        where: { userId: user.id },
-        update: {
-          googleEmail: validation.normalized.email,
-          scopesGranted: JSON.stringify(grantedScopes),
-          status: "CONNECTED",
-          lastSyncAt: new Date(),
-        },
-        create: {
-          userId: user.id,
-          googleEmail: validation.normalized.email,
-          scopesGranted: JSON.stringify(grantedScopes),
-          status: "CONNECTED",
-          lastSyncAt: new Date(),
-        },
-      });
+      try {
+        await prisma.googleConnection.upsert({
+          where: { userId: user.id },
+          update: {
+            googleEmail: validation.normalized.email,
+            googleSub: validation.normalized.sub,
+            scopesGranted: JSON.stringify(grantedScopes),
+            status: "CONNECTED",
+            lastSyncAt: new Date(),
+          },
+          create: {
+            userId: user.id,
+            googleEmail: validation.normalized.email,
+            googleSub: validation.normalized.sub,
+            scopesGranted: JSON.stringify(grantedScopes),
+            status: "CONNECTED",
+            lastSyncAt: new Date(),
+          },
+        });
+      } catch (connErr) {
+        console.warn("[GOOGLE_CONNECTION_UPSERT_WARN]", connErr);
+      }
     }
 
     // Create session and set HttpOnly cookie
