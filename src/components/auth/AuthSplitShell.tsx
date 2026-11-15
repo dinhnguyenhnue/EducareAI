@@ -23,6 +23,12 @@ export function AuthSplitShell({
 }) {
   return (
     <div className="min-h-screen bg-ocean-mesh text-ink flex flex-col justify-between">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-button focus:bg-ocean-600 focus:text-white focus:font-bold focus:text-xs focus:shadow-dialog"
+      >
+        Chuyển đến nội dung chính
+      </a>
       {/* Top Navbar */}
       <header className="h-16 px-5 sm:px-10 flex items-center justify-between border-b border-border/80 bg-surface/85 backdrop-blur-md sticky top-0 z-30">
         <BrandLogo href="/" subtitle="Hệ sinh thái học tập số" size="md" />
@@ -30,7 +36,11 @@ export function AuthSplitShell({
       </header>
 
       {/* Main Split Container */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-10">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-10 focus:outline-none"
+      >
         <PageTransition className="w-full max-w-6xl">
           <div className="grid grid-cols-1 lg:grid-cols-12 rounded-2xl border border-ocean-100 bg-surface shadow-panel overflow-hidden">
             {/* Left Hero Pane */}

@@ -63,10 +63,11 @@ export function DataTable<T>({
               <Search className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="search"
+                aria-label={searchPlaceholder}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full pl-9 pr-3 py-2 rounded-button bg-surface border border-border focus:border-ocean-600 focus:ring-2 focus:ring-ocean-light text-xs text-ink outline-none transition-all"
+                className="w-full pl-9 pr-3 py-2 rounded-button bg-surface border border-border focus:border-ocean-600 focus:ring-2 focus:ring-ocean-light text-sm text-ink outline-none transition-all"
               />
             </div>
           )}
@@ -82,14 +83,14 @@ export function DataTable<T>({
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full text-left border-collapse text-sm">
             <thead>
-              <tr className="bg-surface-muted/75 border-b border-border text-[11px] font-bold uppercase tracking-wider text-ink-muted">
+              <tr className="bg-surface-muted/75 border-b border-border text-xs font-bold uppercase tracking-wider text-ink-muted">
                 {columns.map((col) => (
                   <th
                     key={col.key}
                     className={cn(
-                      "px-4 py-3 whitespace-nowrap",
+                      "px-4 py-3.5 whitespace-nowrap",
                       col.align === "right"
                         ? "text-right"
                         : col.align === "center"
@@ -113,7 +114,7 @@ export function DataTable<T>({
                     <td
                       key={col.key}
                       className={cn(
-                        "px-4 py-3 align-middle text-ink",
+                        "px-4 py-3.5 align-middle text-ink",
                         col.align === "right"
                           ? "text-right"
                           : col.align === "center"

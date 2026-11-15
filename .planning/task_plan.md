@@ -52,3 +52,37 @@
 - [x] **Phase F — Functional Pages & Sub-routes (`complete`)**: Hoàn tất Batch 1–5 (`StudentAiCenterTabs`, `MultiFileAssetUploader`, `SandboxedHtmlGamePlayer`, `html-game-sandbox`, `/privacy`, `/terms`, `/embed/tro-choi/[slug]`, `/admin/settings/integrations`, `quan-tri/*`, `giao-vien/*`, `hoc-sinh/*`, `phu-huynh/*`), xóa hoàn toàn 0/0 token teal cũ khỏi `src/`, gỡ bỏ alias `brand.teal` khỏi `tailwind.config.ts` và bổ sung đầy đủ thang màu `ocean-*`.
 - [x] **Phase G — Motion & Performance Optimization (`complete`)**: `LazyMotion features={domAnimation}` + `<MotionConfig reducedMotion="user">`, `next/font/google`, GPU-friendly `transform`/`opacity`, `next/dynamic` lazy-loading cho `SandboxedHtmlGamePlayer` (`xuong-tro-choi`, `duyet-tro-choi`) và `FloatingAIAssistant` (`AppShell`), `@media (prefers-reduced-motion: reduce)` trong `globals.css`.
 - [x] **Phase H — QA & Visual Comparison (`complete` cho build/unit/HTTP/RBAC checks; Chrome DevTools MCP blocked)**: `prisma validate` PASS, `tsc --noEmit` PASS, `pnpm test` 33/33 PASS, `pnpm build` PASS (shared JS 103 kB, CSS `d8ff7d670f8dc374.css` 78,649 bytes). Live `next start` (`http://localhost:3000`): 10/10 public routes HTTP 200, 5/5 protected portals HTTP 307 redirect. Subagent `chrome_devtools` bị chặn do thiếu `DevToolsActivePort` (Chrome chưa bật `chrome://inspect/#remote-debugging`).
+
+---
+
+# Kế hoạch Thực thi Phase 6 — Skill UI/UX & Performance (`educare-uiux-performance`) + Audit & Nâng cấp Toàn diện
+
+> **Cập nhật lần cuối**: `2026-11-15T10:59:00+07:00`
+> **Trạng thái tổng thể**: `complete` (Tất cả các bước T6.0 -> T6.4 đã hoàn tất và vượt qua 43/43 unit tests + Next.js build)
+
+- [x] **T6.0 — Lập kế hoạch & Kiểm tra nguồn tham khảo (`complete`)**: Xác nhận đường dẫn 3 nguồn (`Impeccable` tại `D:\AI\Repos\impeccable` thay vì `D:\AI\impeccable`; `UI UX Pro Max` tại `D:\AI\Skills\ui-ux-pro-max-skill`; `EvondevKit` tại `D:\AI\Repos\evondevKit`), tạo `uiux_plan.md` và được người dùng phê duyệt.
+- [x] **T6.1 — Giai đoạn 1: Khảo sát hiện trạng & 3 nguồn tham khảo (`complete`)**: Đọc chi tiết `Impeccable` (`D:\AI\Repos\impeccable`, Apache-2.0), `UI UX Pro Max` (`D:\AI\Skills\ui-ux-pro-max-skill`, MIT), `EvondevKit` (`D:\AI\Repos\evondevKit`, MIT); khảo sát toàn diện `d:\Educare_AI` về điều hướng, phân cấp thị giác, responsive, trạng thái giao diện (loading/empty/error/disabled/forbidden), khả năng truy cập (bàn phím, skip-link, `aria-*`, focus), hiệu năng và motion.
+- [x] **T6.2 — Giai đoạn 2: Tạo Skill & Bộ 4 Đặc tả (`complete`)**: Tạo `.agents/skills/educare-uiux-performance/SKILL.md`, `PRODUCT_SPEC.md`, `DESIGN.md`, `MOTION_SPEC.md`, `AUDIT_REPORT.md` (điểm tự đánh giá ban đầu 1–5 kèm bằng chứng `file:line`).
+- [x] **T6.3 — Giai đoạn 3: Triển khai các cải thiện tác động cao (`complete`)**: Sửa lỗi chặn công việc (`error.tsx`, `not-found.tsx`, thay thế toàn bộ `alert()` chặn luồng bằng `useToast()` + banner `role="alert"`), nâng cấp điều hướng & khả năng truy cập (skip-to-content `#main-content`, `aria-current="page"`, nút tìm kiếm nhanh `Ctrl+K` trên mobile `<768px`, `role="dialog" aria-modal="true"` trên mọi modal, `Escape` thu gọn `FloatingAIAssistant`, liên kết `htmlFor`/`id`), và loại bỏ `bg-clip-text text-transparent` trên tiêu đề Hero trang chủ.
+- [x] **T6.4 — Giai đoạn 4: Kiểm tra, Tự thẩm định & Báo cáo cuối (`complete`)**: Tạo `tests/uiux-accessibility.test.ts`; chạy `prisma validate` (PASS), `tsc --noEmit` (PASS), `pnpm test` (43/43 PASS trên 7 suites), `pnpm build` (PASS, First Load JS shared = 103 kB); cập nhật điểm trước/sau 1–5 trong `AUDIT_REPORT.md` và `.planning/HANDOFF.md`.
+
+
+## REDESIGN-PROMPT — 2026-11-15
+- [x] (complete) Read shared conversation, reconciled current product changes, persisted decisions in docs/EDUCAREAI_VISION_AND_DECISIONS.md and created docs/EDUCAREAI_REDESIGN_PROMPT.md. Documentation only; completed implementation phases preserved. Application redesign has not been executed in this task.
+
+---
+
+# Kế hoạch Triển khai Redesign EDUCARE AI (theo docs/EDUCAREAI_REDESIGN_PROMPT.md)
+
+> **Cập nhật**: `2026-11-15T23:48:00+07:00`
+> **Trạng thái tổng thể**: `in_progress`
+
+- [x] **TR-1 — Audit Hiện trạng & Chốt Hướng Thiết kế (`complete`)**: Đối chiếu sitemap 4 cổng, khảo sát các điểm thừa, chốt bảng ánh xạ route/nhóm điều hướng, wireframe, type scale (body 16px, input 16px, table 14px, heading 20-28px).
+- [x] **TR-2 — Nền tảng Component & Navigation Dùng chung (`complete`)**: Nâng cấp `src/lib/theme.ts`, `globals.css`, `AppSidebar` (nhóm menu theo mục đích, bỏ nhãn kỹ thuật "Sandbox"/"3 Tab", active state rõ), `AppHeader` (breadcrumb gọn, search, user menu), tạo `BottomNav` mobile cho Học sinh/Phụ huynh (≤2 thao tác tới tác vụ chính), chuẩn hóa `PageHeader`, `OceanButton` (vùng chạm 44px), `DataTable`, `EmptyState`.
+- [x] **TR-3 — Nhóm 1: Không gian Học sinh & Luồng Mẫu Chuẩn (`complete`)**: Redesign `/hoc-sinh/tong-quan` (nửa trên: "Hôm nay em cần làm gì?", bài học tiếp tục, bài cần nộp, phản hồi; nửa dưới: tiến độ thật, không bịa KPI), `/hoc-sinh/mon-hoc` & `mon-hoc/[id]` (mục tiêu -> nội dung -> bài tập), `/hoc-sinh/bai-tap` & `bai-tap/[id]` (rubric, nộp bài, upload tệp, xác nhận, thay thế tên gán cứng bằng chức danh sư phạm).
+- [x] **TR-4 — Nhóm 2: Bàn làm việc Giáo viên & Chấm bài Rubric (`complete`)**: Redesign `/giao-vien/tong-quan` (hàng đợi cần xử lý: bài nộp chờ chấm, duyệt game, lịch dạy), `/giao-vien/cham-bai` & `TeacherGradingWorkspace` (danh sách học sinh, bài làm, rubric 4 mức, chuyển bài không mất dữ liệu), `/giao-vien/bai-giang` (biên tập bài giảng rõ ràng, tạo bài kèm liên kết Docs), `/giao-vien/ngan-hang-cau-hoi` (chuẩn hóa bảng và nút thao tác).
+- [x] **TR-5 — Nhóm 3: Xưởng Trò chơi HTML, Sáng tạo & Trung tâm AI (`complete`)**: Redesign `/hoc-sinh/xuong-tro-choi` (tách tab "Chơi trò đã duyệt" và "Tạo trò chơi của em", sandbox an toàn, nhãn điểm tự luyện trung thực), `/giao-vien/duyet-tro-choi`, `/hoc-sinh/sang-tao-cung-ai` / `ai-tutor` (gợi ý theo ý định: giải thích, luyện tập, sáng tạo; không che khuất nội dung).
+- [x] **TR-6 — Nhóm 4: Báo cáo Tiến bộ & Cổng Phụ huynh (`complete`)**: Redesign `/giao-vien/phan-tich` (dữ liệu thật từ Attempt & LearningRecord), `/hoc-sinh/ho-so-nang-luc`, `/phu-huynh/*` (chọn con, điểm mạnh & cần rèn luyện ngôn ngữ dễ hiểu, trung thực, không bịa xếp loại).
+- [x] **TR-7 — Nhóm 5: Quản trị Hệ thống, Tài khoản & Tích hợp (`complete`)**: Redesign `/quan-tri/tong-quan`, `/quan-tri/nguoi-dung` (cấp mã HS không email, nhập Excel/CSV, hiển thị mật khẩu tạm an toàn 1 lần), `/admin/settings/integrations` (chia nhóm Google Workspace, Gemini Server API, Gems theo luồng rõ ràng, secret write-only).
+- [x] **TR-8 — Nhóm 6: Trang Công khai & Xác thực (`complete`)**: Redesign `/`, `/dang-nhap` (đăng nhập bằng mã HS hoặc email, hướng dẫn lấy lại mật khẩu liên hệ giáo viên/quản trị), `/dang-ky`, `/dat-lai-mat-khau`, `/khong-co-quyen`, `/privacy`, `/terms`.
+- [x] **TR-9 — Kiểm thử Toàn diện, Đối chiếu Responsive & Nghiệm thu (`complete`)**: `prisma validate` (PASS), `tsc --noEmit` (PASS), `pnpm test` (53/53 PASS trên 8 suites), `pnpm build` (PASS, First Load JS 103 kB), 27/27 static/dynamic pages compiled cleanly, responsive typography và touch targets tuân thủ chuẩn WCAG 2.2 AA.

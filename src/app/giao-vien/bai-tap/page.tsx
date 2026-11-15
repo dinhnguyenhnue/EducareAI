@@ -6,18 +6,25 @@ import { TeacherAssignmentsClient } from "./TeacherAssignmentsClient";
 export const dynamic = "force-dynamic";
 
 export default async function TeacherAssignmentsPage() {
-  const [assignments, classes, subjects] = await Promise.all([
-    prisma.assignment.findMany({
-      include: {
-        subject: true,
-        schoolClass: true,
-        submissions: true,
-      },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.schoolClass.findMany({ orderBy: { name: "asc" } }),
-    prisma.subject.findMany({ orderBy: { name: "asc" } }),
-  ]);
+  let assignments: any[] = [];
+  let classes: any[] = [];
+  let subjects: any[] = [];
+  try {
+    [assignments, classes, subjects] = await Promise.all([
+      prisma.assignment.findMany({
+        include: {
+          subject: true,
+          schoolClass: true,
+          submissions: true,
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.schoolClass.findMany({ orderBy: { name: "asc" } }),
+      prisma.subject.findMany({ orderBy: { name: "asc" } }),
+    ]);
+  } catch (err) {
+    console.warn("Could not load assignments/classes/subjects:", err);
+  }
 
   return (
     <AppShell>

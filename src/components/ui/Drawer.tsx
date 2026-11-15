@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, m } from "framer-motion";
 import { X } from "lucide-react";
 import {
@@ -10,11 +11,15 @@ import {
 } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function Drawer({
   open,
   onClose,
   side = "left",
   title,
+  ariaLabel = "Bảng điều hướng",
   children,
   widthClass = "w-[272px]",
   className,
@@ -23,32 +28,113 @@ export function Drawer({
   onClose: () => void;
   side?: "left" | "right";
   title?: React.ReactNode;
+  ariaLabel?: string;
   children: React.ReactNode;
   widthClass?: string;
   className?: string;
 }) {
+  const titleId = useId();
+  const drawerRef = useRef<HTMLDivElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const wasOpenRef = useRef(false);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (open && !wasOpenRef.current && typeof document !== "undefined") {
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+  }
+  wasOpenRef.current = open;
+
   useEffect(() => {
     if (!open) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
+
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
+    const rafId = window.requestAnimationFrame(() => {
+      const container = drawerRef.current;
+      if (!container) return;
+      if (container.contains(document.activeElement)) return;
+      const focusable = Array.from(
+        container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      );
+      (focusable[0] || container).focus();
+    });
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onCloseRef.current();
+        return;
+      }
+
+      if (e.key === "Tab") {
+        const container = drawerRef.current;
+        if (!container) return;
+        const focusable = Array.from(
+          container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+        ).filter((el) => el.offsetParent !== null || el === document.activeElement);
+
+        if (focusable.length === 0) {
+          e.preventDefault();
+          container.focus();
+          return;
+        }
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+
+        if (e.shiftKey) {
+          if (!active || active === first || !container.contains(active)) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (!active || active === last || !container.contains(active)) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => {
+      window.cancelAnimationFrame(rafId);
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", handleKeyDown);
+      const targetToFocus = previousFocusRef.current;
+      window.requestAnimationFrame(() => {
+        if (targetToFocus && document.body.contains(targetToFocus)) {
+          targetToFocus.focus();
+        }
+      });
     };
-  }, [open, onClose]);
+  }, [open]);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <div
+          ref={drawerRef}
           role="dialog"
           aria-modal="true"
+          aria-labelledby={title ? titleId : undefined}
+          aria-label={!title ? ariaLabel : undefined}
+          tabIndex={-1}
           className={cn(
-            "fixed inset-0 z-50 flex",
+            "fixed inset-0 z-50 flex focus:outline-none",
             side === "right" ? "justify-end" : "justify-start"
           )}
         >
@@ -58,9 +144,10 @@ export function Drawer({
             animate="animate"
             exit="exit"
             onClick={onClose}
+            aria-hidden="true"
             className="fixed inset-0 bg-ink/40 backdrop-blur-[2px]"
           />
-          <m.aside
+          <m.div
             variants={side === "right" ? drawerRightSlideVariants : drawerSlideVariants}
             initial="initial"
             animate="animate"
@@ -74,7 +161,9 @@ export function Drawer({
           >
             {title && (
               <div className="px-4 py-3.5 border-b border-border flex items-center justify-between gap-2">
-                <div className="min-w-0 font-bold text-sm text-ink">{title}</div>
+                <div id={titleId} className="min-w-0 font-bold text-sm text-ink">
+                  {title}
+                </div>
                 <button
                   type="button"
                   onClick={onClose}
@@ -86,10 +175,10 @@ export function Drawer({
               </div>
             )}
             <div className="flex-1 overflow-y-auto">{children}</div>
-          </m.aside>
+          </m.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
-

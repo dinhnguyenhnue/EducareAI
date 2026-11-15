@@ -3,21 +3,25 @@ import { AppShell } from "@/components/layout/AppShell";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getGoogleOAuthConfig } from "@/lib/google-workspace";
+import {
+  getEffectiveGoogleOAuthConfig,
+  getEffectiveGeminiServerConfig,
+  getWorkspaceAndGeminiServicesStatus,
+  SYSTEM_GEMINI_API_SLOT_CODE,
+  SYSTEM_GOOGLE_WORKSPACE_SLOT_CODE,
+} from "@/lib/google-workspace";
+import { hasServerEncryptionKey, maskIdentifierPreview } from "@/lib/secret-crypto";
+import { DEFAULT_INTEGRATION_SLOTS } from "@/lib/integration-slots";
 import { PageHeader, StatCard } from "@/components/ui";
+import { IntegrationsDiagnosticsClient } from "./IntegrationsDiagnosticsClient";
 import {
   ShieldCheck,
-  CheckCircle2,
-  AlertTriangle,
   Network,
   Database,
   Cloud,
   FileSpreadsheet,
   FolderTree,
   Key,
-  ExternalLink,
-  RefreshCw,
-  Info,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -25,41 +29,82 @@ export const dynamic = "force-dynamic";
 export default async function AdminIntegrationsSettingsPage() {
   const session = await getServerSession();
 
-  // Strict Super Admin protection
-  if (!session || session.role !== "SUPER_ADMIN") {
+  // Admin protection (SUPER_ADMIN & SCHOOL_ADMIN)
+  if (
+    !session ||
+    (session.role !== "SUPER_ADMIN" && session.role !== "SCHOOL_ADMIN")
+  ) {
     redirect("/khong-co-quyen?from=/admin/settings/integrations");
   }
 
-  const oauthConfig = getGoogleOAuthConfig();
+  const [oauthConfig, geminiConfig] = await Promise.all([
+    getEffectiveGoogleOAuthConfig(),
+    getEffectiveGeminiServerConfig(),
+  ]);
 
-  // Fetch sanitized audit logs for Google Workspace and Auth
-  const [auditLogs, driveNodesCount, sheetsCount, superAdminUser] = await Promise.all([
+  // Fetch sanitized audit logs, service statuses, and integration slots
+  const [
+    auditLogs,
+    driveNodesCount,
+    sheetsCount,
+    servicesStatus,
+    dbSlots,
+  ] = await Promise.all([
     prisma.auditLog.findMany({
       where: {
-        resource: { in: ["AUTH", "GOOGLE_INTEGRATION", "DRIVE", "SHEETS"] },
+        resource: {
+          in: [
+            "AUTH",
+            "GOOGLE_INTEGRATION",
+            "GOOGLE_WORKSPACE_INTEGRATION",
+            "DRIVE",
+            "SHEETS",
+          ],
+        },
       },
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
     prisma.driveFolderNode.count(),
     prisma.classTrackingSheet.count(),
-    prisma.user.findUnique({
-      where: { email: "dinhnguyenhnue@gmail.com" },
-      select: {
-        email: true,
-        fullName: true,
-        role: true,
-        accountStatus: true,
-        emailVerified: true,
-        lastLoginAt: true,
-      },
-    }),
+    getWorkspaceAndGeminiServicesStatus(session.user.id),
+    prisma.integrationSlot
+      .findMany({ orderBy: { code: "asc" } })
+      .catch(() => []),
   ]);
 
-  const hasClientId = Boolean(process.env.GOOGLE_CLIENT_ID);
-  const hasClientSecret = Boolean(process.env.GOOGLE_CLIENT_SECRET);
+  const gemDbSlots = dbSlots.filter(
+    (s) =>
+      s.code !== SYSTEM_GOOGLE_WORKSPACE_SLOT_CODE &&
+      s.code !== SYSTEM_GEMINI_API_SLOT_CODE
+  );
+
+  const integrationSlots =
+    gemDbSlots.length > 0
+      ? gemDbSlots.map((s) => ({
+          slotKey: s.code,
+          title: s.name,
+          subjectCode: s.subjectCode,
+          gradeLevel: s.gradeLevel,
+          providerType: s.provider,
+          status: s.status,
+          externalUrl: s.externalUrl,
+        }))
+      : DEFAULT_INTEGRATION_SLOTS.map((s) => ({
+          slotKey: s.slotCode,
+          title: s.title,
+          subjectCode: s.subject,
+          gradeLevel: s.grade,
+          providerType: s.providerType,
+          status: s.status,
+          externalUrl: s.externalUrl,
+        }));
+
+  const hasClientId = Boolean(oauthConfig.clientId);
+  const hasClientSecret = Boolean(oauthConfig.clientSecret);
   const hasDbUrl = Boolean(process.env.DATABASE_URL);
-  const hasGeminiKey = Boolean(process.env.GEMINI_API_KEY);
+  const hasGeminiKey = geminiConfig.isConfigured;
+  const hasEncKey = hasServerEncryptionKey();
 
   return (
     <AppShell>
@@ -111,6 +156,25 @@ export default async function AdminIntegrationsSettingsPage() {
           />
         </div>
 
+        {/* Interactive Per-Service Diagnostics & Gemini API vs Gems */}
+        <IntegrationsDiagnosticsClient
+          initialServices={servicesStatus}
+          integrationSlots={integrationSlots}
+          hasEncryptionKey={hasEncKey}
+          initialOauthState={{
+            isConfigured: oauthConfig.isConfigured,
+            source: oauthConfig.source,
+            hasClientSecret: Boolean(oauthConfig.clientSecret),
+            accountMode: oauthConfig.accountMode,
+          }}
+          initialGeminiState={{
+            isConfigured: geminiConfig.isConfigured,
+            source: geminiConfig.source,
+            hasApiKey: Boolean(geminiConfig.apiKey),
+            modelName: geminiConfig.modelName,
+          }}
+        />
+
         {/* Section 1: Google OAuth Security Configuration */}
         <div className="p-6 rounded-2xl bg-surface border border-border shadow-card space-y-4">
           <div className="flex items-center gap-2 border-b border-border pb-3">
@@ -123,7 +187,7 @@ export default async function AdminIntegrationsSettingsPage() {
               <span className="text-ink-muted font-semibold uppercase">Google Client ID</span>
               <div className="font-mono text-ink font-medium break-all">
                 {hasClientId
-                  ? `${process.env.GOOGLE_CLIENT_ID?.slice(0, 16)}••••••••••••.apps.googleusercontent.com`
+                  ? maskIdentifierPreview(oauthConfig.clientId) || "Đã nạp"
                   : "Chưa cấu hình (Thiếu GOOGLE_CLIENT_ID)"}
               </div>
             </div>
@@ -131,7 +195,9 @@ export default async function AdminIntegrationsSettingsPage() {
             <div className="p-3.5 rounded-xl bg-canvas border border-border space-y-1.5">
               <span className="text-ink-muted font-semibold uppercase">Google Client Secret</span>
               <div className="font-mono text-ink font-medium">
-                {hasClientSecret ? "•••••••••••••••• (Bảo mật máy chủ)" : "Chưa cấu hình (Thiếu GOOGLE_CLIENT_SECRET)"}
+                {hasClientSecret
+                  ? `•••••••••••••••• (Nguồn: ${oauthConfig.source})`
+                  : "Chưa cấu hình (Thiếu GOOGLE_CLIENT_SECRET)"}
               </div>
             </div>
 

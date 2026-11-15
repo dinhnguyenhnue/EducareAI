@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import {
   ShieldCheck,
@@ -74,11 +74,15 @@ export function RoleSwitcher({
   onSelectRole: (r: UserRole) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        requestAnimationFrame(() => triggerRef.current?.focus());
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -89,10 +93,11 @@ export function RoleSwitcher({
   return (
     <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         aria-expanded={open}
-        aria-haspopup="menu"
+        aria-controls="role-switcher-panel"
         data-testid="role-view-switcher"
         className={cn(
           "flex items-center gap-2 px-3 py-1.5 rounded-button border text-xs font-semibold transition-all duration-150 active:scale-[0.98]",
@@ -122,7 +127,9 @@ export function RoleSwitcher({
               onClick={() => setOpen(false)}
             />
             <m.div
-              role="menu"
+              id="role-switcher-panel"
+              role="group"
+              aria-label="Chọn góc nhìn vai trò"
               variants={modalPanelVariants}
               initial="initial"
               animate="animate"
@@ -145,8 +152,7 @@ export function RoleSwitcher({
                     <button
                       key={r}
                       type="button"
-                      role="menuitemradio"
-                      aria-checked={isSelected}
+                      aria-pressed={isSelected}
                       data-testid={`switch-view-${r}`}
                       onClick={async () => {
                         setOpen(false);

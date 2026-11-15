@@ -29,39 +29,37 @@ export function PageHeader({
     return (
       <section
         className={cn(
-          "relative overflow-hidden rounded-panel bg-gradient-primary p-6 sm:p-7 text-white shadow-ocean/35",
+          "relative overflow-hidden rounded-panel bg-gradient-to-r from-ocean-50/80 via-sky-50/40 to-surface border border-ocean-100 p-6 sm:p-7 shadow-xs",
           className
         )}
       >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-20 -right-16 w-64 h-64 rounded-full bg-white/15 blur-3xl"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-24 left-12 w-56 h-56 rounded-full bg-ocean-deep/30 blur-3xl"
-        />
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
           <div className="space-y-2 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               {badge && (
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-white/20 backdrop-blur-sm text-white px-2.5 py-1 rounded-full border border-white/20">
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border bg-surface/90 shadow-2xs",
+                    theme.text,
+                    theme.border
+                  )}
+                >
                   {badgeIcon}
                   <span>{badge}</span>
                 </span>
               )}
               {meta}
             </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-white">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-ink text-balance">
               {title}
             </h1>
             {description && (
-              <p className="text-xs sm:text-sm text-white/90 max-w-2xl leading-relaxed">
+              <p className="text-sm sm:text-base text-ink-muted max-w-2xl leading-relaxed">
                 {description}
               </p>
             )}
           </div>
-          {actions && <div className="flex flex-wrap items-center gap-2.5 shrink-0">{actions}</div>}
+          {actions && <div className="flex flex-wrap items-center gap-3 shrink-0">{actions}</div>}
         </div>
       </section>
     );
@@ -71,7 +69,7 @@ export function PageHeader({
     <section
       className={cn(
         variant === "card"
-          ? "p-5 sm:p-6 rounded-panel bg-surface border border-border shadow-card"
+          ? "p-5 sm:p-6 rounded-panel bg-surface border border-border shadow-xs"
           : "pb-5 border-b border-border",
         "flex flex-col lg:flex-row lg:items-center justify-between gap-4",
         className
@@ -83,7 +81,7 @@ export function PageHeader({
             {badge && (
               <span
                 className={cn(
-                  "inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full border",
+                  "inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border",
                   theme.bgSoft,
                   theme.text,
                   theme.border
@@ -98,7 +96,7 @@ export function PageHeader({
         )}
         <h1 className="text-xl sm:text-2xl font-bold text-ink tracking-tight">{title}</h1>
         {description && (
-          <p className="text-xs sm:text-[13px] text-ink-muted max-w-3xl leading-relaxed">
+          <p className="text-sm sm:text-[15px] text-ink-muted max-w-3xl leading-relaxed">
             {description}
           </p>
         )}

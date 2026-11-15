@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { AppShell } from "@/components/layout/AppShell";
-import { PageHeader } from "@/components/ui";
+import { Modal, PageHeader } from "@/components/ui";
 import {
   SAMPLE_QUIZ_10_GAME_HTML,
   SAMPLE_SIMULATION_3_TASKS_HTML,
@@ -448,6 +448,7 @@ export default function StudentGameStudioPage() {
                 <SandboxedHtmlGamePlayer
                   title={selectedProject.title}
                   htmlSourceCode={selectedProject.versions[0].htmlSourceCode}
+                  projectId={selectedProject.id}
                   slug={selectedProject.slug}
                   versionNumber={selectedProject.versions[0].versionNumber}
                   authorName={selectedProject.displayAuthorName}
@@ -873,71 +874,77 @@ export default function StudentGameStudioPage() {
       )}
 
       {/* Report Modal */}
-      {showReportModal && selectedProject && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4">
-          <div className="max-w-md w-full rounded-2xl bg-white border border-slate-200 p-6 space-y-4 shadow-xl">
-            <h3 className="text-base font-bold text-slate-900">
-              Báo cáo vấn đề cho Giáo viên: {selectedProject.title}
-            </h3>
-            <form onSubmit={handleReportSubmit} className="space-y-3 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Lý do báo cáo
-                </label>
-                <select
-                  value={reportReason}
-                  onChange={(e) => setReportReason(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
-                >
-                  <option value="LOI_KIEN_THUC">
-                    Sai kiến thức SGK hoặc đáp án chưa chính xác
-                  </option>
-                  <option value="LOI_KY_THUAT">
-                    Lỗi kỹ thuật (không bấm được nút, kẹt màn hình)
-                  </option>
-                  <option value="NOI_DUNG_KHONG_PHU_HOP">
-                    Ngôn từ hoặc nội dung không phù hợp học đường
-                  </option>
-                  <option value="VI_PHAM_BAN_QUYEN">
-                    Nghi ngờ sao chép chưa ghi nguồn
-                  </option>
-                </select>
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Mô tả chi tiết vị trí lỗi
-                </label>
-                <textarea
-                  rows={3}
-                  required
-                  value={reportDetails}
-                  onChange={(e) => setReportDetails(e.target.value)}
-                  placeholder="VD: Ở câu số 4, giải thích ghi nhầm trang SGK..."
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
-                />
-              </div>
-              {reportStatusMsg && (
-                <p className="text-emerald-700 font-semibold">{reportStatusMsg}</p>
-              )}
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowReportModal(false)}
-                  className="px-4 py-2 rounded-lg font-medium bg-slate-100 text-slate-700"
-                >
-                  Đóng
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-lg font-semibold bg-rose-600 text-white"
-                >
-                  Gửi báo cáo
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={Boolean(showReportModal && selectedProject)}
+        onClose={() => setShowReportModal(false)}
+        title={
+          selectedProject
+            ? `Báo cáo vấn đề cho Giáo viên: ${selectedProject.title}`
+            : "Báo cáo vấn đề cho Giáo viên"
+        }
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleReportSubmit} className="space-y-3 text-xs">
+          <div>
+            <label htmlFor="report-reason-select" className="block font-semibold text-slate-700 mb-1">
+              Lý do báo cáo
+            </label>
+            <select
+              id="report-reason-select"
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+            >
+              <option value="LOI_KIEN_THUC">
+                Sai kiến thức SGK hoặc đáp án chưa chính xác
+              </option>
+              <option value="LOI_KY_THUAT">
+                Lỗi kỹ thuật (không bấm được nút, kẹt màn hình)
+              </option>
+              <option value="NOI_DUNG_KHONG_PHU_HOP">
+                Ngôn từ hoặc nội dung không phù hợp học đường
+              </option>
+              <option value="VI_PHAM_BAN_QUYEN">
+                Nghi ngờ sao chép chưa ghi nguồn
+              </option>
+            </select>
           </div>
-        </div>
-      )}
+          <div>
+            <label htmlFor="report-details-textarea" className="block font-semibold text-slate-700 mb-1">
+              Mô tả chi tiết vị trí lỗi
+            </label>
+            <textarea
+              id="report-details-textarea"
+              rows={3}
+              required
+              value={reportDetails}
+              onChange={(e) => setReportDetails(e.target.value)}
+              placeholder="VD: Ở câu số 4, giải thích ghi nhầm trang SGK..."
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900"
+            />
+          </div>
+          {reportStatusMsg && (
+            <p role="status" className="text-emerald-700 font-semibold">
+              {reportStatusMsg}
+            </p>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowReportModal(false)}
+              className="px-4 py-2 rounded-lg font-medium bg-slate-100 text-slate-700"
+            >
+              Đóng
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-lg font-semibold bg-rose-600 text-white"
+            >
+              Gửi báo cáo
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
     </AppShell>
   );

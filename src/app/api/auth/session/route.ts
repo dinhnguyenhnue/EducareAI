@@ -13,7 +13,11 @@ import {
   type ViewRole,
 } from "@/lib/session-token";
 import { getGoogleOAuthConfig } from "@/lib/google-workspace";
-import { verifyPassword } from "@/lib/password";
+import {
+  verifyPassword,
+  isMustChangePassword,
+  normalizeStudentCodeUsername,
+} from "@/lib/password";
 
 export async function GET() {
   const session = await getServerSession();
@@ -25,6 +29,8 @@ export async function GET() {
     );
   }
 
+  const mustChangePassword = isMustChangePassword(session.user);
+
   return NextResponse.json(
     {
       authenticated: true,
@@ -35,14 +41,17 @@ export async function GET() {
       activeViewRole: session.activeViewRole,
       isSuperAdmin: session.isSuperAdmin,
       permissions: session.permissions,
+      mustChangePassword,
       user: {
         id: session.user.id,
         email: session.user.email,
+        studentCode: session.user.studentProfile?.studentCode || null,
         fullName: session.user.fullName,
         role: session.user.role,
         avatarUrl: session.user.avatarUrl,
         accountStatus: session.user.accountStatus,
         emailVerified: session.user.emailVerified,
+        mustChangePassword,
       },
     },
     { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
@@ -52,26 +61,44 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { mode, email, password, rememberMe, idTokenClaims, initialViewRole } = body;
+    const {
+      mode,
+      email,
+      identifier,
+      studentCode,
+      password,
+      rememberMe,
+      idTokenClaims,
+      initialViewRole,
+    } = body;
     const clientIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
 
-    // MODE 1: Email & Password Credentials Authentication
+    // MODE 1: Email or Student Code & Password Credentials Authentication
     if (mode === "CREDENTIALS") {
-      if (!email || typeof email !== "string" || !password || typeof password !== "string") {
+      const rawLoginId =
+        (typeof identifier === "string" && identifier.trim()) ||
+        (typeof studentCode === "string" && studentCode.trim()) ||
+        (typeof email === "string" && email.trim()) ||
+        "";
+
+      if (!rawLoginId || !password || typeof password !== "string") {
         return NextResponse.json(
-          { error: "Vui lòng nhập đầy đủ email và mật khẩu." },
+          { error: "Vui lòng nhập đầy đủ Mã học sinh (hoặc Email) và mật khẩu." },
           { status: 400 }
         );
       }
 
-      const normalizedEmail = email.trim().toLowerCase();
+      const isEmailFormat = rawLoginId.includes("@");
+      const normalizedLookupKey = isEmailFormat
+        ? rawLoginId.trim().toLowerCase()
+        : normalizeStudentCodeUsername(rawLoginId);
 
-      // Brute-force & Rate-limiting protection: Max 5 failed attempts per 15 minutes per email/IP
+      // Brute-force & Rate-limiting protection: Max 5 failed attempts per 15 minutes per identifier/IP
       const recentFailedAttempts = await prisma.auditLog.count({
         where: {
           action: { in: ["LOGIN_FAILED_PASSWORD_MISMATCH", "LOGIN_FAILED_INVALID_CREDENTIALS"] },
           OR: [
-            { actorEmail: normalizedEmail },
+            { actorEmail: normalizedLookupKey },
             { ipAddress: clientIp },
           ],
           createdAt: { gte: new Date(Date.now() - 15 * 60 * 1000) },
@@ -81,7 +108,7 @@ export async function POST(req: Request) {
       if (recentFailedAttempts >= 5) {
         await prisma.auditLog.create({
           data: {
-            actorEmail: normalizedEmail,
+            actorEmail: normalizedLookupKey,
             actorRole: "UNAUTHENTICATED",
             action: "BRUTE_FORCE_RATE_LIMITED",
             resource: "AUTH",
@@ -99,14 +126,37 @@ export async function POST(req: Request) {
         );
       }
 
-      const user = await prisma.user.findUnique({
-        where: { email: normalizedEmail },
-      });
+      let user = null;
+      if (isEmailFormat) {
+        user = await prisma.user.findUnique({
+          where: { email: normalizedLookupKey },
+          include: { studentProfile: true },
+        });
+      } else {
+        // Lookup by StudentProfile.studentCode first, then fallback to User.email storing studentCode
+        const profile = await prisma.studentProfile.findUnique({
+          where: { studentCode: normalizedLookupKey },
+          include: { user: { include: { studentProfile: true } } },
+        });
+        if (profile?.user) {
+          user = profile.user;
+        } else {
+          user = await prisma.user.findFirst({
+            where: {
+              OR: [
+                { email: normalizedLookupKey },
+                { email: normalizedLookupKey.toLowerCase() },
+              ],
+            },
+            include: { studentProfile: true },
+          });
+        }
+      }
 
       if (!user || !user.passwordHash) {
         await prisma.auditLog.create({
           data: {
-            actorEmail: normalizedEmail,
+            actorEmail: normalizedLookupKey,
             actorRole: "UNAUTHENTICATED",
             action: "LOGIN_FAILED_INVALID_CREDENTIALS",
             resource: "AUTH",
@@ -116,7 +166,7 @@ export async function POST(req: Request) {
           },
         });
         return NextResponse.json(
-          { error: "Email hoặc mật khẩu không chính xác." },
+          { error: "Mã học sinh / Email hoặc mật khẩu không chính xác." },
           { status: 401 }
         );
       }
@@ -128,9 +178,9 @@ export async function POST(req: Request) {
         );
       }
 
-      if (user.accountStatus === "PENDING_ACTIVATION") {
+      if (user.accountStatus === "PENDING_ACTIVATION" && !isMustChangePassword(user)) {
         return NextResponse.json(
-          { error: "Tài khoản chưa được kích hoạt. Vui lòng kiểm tra email xác nhận." },
+          { error: "Tài khoản chưa được kích hoạt mật khẩu. Vui lòng liên hệ Quản trị viên để cấp mật khẩu tạm." },
           { status: 403 }
         );
       }
@@ -156,10 +206,12 @@ export async function POST(req: Request) {
           },
         });
         return NextResponse.json(
-          { error: "Email hoặc mật khẩu không chính xác." },
+          { error: "Mã học sinh / Email hoặc mật khẩu không chính xác." },
           { status: 401 }
         );
       }
+
+      const mustChangePassword = isMustChangePassword(user);
 
       // Successful password authentication
       await prisma.user.update({
@@ -172,7 +224,9 @@ export async function POST(req: Request) {
           actorId: user.id,
           actorEmail: user.email,
           actorRole: user.role,
-          action: "LOGIN_SUCCESS_CREDENTIALS",
+          action: mustChangePassword
+            ? "LOGIN_SUCCESS_FIRST_TIME_TEMP_PASSWORD"
+            : "LOGIN_SUCCESS_CREDENTIALS",
           resource: "AUTH",
           resourceId: user.id,
           status: "SUCCESS",
@@ -186,20 +240,22 @@ export async function POST(req: Request) {
         initialViewRole: initialViewRole as ViewRole | undefined,
       });
 
-      const redirectUrl = getDefaultHomePathForRole(
-        user.role,
-        sessionData.payload.activeViewRole
-      );
+      const redirectUrl = mustChangePassword
+        ? "/dat-lai-mat-khau?firstLogin=1"
+        : getDefaultHomePathForRole(user.role, sessionData.payload.activeViewRole);
 
       const response = NextResponse.json({
         success: true,
         authMethod: "PASSWORD",
+        mustChangePassword,
         user: {
           id: user.id,
           email: user.email,
+          studentCode: user.studentProfile?.studentCode || null,
           fullName: user.fullName,
           role: user.role,
           accountStatus: user.accountStatus,
+          mustChangePassword,
         },
         activeViewRole: sessionData.payload.activeViewRole,
         redirectUrl,

@@ -19,6 +19,7 @@ import {
 interface SandboxedHtmlGamePlayerProps {
   title: string;
   htmlSourceCode: string;
+  projectId?: string;
   slug?: string;
   versionNumber?: number;
   authorName?: string;
@@ -32,11 +33,15 @@ interface UnverifiedPracticeEvent {
   score: number;
   maxScore: number;
   receivedAt: string;
+  saveStatus?: "SAVING" | "SAVED" | "SKIPPED" | "ERROR";
+  attemptNumber?: number;
+  saveMessage?: string;
 }
 
 export default function SandboxedHtmlGamePlayer({
   title,
   htmlSourceCode,
+  projectId,
   slug,
   versionNumber = 1,
   authorName,
@@ -49,6 +54,12 @@ export default function SandboxedHtmlGamePlayer({
   const [practiceEvent, setPracticeEvent] =
     useState<UnverifiedPracticeEvent | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const startedAtRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    startedAtRef.current = Date.now();
+  }, [reloadKey, projectId, slug]);
 
   const safeSrcDoc = useMemo(
     () => wrapHtmlWithStrictCsp(htmlSourceCode || ""),
@@ -60,14 +71,20 @@ export default function SandboxedHtmlGamePlayer({
     [htmlSourceCode]
   );
 
-  // Listen to optional postMessage practice completion from inside the isolated iframe.
-  // Section 6 rule: Any score sent from inside an HTML game is strictly tagged as UNVERIFIED PRACTICE ONLY.
+  // Listen to optional postMessage practice completion strictly from our own isolated iframe.
   useEffect(() => {
     function handleMessage(event: MessageEvent) {
+      if (
+        !iframeRef.current?.contentWindow ||
+        event.source !== iframeRef.current.contentWindow
+      ) {
+        return;
+      }
       if (!event.data || typeof event.data !== "object") return;
       if (
         event.data.type === "TIN_HOC_GAME_PRACTICE_COMPLETE" ||
-        event.data.type === "TINHOC_GAME_PRACTICE_RESULT"
+        event.data.type === "TINHOC_GAME_PRACTICE_RESULT" ||
+        event.data.type === "EDUCARE_PRACTICE_EVENT"
       ) {
         const rawScore = Number(event.data.score);
         const rawMax = Number(event.data.maxScore || 10);
@@ -76,17 +93,87 @@ export default function SandboxedHtmlGamePlayer({
         }
         const safeMax = Math.min(1000, Math.max(1, rawMax));
         const safeScore = Math.min(safeMax, Math.max(0, rawScore));
+        const timeSpentSeconds = Math.max(
+          0,
+          Math.round((Date.now() - startedAtRef.current) / 1000)
+        );
+        const wrongTopics = Array.isArray(event.data.wrongTopics)
+          ? event.data.wrongTopics
+              .map((w: unknown) => String(w || "").trim())
+              .filter(Boolean)
+          : [];
+
+        const receivedAt = new Date().toLocaleTimeString("vi-VN");
+        const canPersist = Boolean(projectId || slug);
+
         setPracticeEvent({
           gameType: String(event.data.gameType || "HTML_GAME").slice(0, 40),
           score: safeScore,
           maxScore: safeMax,
-          receivedAt: new Date().toLocaleTimeString("vi-VN"),
+          receivedAt,
+          saveStatus: canPersist ? "SAVING" : "SKIPPED",
         });
+
+        if (canPersist) {
+          const idempotencyKey = `gp_${projectId || slug}_${Date.now()}_${Math.random()
+            .toString(36)
+            .slice(2, 8)}`;
+          fetch("/api/tin-hoc/game-plays", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              projectId,
+              slug,
+              score: safeScore,
+              maxScore: safeMax,
+              timeSpentSeconds,
+              wrongTopics,
+              eventType: event.data.type,
+              idempotencyKey,
+            }),
+          })
+            .then(async (res) => {
+              const data = await res.json();
+              if (!res.ok) {
+                setPracticeEvent((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        saveStatus: "ERROR",
+                        saveMessage: data.error || "Chưa lưu được lượt chơi.",
+                      }
+                    : prev
+                );
+                return;
+              }
+              setPracticeEvent((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      saveStatus: data.recorded ? "SAVED" : "SKIPPED",
+                      attemptNumber: data.attemptNumber,
+                      saveMessage: data.message,
+                    }
+                  : prev
+              );
+            })
+            .catch(() => {
+              setPracticeEvent((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      saveStatus: "ERROR",
+                      saveMessage: "Lỗi mạng khi lưu lượt chơi.",
+                    }
+                  : prev
+              );
+            });
+        }
       }
     }
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  }, [projectId, slug]);
 
   const handleToggleFullscreen = () => {
     if (!containerRef.current) return;
@@ -178,11 +265,18 @@ export default function SandboxedHtmlGamePlayer({
               <strong>
                 {practiceEvent.score}/{practiceEvent.maxScore}
               </strong>{" "}
-              (Ghi nhận lúc {practiceEvent.receivedAt}).
+              (Ghi nhận lúc {practiceEvent.receivedAt}
+              {practiceEvent.attemptNumber ? ` • Lượt #${practiceEvent.attemptNumber}` : ""}).
             </span>
           </div>
           <span className="px-2 py-0.5 rounded bg-amber-100 border border-amber-300 font-medium text-amber-800">
-            Trạng thái: Chưa xác minh (Chỉ dùng tự luyện, không tính điểm kiểm tra chính thức)
+            {practiceEvent.saveStatus === "SAVED"
+              ? `Đã lưu lượt chơi #${practiceEvent.attemptNumber || 1} vào LearningRecord`
+              : practiceEvent.saveStatus === "SAVING"
+                ? "Đang lưu lượt chơi..."
+                : practiceEvent.saveStatus === "ERROR"
+                  ? practiceEvent.saveMessage || "Lỗi lưu lượt chơi"
+                  : "Trạng thái: Chỉ dùng tự luyện, không tính điểm kiểm tra chính thức"}
           </span>
         </div>
       )}
@@ -240,6 +334,7 @@ export default function SandboxedHtmlGamePlayer({
       */}
       <div className="relative w-full bg-slate-950 flex-1">
         <iframe
+          ref={iframeRef}
           key={reloadKey}
           title={`Khung cô lập trò chơi: ${title}`}
           sandbox="allow-scripts"

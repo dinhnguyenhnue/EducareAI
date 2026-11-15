@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getGoogleOAuthConfig, getSafeBaseUrl } from "@/lib/google-workspace";
+import { getEffectiveGoogleOAuthConfig, getSafeBaseUrl } from "@/lib/google-workspace";
+import { encryptSecret, hasServerEncryptionKey } from "@/lib/secret-crypto";
 import {
   validateGoogleIdTokenClaims,
   authenticateVerifiedGoogleUser,
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
     return NextResponse.redirect(`${currentBaseUrl}/dang-nhap?error=google_denied`);
   }
 
-  const config = getGoogleOAuthConfig(currentBaseUrl);
+  const config = await getEffectiveGoogleOAuthConfig(currentBaseUrl);
 
   if (!config.isConfigured || !code) {
     return NextResponse.redirect(`${currentBaseUrl}/dang-nhap?error=google_not_configured`);
@@ -99,12 +100,22 @@ export async function GET(req: Request) {
 
     if (tokenData.access_token) {
       try {
+        const canEncrypt = hasServerEncryptionKey();
+        const encryptedAccessToken = canEncrypt ? encryptSecret(tokenData.access_token) : null;
+        const encryptedRefreshToken =
+          canEncrypt && tokenData.refresh_token
+            ? encryptSecret(tokenData.refresh_token)
+            : undefined;
         await prisma.googleConnection.upsert({
           where: { userId: user.id },
           update: {
             googleEmail: validation.normalized.email,
             googleSub: validation.normalized.sub,
             scopesGranted: JSON.stringify(grantedScopes),
+            accessTokenHash: encryptedAccessToken,
+            ...(encryptedRefreshToken !== undefined
+              ? { refreshTokenHash: encryptedRefreshToken }
+              : {}),
             status: "CONNECTED",
             lastSyncAt: new Date(),
           },
@@ -113,6 +124,8 @@ export async function GET(req: Request) {
             googleEmail: validation.normalized.email,
             googleSub: validation.normalized.sub,
             scopesGranted: JSON.stringify(grantedScopes),
+            accessTokenHash: encryptedAccessToken,
+            refreshTokenHash: encryptedRefreshToken ?? null,
             status: "CONNECTED",
             lastSyncAt: new Date(),
           },

@@ -133,7 +133,7 @@ function LoginForm() {
     setErrorMessage(null);
 
     if (!email.trim() || !password) {
-      setErrorMessage("Vui lòng nhập đầy đủ email và mật khẩu.");
+      setErrorMessage("Vui lòng nhập đầy đủ Mã học sinh (hoặc Email) và mật khẩu.");
       return;
     }
 
@@ -144,6 +144,7 @@ function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "CREDENTIALS",
+          identifier: email.trim(),
           email: email.trim(),
           password,
           rememberMe,
@@ -152,11 +153,16 @@ function LoginForm() {
 
       const data = await res.json();
       if (!res.ok) {
-        setErrorMessage(data.error || "Email hoặc mật khẩu không chính xác.");
+        setErrorMessage(data.error || "Mã học sinh / Email hoặc mật khẩu không chính xác.");
         return;
       }
 
       await refreshSession();
+      if (data.mustChangePassword) {
+        router.push("/dat-lai-mat-khau?firstLogin=1");
+        router.refresh();
+        return;
+      }
       const destination =
         callbackUrl && callbackUrl.startsWith("/")
           ? callbackUrl
@@ -219,33 +225,36 @@ function LoginForm() {
         </div>
         <div className="relative flex justify-center text-[11px] uppercase tracking-wider">
           <span className="bg-surface px-3 text-ink-muted font-semibold">
-            hoặc đăng nhập bằng Email
+            hoặc đăng nhập bằng Mã học sinh / Email
           </span>
         </div>
       </div>
 
-      {/* Email & Password Form */}
+      {/* Student Code / Email & Password Form */}
       <form onSubmit={handleEmailPasswordLogin} className="space-y-4">
         <div>
           <label
             htmlFor="login-email"
             className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5"
           >
-            Email tài khoản
+            Mã học sinh hoặc Email tài khoản
           </label>
           <div className="relative">
             <Mail className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               id="login-email"
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="ten.nguoidung@unigo.edu.vn"
+              placeholder="VD: HS2026-0701 hoặc email giáo viên"
               required
-              autoComplete="email"
+              autoComplete="username"
               className="w-full pl-10 pr-4 py-2.5 rounded-button bg-canvas border border-border focus:bg-surface focus:border-ocean-600 focus:ring-2 focus:ring-ocean-light text-sm text-ink outline-none transition-all placeholder:text-ink-muted/55"
             />
           </div>
+          <p className="text-[11px] text-ink-muted mt-1">
+            Học sinh chưa có email trường dùng trực tiếp <strong>Mã học sinh</strong> do quản trị viên cấp.
+          </p>
         </div>
 
         <div>

@@ -7,7 +7,7 @@ import { Award, Sparkles, TrendingUp, Users, FileCheck2 } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function TeacherAnalyticsPage() {
-  const [submissions, grades, progressRecords, studentsCount] =
+  const [submissions, grades, progressRecords, studentsCount, quizAttempts, gamePlayRecords] =
     await Promise.all([
       prisma.submission.findMany({
         include: { assignment: true, student: { include: { user: true } } },
@@ -17,7 +17,53 @@ export default async function TeacherAnalyticsPage() {
         include: { subject: true, student: { include: { user: true } } },
       }),
       prisma.studentProfile.count(),
+      prisma.attempt.findMany({
+        where: { status: { in: ["SUBMITTED", "EXPIRED_AUTO_SUBMITTED"] } },
+        include: {
+          assessment: { select: { title: true, code: true, mode: true } },
+          answers: {
+            where: { isCorrect: false },
+            select: { assessmentItemId: true },
+          },
+        },
+        orderBy: { submittedAt: "desc" },
+        take: 30,
+      }),
+      prisma.learningRecord.findMany({
+        where: { activityType: "HTML_GAME_PLAY" },
+        include: {
+          student: {
+            include: {
+              user: { select: { fullName: true } },
+              schoolClass: { select: { name: true } },
+            },
+          },
+        },
+        orderBy: { recordedAt: "desc" },
+        take: 30,
+      }),
     ]);
+
+  const attemptStudentIds = Array.from(
+    new Set(quizAttempts.map((att) => att.studentId).filter(Boolean))
+  );
+  const attemptStudents =
+    attemptStudentIds.length > 0
+      ? await prisma.user.findMany({
+        where: { id: { in: attemptStudentIds } },
+        select: {
+          id: true,
+          fullName: true,
+          studentProfile: {
+            select: {
+              studentCode: true,
+              schoolClass: { select: { name: true } },
+            },
+          },
+        },
+      })
+      : [];
+  const attemptStudentMap = new Map(attemptStudents.map((u) => [u.id, u]));
 
   const gradedSubs = submissions.filter(
     (s) => s.status === "GRADED" && s.score !== null && s.score !== undefined
@@ -25,17 +71,17 @@ export default async function TeacherAnalyticsPage() {
   const avgScore: string | null =
     gradedSubs.length > 0
       ? (
-          gradedSubs.reduce((acc, s) => acc + (s.score ?? 0), 0) /
-          gradedSubs.length
-        ).toFixed(1)
+        gradedSubs.reduce((acc, s) => acc + (s.score ?? 0), 0) /
+        gradedSubs.length
+      ).toFixed(1)
       : null;
 
   const avgMastery: number | null =
     progressRecords.length > 0
       ? Math.round(
-          progressRecords.reduce((acc, p) => acc + p.masteryPercent, 0) /
-            progressRecords.length
-        )
+        progressRecords.reduce((acc, p) => acc + p.masteryPercent, 0) /
+        progressRecords.length
+      )
       : null;
 
   const subjectChartMap = new Map<string, { sum: number; count: number }>();
@@ -172,6 +218,152 @@ export default async function TeacherAnalyticsPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Quiz Attempts & HTML Game Plays Recorded in DB */}
+        <div className="p-6 rounded-2xl bg-surface border border-border shadow-card space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
+            <div>
+              <h2 className="text-base font-bold text-ink">
+                Nhật ký Lượt làm Trắc nghiệm &amp; Lượt chơi Trò chơi HTML
+              </h2>
+              <p className="text-xs text-ink-muted mt-0.5">
+                Dữ liệu thực tế từ bảng <code className="font-mono">Attempt</code> và <code className="font-mono">LearningRecord</code> (không giả lập dữ liệu).
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-semibold">
+              <span className="px-2.5 py-1 rounded-full bg-ocean-50 text-ocean-700 border border-ocean-200">
+                {quizAttempts.length} lượt Quiz/Đề thi
+              </span>
+              <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                {gamePlayRecords.length} lượt chơi Game HTML
+              </span>
+            </div>
+          </div>
+
+          {quizAttempts.length === 0 && gamePlayRecords.length === 0 ? (
+            <EmptyState
+              tone="progress"
+              title="Chưa có dữ liệu lượt làm hoặc lượt chơi"
+              description="Khi học sinh nộp bài trắc nghiệm hoặc hoàn thành một lượt chơi trò chơi HTML có phát sự kiện kết thúc, dữ liệu sẽ hiển thị tại đây."
+            />
+          ) : (
+            <div className="overflow-x-auto border border-border rounded-xl">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-canvas border-b border-border font-bold text-ink">
+                    <th className="py-2.5 px-3">Học sinh</th>
+                    <th className="py-2.5 px-3">Lớp</th>
+                    <th className="py-2.5 px-3">Loại hoạt động</th>
+                    <th className="py-2.5 px-3">Tên bài / Trò chơi</th>
+                    <th className="py-2.5 px-3">Lần</th>
+                    <th className="py-2.5 px-3">Điểm (hệ 10)</th>
+                    <th className="py-2.5 px-3">Thời gian</th>
+                    <th className="py-2.5 px-3">Câu / Chủ đề sai</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {quizAttempts.map((att) => {
+                    const attStudent = attemptStudentMap.get(att.studentId);
+                    const durationSec =
+                      att.submittedAt && att.startedAt
+                        ? Math.max(
+                          0,
+                          Math.round(
+                            (att.submittedAt.getTime() - att.startedAt.getTime()) / 1000
+                          )
+                        )
+                        : null;
+                    return (
+                      <tr key={`att-${att.id}`}>
+                        <td className="py-2 px-3 font-medium text-ink">
+                          {attStudent?.fullName || "Chưa có dữ liệu"}
+                          {attStudent?.studentProfile?.studentCode ? (
+                            <span className="block text-[11px] font-mono text-ink-muted">
+                              {attStudent.studentProfile.studentCode}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="py-2 px-3 text-ink-muted">
+                          {attStudent?.studentProfile?.schoolClass?.name || att.classId || "Chưa có dữ liệu"}
+                        </td>
+                        <td className="py-2 px-3">
+                          <span className="px-2 py-0.5 rounded bg-ocean-50 text-ocean-700 font-semibold text-[11px]">
+                            {att.assessment?.mode === "EXAM" ? "Kiểm tra" : "Luyện tập Quiz"}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-ink">
+                          {att.assessment?.title || "Chưa có dữ liệu"}
+                        </td>
+                        <td className="py-2 px-3 font-mono">#{att.attemptNumber}</td>
+                        <td className="py-2 px-3 font-bold text-ink">
+                          {att.totalScore !== null && att.totalScore !== undefined
+                            ? att.totalScore.toFixed(2)
+                            : "Chưa có dữ liệu"}
+                        </td>
+                        <td className="py-2 px-3 text-ink-muted">
+                          {durationSec !== null ? `${durationSec}s` : "Chưa có dữ liệu"}
+                        </td>
+                        <td className="py-2 px-3 text-ink-muted">
+                          {att.answers.length > 0
+                            ? `Sai ${att.answers.length} câu`
+                            : "0 câu sai"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {gamePlayRecords.map((rec) => {
+                    let detail: Record<string, any> = {};
+                    try {
+                      detail = rec.detailData ? JSON.parse(rec.detailData) : {};
+                    } catch { }
+                    const wrongTopics: string[] = Array.isArray(detail.wrongTopics)
+                      ? detail.wrongTopics
+                      : [];
+                    return (
+                      <tr key={`gp-${rec.id}`}>
+                        <td className="py-2 px-3 font-medium text-ink">
+                          {rec.student?.user?.fullName || "Chưa có dữ liệu"}
+                          {rec.student?.studentCode ? (
+                            <span className="block text-[11px] font-mono text-ink-muted">
+                              {rec.student.studentCode}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="py-2 px-3 text-ink-muted">
+                          {rec.student?.schoolClass?.name || detail.className || "Chưa có dữ liệu"}
+                        </td>
+                        <td className="py-2 px-3">
+                          <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-semibold text-[11px]">
+                            Game HTML (Tự luyện)
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-ink">
+                          {detail.projectTitle || "Trò chơi HTML"}
+                        </td>
+                        <td className="py-2 px-3 font-mono">#{detail.attemptNumber || 1}</td>
+                        <td className="py-2 px-3 font-bold text-ink">
+                          {rec.score !== null && rec.score !== undefined
+                            ? rec.score.toFixed(2)
+                            : "Chưa có dữ liệu"}
+                        </td>
+                        <td className="py-2 px-3 text-ink-muted">
+                          {rec.timeSpentSeconds !== null && rec.timeSpentSeconds !== undefined
+                            ? `${rec.timeSpentSeconds}s`
+                            : "Chưa có dữ liệu"}
+                        </td>
+                        <td className="py-2 px-3 text-ink-muted">
+                          {wrongTopics.length > 0
+                            ? wrongTopics.join(", ")
+                            : "Chưa có dữ liệu"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </AppShell>

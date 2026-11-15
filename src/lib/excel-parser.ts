@@ -370,7 +370,7 @@ export function processRawSheetsToStudents(
       const gradeLevel = detectGradeLevel(sheet.sheetName, rawClass, rawGrade);
       const className = rawClass || `${gradeLevel}A1`;
 
-      const rawCode = codeIdx >= 0 ? row[codeIdx] || "" : row[0] || "";
+      const rawCode = (codeIdx >= 0 ? row[codeIdx] || "" : row[0] || "").trim();
       const studentCode = normalizeStudentCode(rawCode, gradeLevel, r);
 
       const dateOfBirth =
@@ -382,8 +382,14 @@ export function processRawSheetsToStudents(
           ? row[emailIdx].trim().toLowerCase()
           : null;
 
+      if (!rawCode || rawCode.replace(/\s+/g, "").length < 3) {
+        errors.push("Thiếu Mã học sinh hợp lệ (tối thiểu 3 ký tự)");
+      }
       if (!fullName || fullName.length < 2) {
         errors.push("Thiếu Họ và Tên học sinh hợp lệ");
+      }
+      if (classIdx >= 0 && !rawClass) {
+        errors.push("Thiếu tên Lớp học");
       }
       if (![6, 7, 8, 9].includes(gradeLevel)) {
         errors.push(`Khối lớp không hợp lệ (${gradeLevel})`);

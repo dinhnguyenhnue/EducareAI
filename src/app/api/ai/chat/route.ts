@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  getEffectiveGeminiServerConfig,
+  redactStudentPiiForExternalAi,
+} from "@/lib/google-workspace";
 
 export async function POST(req: Request) {
   const startedAt = Date.now();
@@ -15,7 +19,8 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const { message, subjectCode = "TIN7", roleContext, featureModule } = body;
-    const apiKey = process.env.GEMINI_API_KEY || "";
+    const geminiConfig = await getEffectiveGeminiServerConfig();
+    const apiKey = geminiConfig.apiKey;
     const activeRole = roleContext || session.activeViewRole || session.role;
 
     const resolvedModule =
@@ -26,22 +31,27 @@ export async function POST(req: Request) {
         ? "AI_PARENT_COMPANION"
         : "AI_TUTOR");
 
-    // Socratic System Instruction per UNIGO THCS pedagogical standard
+    // Socratic System Instruction per pedagogical standard
     const systemPrompt =
-      "Bạn là Trợ lý Sư phạm Socratic của hệ sinh thái EDUCARE AI - Trường THCS UNIGO. Nguyên tắc bắt buộc: Không giải bài hộ học sinh, không viết sẵn toàn bộ bài làm để học sinh chép. Hãy đặt câu hỏi gợi mở từng bước, khuyến khích học sinh tự nghiên cứu, tự tạo sản phẩm và tự đánh giá.";
+      "Bạn là Trợ lý Sư phạm Socratic của hệ sinh thái EDUCARE AI. Nguyên tắc bắt buộc: Không giải bài hộ học sinh, không viết sẵn toàn bộ bài làm để học sinh chép. Hãy đặt câu hỏi gợi mở từng bước, khuyến khích học sinh tự nghiên cứu, tự tạo sản phẩm và tự đánh giá.";
 
+    const sanitizedUserMessage = redactStudentPiiForExternalAi(message || "");
     let reply = "";
     let isLiveGeminiApi = false;
 
-    if (apiKey) {
+    if (geminiConfig.isConfigured && apiKey) {
       const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+          geminiConfig.modelName
+        )}:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: "user", parts: [{ text: message || "" }] }],
+            contents: [
+              { role: "user", parts: [{ text: sanitizedUserMessage }] },
+            ],
           }),
         }
       );
@@ -57,17 +67,20 @@ export async function POST(req: Request) {
 
     if (!reply) {
       if (activeRole === "TEACHER") {
-        reply = `[Chế độ Sư phạm Socratic — Chưa cấu hình GEMINI_API_KEY trực tuyến]: Với yêu cầu "${message}", thầy/cô có thể thiết kế câu hỏi phân hóa 3 mức độ (Nhận biết - Thông hiểu - Vận dụng thực tiễn) gắn với Rubric 4 tiêu chí của Tổ THCS UNIGO.`;
+        reply = `[Chế độ Sư phạm Socratic — Chưa cấu hình GEMINI_API_KEY trực tuyến]: Với yêu cầu "${sanitizedUserMessage}", thầy/cô có thể thiết kế câu hỏi phân hóa 3 mức độ (Nhận biết - Thông hiểu - Vận dụng thực tiễn) gắn với Rubric 4 tiêu chí.`;
       } else if (activeRole === "PARENT") {
         reply = `[Trợ lý Đồng hành Phụ huynh]: Dựa trên bảng điểm và nhận xét chính thức của giáo viên bộ môn, gia đình có thể đặt câu hỏi khích lệ con chia sẻ lại quy trình làm sản phẩm thay vì chỉ hỏi điểm số.`;
       } else {
-        reply = `[Gia sư Socratic UNIGO (${
+        reply = `[Gia sư Socratic (${
           subjectCode || "THCS"
-        })]: Thầy không đưa đáp án chép sẵn để tránh học vẹt. Để giải quyết vấn đề "${message}", theo em bước 1 chúng ta cần xác định dữ kiện nào đã biết và tiêu chí nào trong Rubric cần đạt?`;
+        })]: Thầy không đưa đáp án chép sẵn để tránh học vẹt. Để giải quyết vấn đề "${sanitizedUserMessage}", theo em bước 1 chúng ta cần xác định dữ kiện nào đã biết và tiêu chí nào trong Rubric cần đạt?`;
       }
     }
 
-    const promptTokens = Math.max(45, Math.ceil(String(message || "").length / 3) + 60);
+    const promptTokens = Math.max(
+      45,
+      Math.ceil(String(sanitizedUserMessage || "").length / 3) + 60
+    );
     const completionTokens = Math.max(60, Math.ceil(reply.length / 3));
     const totalTokens = promptTokens + completionTokens;
     const estimatedCostUsd = Number((totalTokens * 0.0000003).toFixed(6));
@@ -80,7 +93,9 @@ export async function POST(req: Request) {
         className: "7A1",
         subjectCode: String(subjectCode || "TIN7"),
         featureModule: resolvedModule,
-        modelName: isLiveGeminiApi ? "gemini-2.0-flash" : "socratic-pedagogical-engine",
+        modelName: isLiveGeminiApi
+          ? geminiConfig.modelName
+          : "socratic-pedagogical-engine",
         promptTokens,
         completionTokens,
         totalTokens,
@@ -89,15 +104,20 @@ export async function POST(req: Request) {
         status: "SUCCESS",
         summaryNote:
           activeRole === "STUDENT"
-            ? "Phiên gợi mở Socratic (Bảo mật nội dung hội thoại riêng tư theo SRS §4.5)"
+            ? "Phiên gợi mở Socratic (Đã ẩn danh PII học sinh trước khi xử lý)"
             : `Hỗ trợ nghiệp vụ ${resolvedModule} (${subjectCode})`,
       },
     });
 
     return NextResponse.json({
       success: true,
+      integrationStatus: isLiveGeminiApi ? "CONNECTED" : "NOT_CONFIGURED",
       isLiveGeminiApi,
-      missingEnvVar: apiKey ? null : "GEMINI_API_KEY",
+      modelName: isLiveGeminiApi
+        ? geminiConfig.modelName
+        : "socratic-pedagogical-engine",
+      missingEnvVar: geminiConfig.isConfigured ? null : "GEMINI_API_KEY",
+      piiRedacted: sanitizedUserMessage !== String(message || ""),
       usage: { promptTokens, completionTokens, totalTokens, estimatedCostUsd },
       reply,
     });

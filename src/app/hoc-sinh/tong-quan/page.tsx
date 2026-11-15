@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth";
 import {
   PageHeader,
-  StatCard,
   CourseCard,
   ProgressCard,
   AIWidget,
@@ -21,6 +20,9 @@ import {
   ChevronRight,
   ClipboardList,
   Gamepad2,
+  AlertCircle,
+  Sparkles,
+  MessageSquare,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +42,10 @@ export default async function StudentDashboardPage() {
           include: {
             schoolClass: true,
             submissions: {
-              select: { id: true, assignmentId: true, status: true, score: true },
+              include: {
+                assignment: { include: { subject: true } },
+              },
+              orderBy: { submittedAt: "desc" },
             },
             progressRecords: {
               include: { subject: true },
@@ -52,6 +57,7 @@ export default async function StudentDashboardPage() {
     prisma.assignment.findMany({
       include: { subject: true, schoolClass: true },
       orderBy: { dueAt: "asc" },
+      take: 6,
     }),
     prisma.lesson.findMany({
       take: 4,
@@ -60,154 +66,179 @@ export default async function StudentDashboardPage() {
     }),
   ]);
 
+  const schoolClass = student?.studentProfile?.schoolClass;
   const progressRecords = student?.studentProfile?.progressRecords || [];
   const submissions = student?.studentProfile?.submissions || [];
-  const gradedCount = submissions.filter((s) => s.status === "GRADED").length;
-  const averageMastery =
-    progressRecords.length > 0
-      ? Math.round(
-          progressRecords.reduce((sum, r) => sum + r.masteryPercent, 0) /
-            progressRecords.length
-        )
-      : null;
+  const gradedSubmissions = submissions.filter((s) => s.status === "GRADED");
+  const latestGraded = gradedSubmissions[0];
+  const nextLesson = lessons[0];
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        {/* Vibrant Ocean Blue Student Hero Banner */}
+      <div className="space-y-7">
+        {/* Modern Restrained PageHeader */}
         <PageHeader
-          variant="hero"
-          badge={`Lớp ${student?.studentProfile?.schoolClass?.name ?? "7A1"} • Không gian học tập`}
-          title={`Xin chào, ${student?.fullName ?? "Học sinh UNIGO"}!`}
-          description={`Hôm nay em có ${assignments.length} nhiệm vụ học tập được giao và ${lessons.length} bài giảng số sẵn sàng trong hệ thống.`}
+          variant="card"
+          tone="overview"
+          badge={schoolClass ? `Lớp ${schoolClass.name} • UNIGO` : "Học sinh UNIGO"}
+          badgeIcon={<BookOpen className="w-3.5 h-3.5" />}
+          title={`Chào em, ${student?.fullName ?? "Học sinh UNIGO"}!`}
+          description="Không gian học tập số cá nhân hóa: Theo dõi nhiệm vụ cần làm, học bài mới, sáng tạo sản phẩm và nhận phản hồi trực tiếp từ thầy cô."
           actions={
-            <>
-              <Link
+            <div className="flex flex-wrap items-center gap-2.5">
+              <OceanButtonLink
                 href="/hoc-sinh/bai-tap"
-                className="px-4 py-2.5 rounded-button bg-white text-ocean-deep text-xs font-bold hover:bg-ocean-light transition-colors shadow-sm inline-flex items-center gap-2"
+                variant="primary"
+                size="md"
+                icon={<ClipboardList className="w-4 h-4" />}
               >
-                <span>Xem bài tập cần nộp</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link
+                Bài tập cần làm
+              </OceanButtonLink>
+              <OceanButtonLink
                 href="/hoc-sinh/xuong-tro-choi"
-                className="px-4 py-2.5 rounded-button bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/25 text-white text-xs font-bold transition-colors inline-flex items-center gap-2"
+                variant="secondary"
+                size="md"
+                icon={<Gamepad2 className="w-4 h-4" />}
               >
-                <Gamepad2 className="w-4 h-4" />
-                <span>Xưởng trò chơi HTML</span>
-              </Link>
-            </>
+                Xưởng trò chơi
+              </OceanButtonLink>
+            </div>
           }
         />
 
-        {/* Gamified Real KPI Summary */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Nhiệm vụ học tập"
-            value={`${assignments.length} bài`}
-            hint="Bài tập được giao từ thầy cô"
-            icon={<ClipboardList className="w-4 h-4" />}
-            tone="assignments"
-            href="/hoc-sinh/bai-tap"
-          />
-          <StatCard
-            label="Bài đã được chấm"
-            value={`${gradedCount} bài`}
-            hint={`Tổng ${submissions.length} lượt đã nộp trong CSDL`}
-            icon={<CheckCircle2 className="w-4 h-4" />}
-            tone="progress"
-            href="/hoc-sinh/ho-so-nang-luc"
-          />
-          <StatCard
-            label="Bài giảng số mới nhất"
-            value={`${lessons.length} học liệu`}
-            hint="Học liệu tương tác theo chủ đề"
-            icon={<BookOpen className="w-4 h-4" />}
-            tone="materials"
-            href="/hoc-sinh/mon-hoc"
-          />
-          <StatCard
-            label="Mức đạt trung bình"
-            value={averageMastery !== null ? `${averageMastery}%` : null}
-            hint={
-              averageMastery !== null
-                ? `Tổng hợp từ ${progressRecords.length} môn học`
-                : "Chưa có dữ liệu tiến độ môn học"
-            }
-            icon={<Award className="w-4 h-4" />}
-            tone="achievements"
-            href="/hoc-sinh/ho-so-nang-luc"
-          />
-        </div>
+        {/* Chưa được xếp lớp cảnh báo rõ ràng */}
+        {!schoolClass && (
+          <div className="p-4 rounded-panel bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <strong className="font-bold block">Tài khoản chưa được xếp vào lớp học</strong>
+              <p className="mt-0.5 text-amber-800">
+                Em vui lòng liên hệ Thầy/Cô giáo chủ nhiệm hoặc Quản trị viên nhà trường để được bổ sung vào danh sách lớp chính thức.
+              </p>
+            </div>
+          </div>
+        )}
 
-        {/* 12-Column Learning Journey */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left 8 Columns: Tasks & Lessons */}
-          <div className="lg:col-span-8 space-y-6">
-            <section className="p-6 rounded-panel bg-surface border border-border shadow-card">
-              <div className="flex items-center justify-between pb-4 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <span className="w-7 h-7 rounded-lg bg-orange-100 text-orange-700 flex items-center justify-center">
-                    <Clock className="w-4 h-4" />
-                  </span>
-                  <h2 className="text-sm font-bold text-ink uppercase tracking-wide">
-                    1. Hôm nay em cần làm gì?
-                  </h2>
-                </div>
-                <span className="text-xs text-ink-muted">Sắp xếp theo hạn nộp</span>
+        {/* PHẦN 1: HÔM NAY EM CẦN LÀM GÌ? (Nổi bật, hành động trực tiếp) */}
+        <section aria-labelledby="today-heading" className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 id="today-heading" className="text-lg sm:text-xl font-bold text-ink tracking-tight flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-ocean-600 inline-block" />
+                Hôm nay em cần làm gì?
+              </h2>
+              <p className="text-sm text-ink-muted mt-0.5">
+                Các nhiệm vụ quan trọng được sắp xếp theo mức độ ưu tiên và thời hạn nộp bài.
+              </p>
+            </div>
+            <Link
+              href="/hoc-sinh/bai-tap"
+              className="text-sm font-semibold text-ocean-600 hover:text-ocean-700 flex items-center gap-1 transition-colors"
+            >
+              Xem tất cả bài tập <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Spotlight 1: Tiếp tục bài học gần nhất (5 cols) */}
+            <div className="lg:col-span-5 p-5 rounded-panel bg-gradient-to-br from-sky-50/70 via-surface to-ocean-50/40 border border-sky-200 shadow-xs flex flex-col justify-between space-y-4">
+              <div className="space-y-2">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-700 bg-sky-100/70 px-2.5 py-0.5 rounded-full border border-sky-200">
+                  <BookOpen className="w-3.5 h-3.5" />
+                  Bài học tiếp theo
+                </span>
+                {nextLesson ? (
+                  <>
+                    <h3 className="text-base sm:text-lg font-bold text-ink">
+                      {nextLesson.title}
+                    </h3>
+                    <p className="text-sm text-ink-muted">
+                      Môn {nextLesson.topic.subject.name} • Chủ đề: {nextLesson.topic.name}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-ink-muted">
+                    Hiện chưa có bài học mới được phát hành.
+                  </p>
+                )}
               </div>
 
-              <div className="mt-4 divide-y divide-border/70">
-                {assignments.length === 0 ? (
-                  <EmptyState
-                    title="Chưa có bài tập nào được giao"
-                    description="Khi giáo viên phát hành bài tập mới cho lớp, nhiệm vụ sẽ hiển thị tại đây."
-                    tone="assignments"
-                  />
-                ) : (
-                  assignments.map((a) => {
-                    const gradedSub = submissions.find(
-                      (s) => s.assignmentId === a.id && s.status === "GRADED"
-                    );
-                    const isSubmitted = submissions.some(
-                      (s) => s.assignmentId === a.id
-                    );
+              {nextLesson ? (
+                <OceanButtonLink
+                  href={`/hoc-sinh/mon-hoc/${nextLesson.id}`}
+                  variant="primary"
+                  size="md"
+                  icon={<ArrowRight className="w-4 h-4" />}
+                >
+                  Học tiếp bài này
+                </OceanButtonLink>
+              ) : (
+                <OceanButtonLink
+                  href="/hoc-sinh/mon-hoc"
+                  variant="secondary"
+                  size="md"
+                >
+                  Khám phá môn học
+                </OceanButtonLink>
+              )}
+            </div>
+
+            {/* Spotlight 2: Danh sách nhiệm vụ cần nộp (7 cols) */}
+            <div className="lg:col-span-7 p-5 rounded-panel bg-surface border border-border shadow-xs space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-border">
+                <span className="text-xs font-bold uppercase tracking-wider text-ink-muted flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-orange-500" />
+                  Nhiệm vụ sắp đến hạn
+                </span>
+                <span className="text-xs text-ink-muted">
+                  {assignments.length} bài được giao
+                </span>
+              </div>
+
+              {assignments.length === 0 ? (
+                <EmptyState
+                  title="Không có bài tập nào đang chờ"
+                  description="Em đã hoàn thành tất cả nhiệm vụ hoặc giáo viên chưa giao bài mới."
+                  tone="assignments"
+                />
+              ) : (
+                <div className="divide-y divide-border/60">
+                  {assignments.slice(0, 3).map((a) => {
+                    const submission = submissions.find((s) => s.assignmentId === a.id);
+                    const isGraded = submission?.status === "GRADED";
+                    const isSubmitted = Boolean(submission);
+                    const dueDate = new Date(a.dueAt);
+                    const isOverdue = !isSubmitted && dueDate.getTime() < Date.now();
 
                     return (
                       <div
                         key={a.id}
-                        className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                        className="py-3 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                       >
-                        <div className="space-y-1 min-w-0">
+                        <div className="space-y-1 min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200 px-2.5 py-0.5 rounded-full">
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200">
                               {a.subject.name}
                             </span>
-                            <span className="text-xs text-ink-muted">
-                              Hạn nộp:{" "}
-                              {new Date(a.dueAt).toLocaleDateString("vi-VN")}
+                            <span className={`text-xs ${isOverdue ? "text-status-danger font-semibold" : "text-ink-muted"}`}>
+                              Hạn nộp: {dueDate.toLocaleDateString("vi-VN")}
                             </span>
                           </div>
-                          <h3 className="text-sm font-bold text-ink hover:text-ocean-600 transition-colors">
-                            <Link href={`/hoc-sinh/bai-tap/${a.id}`}>
-                              {a.title}
-                            </Link>
-                          </h3>
-                          <p className="text-xs text-ink-muted line-clamp-1">
-                            {a.description}
-                          </p>
+                          <h4 className="text-sm font-bold text-ink hover:text-ocean-600 transition-colors truncate">
+                            <Link href={`/hoc-sinh/bai-tap/${a.id}`}>{a.title}</Link>
+                          </h4>
                         </div>
 
-                        <div className="flex items-center gap-3 shrink-0">
-                          {gradedSub ? (
-                            <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
+                        <div className="shrink-0 flex items-center gap-2">
+                          {isGraded ? (
+                            <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1">
                               <CheckCircle2 className="w-3.5 h-3.5" />
-                              Đã chấm ({gradedSub.score}/{a.maxScore})
+                              {submission?.score}/{a.maxScore} điểm
                             </span>
                           ) : isSubmitted ? (
-                            <span className="text-xs font-bold px-3 py-1 rounded-full bg-ocean-light text-ocean-700 border border-ocean-200 flex items-center gap-1.5">
+                            <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 inline-flex items-center gap-1">
                               <Clock className="w-3.5 h-3.5" />
-                              Đang chờ chấm
+                              Đã nộp bài
                             </span>
                           ) : (
                             <OceanButtonLink
@@ -215,46 +246,83 @@ export default async function StudentDashboardPage() {
                               variant="primary"
                               size="sm"
                             >
-                              Làm bài & Nộp
+                              Nộp bài
                             </OceanButtonLink>
                           )}
                         </div>
                       </div>
                     );
-                  })
-                )}
-              </div>
-            </section>
-
-            {/* Subject Courses */}
-            <section className="p-6 rounded-panel bg-surface border border-border shadow-card">
-              <div className="flex items-center justify-between pb-4 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <span className="w-7 h-7 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center">
-                    <BookOpen className="w-4 h-4" />
-                  </span>
-                  <h2 className="text-sm font-bold text-ink uppercase tracking-wide">
-                    Bài học đang diễn ra
-                  </h2>
+                  })}
                 </div>
+              )}
+            </div>
+          </div>
+
+          {/* Phản hồi mới nhất từ giáo viên (nếu có) */}
+          {latestGraded && (
+            <div className="p-4 sm:p-5 rounded-panel bg-emerald-50/60 border border-emerald-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <span className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 mt-0.5">
+                  <MessageSquare className="w-4 h-4" />
+                </span>
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold text-emerald-800 uppercase tracking-wide">
+                      Phản hồi mới nhất từ Thầy/Cô
+                    </span>
+                    <span className="text-xs text-emerald-700">
+                      • Bài: {latestGraded.assignment.title}
+                    </span>
+                  </div>
+                  <p className="text-sm text-ink leading-relaxed">
+                    {latestGraded.teacherComment ? (
+                      `"${latestGraded.teacherComment}"`
+                    ) : (
+                      <span className="text-ink-muted">
+                        Bài đã được chấm đạt <strong>{latestGraded.score}/{latestGraded.assignment.maxScore}</strong> điểm theo Rubric.
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <OceanButtonLink
+                href={`/hoc-sinh/bai-tap/${latestGraded.assignmentId}`}
+                variant="secondary"
+                size="sm"
+                className="shrink-0"
+              >
+                Xem chi tiết nhận xét
+              </OceanButtonLink>
+            </div>
+          )}
+        </section>
+
+        {/* PHẦN 2: BÀI HỌC CỦA EM & TIẾN BỘ THỰC TẾ */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Cột trái (8 cột): Khám phá bài giảng & Học tập */}
+          <div className="lg:col-span-8 space-y-6">
+            <section aria-labelledby="lessons-heading" className="p-6 rounded-panel bg-surface border border-border shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <h3 id="lessons-heading" className="text-base font-bold text-ink flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-sky-600" />
+                  Bài học môn Tin học &amp; Đang diễn ra
+                </h3>
                 <Link
                   href="/hoc-sinh/mon-hoc"
-                  className="text-xs font-bold text-sky-700 hover:text-ocean-600 flex items-center gap-1"
+                  className="text-xs font-semibold text-ocean-600 hover:text-ocean-700 flex items-center gap-1"
                 >
-                  Xem tất cả <ChevronRight className="w-3.5 h-3.5" />
+                  Tất cả môn học <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
 
               {lessons.length === 0 ? (
-                <div className="mt-4">
-                  <EmptyState
-                    title="Chưa có bài giảng số nào"
-                    description="Bài giảng của môn học sẽ xuất hiện tại đây khi thầy cô cập nhật."
-                    tone="materials"
-                  />
-                </div>
+                <EmptyState
+                  title="Chưa có bài học nào được đăng tải"
+                  description="Thầy cô sẽ cập nhật học liệu tương tác theo chương trình học của trường."
+                  tone="materials"
+                />
               ) : (
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {lessons.map((l) => (
                     <CourseCard
                       key={l.id}
@@ -269,24 +337,27 @@ export default async function StudentDashboardPage() {
             </section>
           </div>
 
-          {/* Right 4 Columns: Mastery Progress & AI Tutor */}
+          {/* Cột phải (4 cột): Tiến độ học tập thật & AI Socratic */}
           <div className="lg:col-span-4 space-y-6">
-            <section className="p-6 rounded-panel bg-surface border border-border shadow-card space-y-4">
-              <div className="flex items-center gap-2 pb-3 border-b border-border">
-                <span className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                  <Award className="w-4 h-4" />
-                </span>
-                <h2 className="text-sm font-bold text-ink uppercase tracking-wide">
-                  2. Em đang tiến bộ ở đâu?
-                </h2>
+            {/* Em đang tiến bộ ở đâu? */}
+            <section aria-labelledby="progress-heading" className="p-5 rounded-panel bg-surface border border-border shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-border">
+                <h3 id="progress-heading" className="text-xs font-bold uppercase tracking-wider text-ink-muted flex items-center gap-1.5">
+                  <Award className="w-3.5 h-3.5 text-emerald-600" />
+                  Tiến độ học tập thực tế
+                </h3>
+                <Link
+                  href="/hoc-sinh/ho-so-nang-luc"
+                  className="text-xs font-semibold text-emerald-700 hover:underline"
+                >
+                  Chi tiết
+                </Link>
               </div>
 
               {progressRecords.length === 0 ? (
-                <EmptyState
-                  title="Chưa có dữ liệu tiến độ"
-                  description="Hoàn thành bài tập và bài kiểm tra để theo dõi biểu đồ tiến bộ."
-                  tone="progress"
-                />
+                <div className="py-2 text-center text-xs text-ink-muted">
+                  Chưa có dữ liệu tiến độ. Khi em nộp bài và hoàn thành bài kiểm tra, chỉ số đạt sẽ hiển thị ở đây.
+                </div>
               ) : (
                 <div className="space-y-3">
                   {progressRecords.map((rec) => (
@@ -303,23 +374,26 @@ export default async function StudentDashboardPage() {
               )}
             </section>
 
-            <AIWidget
-              title="3. Bước học tiếp theo"
-              badge="AI Tutor"
-              description={
-                <p>
-                  <strong className="text-violet-700 font-bold">
-                    Đề xuất cá nhân hóa:
-                  </strong>{" "}
-                  {progressRecords[0]?.nextStepSuggestion ||
-                    "Hoàn thành bài tập thực hành và chia sẻ sản phẩm lên Cộng đồng học tập UNIGO."}
-                </p>
-              }
-              primaryHref="/hoc-sinh/ai-tutor"
-              primaryLabel="Trao đổi với AI Tutor"
-              secondaryHref="/hoc-sinh/cong-dong"
-              secondaryLabel="Đăng sản phẩm lên Cộng đồng"
-            />
+            {/* Gia sư Socratic & Xưởng trò chơi */}
+            <div className="p-5 rounded-panel bg-gradient-to-br from-violet-50/70 via-surface to-fuchsia-50/30 border border-violet-200 shadow-xs space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-6 h-6 rounded-md bg-violet-100 text-violet-700 flex items-center justify-center">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </span>
+                <h3 className="text-sm font-bold text-ink">Gia sư Socratic UNIGO</h3>
+              </div>
+              <p className="text-xs text-ink-muted leading-relaxed">
+                Thầy cô AI không giải bài hộ em, mà sẽ đặt câu hỏi gợi mở từng bước giúp em tự tìm ra cách giải quyết vấn đề.
+              </p>
+              <OceanButtonLink
+                href="/hoc-sinh/ai-tutor"
+                variant="secondary"
+                size="sm"
+                className="w-full justify-center"
+              >
+                Hỏi Gia sư Socratic
+              </OceanButtonLink>
+            </div>
           </div>
         </div>
       </div>

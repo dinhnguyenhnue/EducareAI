@@ -1,5 +1,13 @@
 import crypto from "crypto";
 import { prisma } from "./prisma";
+import {
+  decryptSecret,
+  encryptSecret,
+  hasServerEncryptionKey,
+} from "./secret-crypto";
+
+export const SYSTEM_GOOGLE_WORKSPACE_SLOT_CODE = "SYSTEM_GOOGLE_WORKSPACE";
+export const SYSTEM_GEMINI_API_SLOT_CODE = "SYSTEM_GEMINI_API";
 
 export interface GoogleOAuthConfig {
   clientId: string;
@@ -16,12 +24,37 @@ export const GOOGLE_SCOPES = {
   DOCS: ["https://www.googleapis.com/auth/documents"],
   SHEETS: ["https://www.googleapis.com/auth/spreadsheets"],
   CLASSROOM: [
-    "https://www.googleapis.com/auth/classroom.courses",
+    "https://www.googleapis.com/auth/classroom.courses.readonly",
     "https://www.googleapis.com/auth/classroom.coursework.students",
     "https://www.googleapis.com/auth/classroom.rosters.readonly",
   ],
   CALENDAR: ["https://www.googleapis.com/auth/calendar.events"],
 };
+
+export type IntegrationServiceStatusCode =
+  | "NOT_CONFIGURED"
+  | "PENDING_CONSENT"
+  | "CONNECTED"
+  | "ERROR";
+
+export interface WorkspaceServiceStatusItem {
+  serviceCode:
+    | "GOOGLE_DRIVE"
+    | "GOOGLE_SHEETS"
+    | "GOOGLE_DOCS"
+    | "GOOGLE_CALENDAR"
+    | "GOOGLE_CLASSROOM"
+    | "GEMINI_API";
+  serviceName: string;
+  category: "GOOGLE_WORKSPACE" | "GEMINI_SERVER_API";
+  status: IntegrationServiceStatusCode;
+  statusLabel: "Chưa cấu hình" | "Chờ cấp quyền" | "Đã kết nối" | "Lỗi";
+  requiredScopes: string[];
+  requiredEnvVars: string[];
+  lastSyncAt: string | null;
+  lastErrorMessage: string | null;
+  setupGuide: string;
+}
 
 /**
  * Cấu trúc thư mục chuẩn 6 nhánh trên Google Drive (EDUCARE_AI/)
@@ -349,11 +382,14 @@ export function getGoogleOAuthConfig(customBaseUrl?: string): GoogleOAuthConfig 
 }
 
 export function buildGoogleOAuthUrl(
-  selectedServices: string[] = ["DRIVE", "DOCS", "SHEETS", "CLASSROOM", "CALENDAR"],
+  selectedServices: string[] = [],
   state: string = "educare_oauth",
-  customBaseUrl?: string
+  customBaseUrl?: string,
+  overrideConfig?: { clientId?: string; redirectUri?: string }
 ) {
   const config = getGoogleOAuthConfig(customBaseUrl);
+  const effectiveClientId = overrideConfig?.clientId || config.clientId;
+  const effectiveRedirectUri = overrideConfig?.redirectUri || config.redirectUri;
   const scopes = new Set<string>(GOOGLE_SCOPES.BASIC);
 
   selectedServices.forEach((svc) => {
@@ -364,8 +400,8 @@ export function buildGoogleOAuthUrl(
   });
 
   const params = new URLSearchParams({
-    client_id: config.clientId || "UNCONFIGURED_CLIENT_ID",
-    redirect_uri: config.redirectUri,
+    client_id: effectiveClientId || "UNCONFIGURED_CLIENT_ID",
+    redirect_uri: effectiveRedirectUri,
     response_type: "code",
     scope: Array.from(scopes).join(" "),
     access_type: "offline",
@@ -400,6 +436,205 @@ export function sanitizeSheetRows(rows: unknown[][]): string[][] {
   return rows.map((row) => row.map((cell) => sanitizeSheetCell(cell)));
 }
 
+export async function getEffectiveGoogleOAuthConfig(
+  customBaseUrl?: string
+): Promise<GoogleOAuthConfig & { source: "ENV" | "DB_ENCRYPTED" | "NONE"; accountMode: GoogleAccountMode }> {
+  const envCfg = getGoogleOAuthConfig(customBaseUrl);
+  let clientId = envCfg.clientId;
+  let clientSecret = envCfg.clientSecret;
+  let source: "ENV" | "DB_ENCRYPTED" | "NONE" = envCfg.isConfigured ? "ENV" : "NONE";
+  let accountMode: GoogleAccountMode = "PERSONAL_GMAIL_HYBRID";
+
+  try {
+    const slot = await prisma.integrationSlot.findUnique({
+      where: { code: SYSTEM_GOOGLE_WORKSPACE_SLOT_CODE },
+    });
+    if (slot?.configJson) {
+      const parsed = JSON.parse(slot.configJson);
+      if (parsed.accountMode === "WORKSPACE_DOMAIN") {
+        accountMode = "WORKSPACE_DOMAIN";
+      }
+      if (!clientId && typeof parsed.clientId === "string" && parsed.clientId.trim()) {
+        clientId = parsed.clientId.trim();
+      }
+      if (!clientSecret && typeof parsed.clientSecretEncrypted === "string") {
+        const decrypted = decryptSecret(parsed.clientSecretEncrypted);
+        if (decrypted) {
+          clientSecret = decrypted;
+          source = "DB_ENCRYPTED";
+        }
+      }
+    }
+  } catch {
+    // Ignore DB lookup errors during build/edge
+  }
+
+  const baseUrl = customBaseUrl || getSafeBaseUrl();
+  return {
+    clientId,
+    clientSecret,
+    redirectUri: `${baseUrl}/api/auth/google/callback`,
+    isConfigured: Boolean(clientId && clientSecret),
+    source: clientId && clientSecret ? source : "NONE",
+    accountMode,
+  };
+}
+
+export async function getEffectiveGeminiServerConfig(): Promise<{
+  isConfigured: boolean;
+  modelName: string;
+  apiKey: string | null;
+  source: "ENV" | "DB_ENCRYPTED" | "NONE";
+}> {
+  const envGemini = getGeminiServerConfig();
+  const envKey = sanitizeEnvCredential(process.env.GEMINI_API_KEY);
+  let modelName = envGemini.modelName;
+  let apiKey: string | null = envGemini.isConfigured ? envKey : null;
+  let source: "ENV" | "DB_ENCRYPTED" | "NONE" = envGemini.isConfigured ? "ENV" : "NONE";
+
+  try {
+    const slot = await prisma.integrationSlot.findUnique({
+      where: { code: SYSTEM_GEMINI_API_SLOT_CODE },
+    });
+    if (slot?.configJson) {
+      const parsed = JSON.parse(slot.configJson);
+      if (!process.env.GEMINI_MODEL && typeof parsed.modelName === "string" && parsed.modelName.trim()) {
+        modelName = parsed.modelName.trim();
+      }
+      if (!apiKey && typeof parsed.apiKeyEncrypted === "string") {
+        const decrypted = decryptSecret(parsed.apiKeyEncrypted);
+        if (decrypted && decrypted.length >= 16) {
+          apiKey = decrypted;
+          source = "DB_ENCRYPTED";
+        }
+      }
+    }
+  } catch {
+    // Ignore DB lookup errors
+  }
+
+  return {
+    isConfigured: Boolean(apiKey),
+    modelName,
+    apiKey,
+    source,
+  };
+}
+
+export async function getValidGoogleAccessToken(userId?: string): Promise<{
+  ok: boolean;
+  status: IntegrationServiceStatusCode;
+  accessToken: string | null;
+  scopes: Set<string>;
+  reason: string | null;
+}> {
+  const oauth = await getEffectiveGoogleOAuthConfig();
+  if (!oauth.isConfigured) {
+    return {
+      ok: false,
+      status: "NOT_CONFIGURED",
+      accessToken: null,
+      scopes: new Set(),
+      reason: "Thiếu GOOGLE_CLIENT_ID hoặc GOOGLE_CLIENT_SECRET.",
+    };
+  }
+
+  const conn = userId
+    ? await prisma.googleConnection.findUnique({ where: { userId } }).catch(() => null)
+    : await prisma.googleConnection
+        .findFirst({ where: { status: "CONNECTED" }, orderBy: { createdAt: "desc" } })
+        .catch(() => null);
+
+  const scopes = new Set<string>(
+    (conn?.scopesGranted || "")
+      .split(/[\s,"\[\]]+/)
+      .map((s: string) => s.trim())
+      .filter(Boolean)
+  );
+
+  if (!conn || conn.status !== "CONNECTED" || !conn.accessTokenHash) {
+    return {
+      ok: false,
+      status: "PENDING_CONSENT",
+      accessToken: null,
+      scopes,
+      reason: "Chưa hoàn tất cấp quyền Google OAuth cho tài khoản quản trị/giáo viên.",
+    };
+  }
+
+  if (
+    conn.accessTokenHash.startsWith("DEMO") ||
+    conn.accessTokenHash.startsWith("MOCK")
+  ) {
+    return {
+      ok: false,
+      status: "PENDING_CONSENT",
+      accessToken: null,
+      scopes,
+      reason: "Token hiện tại chỉ là dữ liệu mẫu, chưa có token OAuth thật từ Google.",
+    };
+  }
+
+  const decryptedAccess = decryptSecret(conn.accessTokenHash);
+  if (decryptedAccess) {
+    return {
+      ok: true,
+      status: "CONNECTED",
+      accessToken: decryptedAccess,
+      scopes,
+      reason: null,
+    };
+  }
+
+  // Try refreshing if refresh token exists
+  const decryptedRefresh = decryptSecret(conn.refreshTokenHash);
+  if (decryptedRefresh) {
+    try {
+      const refreshRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: oauth.clientId,
+          client_secret: oauth.clientSecret,
+          refresh_token: decryptedRefresh,
+          grant_type: "refresh_token",
+        }),
+      });
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        if (refreshData.access_token && hasServerEncryptionKey()) {
+          await prisma.googleConnection.update({
+            where: { id: conn.id },
+            data: {
+              accessTokenHash: encryptSecret(refreshData.access_token),
+              lastSyncAt: new Date(),
+            },
+          });
+          return {
+            ok: true,
+            status: "CONNECTED",
+            accessToken: refreshData.access_token,
+            scopes,
+            reason: null,
+          };
+        }
+      }
+    } catch {
+      // Fall through to error
+    }
+  }
+
+  return {
+    ok: false,
+    status: "ERROR",
+    accessToken: null,
+    scopes,
+    reason: hasServerEncryptionKey()
+      ? "Không thể giải mã hoặc làm mới OAuth access token. Vui lòng kết nối lại Google OAuth."
+      : "Thiếu APP_ENCRYPTION_KEY trên máy chủ để giải mã OAuth token đã lưu.",
+  };
+}
+
 /**
  * Kiểm tra trạng thái kết nối thực tế với Google Workspace API.
  * Không bao giờ báo SYNCED/SUCCESS nếu chưa có OAuth cấu hình + token hợp lệ + xác nhận từ Google API.
@@ -407,28 +642,391 @@ export function sanitizeSheetRows(rows: unknown[][]): string[][] {
 export async function resolveGoogleIntegrationMode(userId?: string): Promise<{
   isOAuthConfigured: boolean;
   hasLiveToken: boolean;
-  syncStatus: "DISCONNECTED" | "DEMO";
-  logStatus: "DISCONNECTED" | "DEMO";
+  syncStatus: "DISCONNECTED" | "CONNECTED";
+  logStatus: "DISCONNECTED" | "SUCCESS";
+  accessToken: string | null;
 }> {
-  const oauth = getGoogleOAuthConfig();
-  let hasLiveToken = false;
-  if (oauth.isConfigured && userId) {
-    const conn = await prisma.googleConnection.findUnique({ where: { userId } }).catch(() => null);
-    hasLiveToken = Boolean(
-      conn &&
-        conn.status === "CONNECTED" &&
-        conn.accessTokenHash &&
-        !conn.accessTokenHash.startsWith("DEMO") &&
-        !conn.accessTokenHash.startsWith("MOCK")
-    );
-  }
-  // Khi chưa thực hiện gọi Google API thật và đọc lại xác nhận, chỉ trả về DISCONNECTED hoặc DEMO
-  const mode = oauth.isConfigured && hasLiveToken ? "DEMO" : "DISCONNECTED";
+  const tokenState = await getValidGoogleAccessToken(userId);
   return {
-    isOAuthConfigured: oauth.isConfigured,
-    hasLiveToken,
-    syncStatus: mode,
-    logStatus: mode,
+    isOAuthConfigured: tokenState.status !== "NOT_CONFIGURED",
+    hasLiveToken: tokenState.ok,
+    syncStatus: tokenState.ok ? "CONNECTED" : "DISCONNECTED",
+    logStatus: tokenState.ok ? "SUCCESS" : "DISCONNECTED",
+    accessToken: tokenState.accessToken,
+  };
+}
+
+export function getGeminiServerConfig(): {
+  isConfigured: boolean;
+  modelName: string;
+} {
+  const rawKey = sanitizeEnvCredential(process.env.GEMINI_API_KEY);
+  const isPlaceholder =
+    !rawKey ||
+    rawKey === "your_gemini_api_key" ||
+    rawKey.startsWith("YOUR_") ||
+    rawKey.length < 16;
+  const modelName =
+    sanitizeEnvCredential(process.env.GEMINI_MODEL) || "gemini-2.0-flash";
+  return {
+    isConfigured: !isPlaceholder,
+    modelName,
+  };
+}
+
+/**
+ * Ẩn danh dữ liệu cá nhân học sinh (PII: email, mã học sinh, số điện thoại)
+ * trước khi gửi nội dung câu hỏi sang dịch vụ AI bên ngoài.
+ */
+export function redactStudentPiiForExternalAi(rawText: string): string {
+  return String(rawText || "")
+    .replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[EMAIL_DA_AN]")
+    .replace(/\bHS\d{4}[-_]?\w+\b/gi, "[MA_HS_DA_AN]")
+    .replace(/\b(0|\+84)\d{8,10}\b/g, "[SDT_DA_AN]");
+}
+
+const STATUS_LABELS: Record<
+  IntegrationServiceStatusCode,
+  "Chưa cấu hình" | "Chờ cấp quyền" | "Đã kết nối" | "Lỗi"
+> = {
+  NOT_CONFIGURED: "Chưa cấu hình",
+  PENDING_CONSENT: "Chờ cấp quyền",
+  CONNECTED: "Đã kết nối",
+  ERROR: "Lỗi",
+};
+
+/**
+ * Trả về trạng thái chuẩn hóa của 6 dịch vụ Google Workspace & Gemini API trên máy chủ:
+ * - NOT_CONFIGURED (Chưa cấu hình)
+ * - PENDING_CONSENT (Chờ cấp quyền OAuth)
+ * - CONNECTED (Đã kết nối)
+ * - ERROR (Lỗi xác thực / đồng bộ)
+ * Tuyệt đối không trả về giá trị khóa bí mật ra client.
+ */
+export async function getWorkspaceAndGeminiServicesStatus(
+  userId?: string
+): Promise<WorkspaceServiceStatusItem[]> {
+  const oauth = await getEffectiveGoogleOAuthConfig();
+  const gemini = await getEffectiveGeminiServerConfig();
+
+  const [userConn, latestLogs] = await Promise.all([
+    userId
+      ? prisma.googleConnection.findUnique({ where: { userId } }).catch(() => null)
+      : prisma.googleConnection
+          .findFirst({ orderBy: { createdAt: "desc" } })
+          .catch(() => null),
+    prisma.syncLog
+      .findMany({
+        orderBy: { createdAt: "desc" },
+        take: 40,
+      })
+      .catch(() => []),
+  ]);
+
+  const grantedScopes = new Set<string>(
+    (userConn?.scopesGranted || "")
+      .split(/[\s, "\[\]]+/)
+      .map((s: string) => s.trim())
+      .filter(Boolean)
+  );
+
+  const hasValidToken = Boolean(
+    userConn &&
+      userConn.status === "CONNECTED" &&
+      userConn.accessTokenHash &&
+      !userConn.accessTokenHash.startsWith("DEMO") &&
+      !userConn.accessTokenHash.startsWith("MOCK") &&
+      Boolean(decryptSecret(userConn.accessTokenHash))
+  );
+
+  const resolveGoogleServiceState = (
+    logServiceKey: string,
+    requiredScopes: string[]
+  ): {
+    status: IntegrationServiceStatusCode;
+    lastSyncAt: string | null;
+    lastErrorMessage: string | null;
+  } => {
+    const latestLog = latestLogs.find((l) => l.service === logServiceKey);
+    const lastSyncAt = latestLog ? latestLog.createdAt.toISOString() : null;
+    const lastErrorMessage = latestLog?.errorMessage || null;
+
+    if (!oauth.isConfigured) {
+      return {
+        status: "NOT_CONFIGURED",
+        lastSyncAt,
+        lastErrorMessage:
+          lastErrorMessage ||
+          "Thiếu GOOGLE_CLIENT_ID hoặc GOOGLE_CLIENT_SECRET trong biến môi trường máy chủ.",
+      };
+    }
+
+    if (userConn?.status === "ERROR" || latestLog?.status === "ERROR") {
+      return {
+        status: "ERROR",
+        lastSyncAt,
+        lastErrorMessage:
+          lastErrorMessage || "Phiên OAuth hoặc lần gọi API gần nhất báo lỗi.",
+      };
+    }
+
+    const hasAllScopes = requiredScopes.every((sc) => grantedScopes.has(sc));
+    if (!hasValidToken || !hasAllScopes) {
+      return {
+        status: "PENDING_CONSENT",
+        lastSyncAt,
+        lastErrorMessage:
+          "Đã có Client ID/Secret nhưng quản trị viên/giáo viên chưa hoàn tất cấp quyền OAuth cho phạm vi (scope) này.",
+      };
+    }
+
+    return {
+      status: "CONNECTED",
+      lastSyncAt,
+      lastErrorMessage: null,
+    };
+  };
+
+  const driveState = resolveGoogleServiceState("DRIVE", GOOGLE_SCOPES.DRIVE);
+  const sheetsState = resolveGoogleServiceState("SHEETS", GOOGLE_SCOPES.SHEETS);
+  const docsState = resolveGoogleServiceState("DOCS", GOOGLE_SCOPES.DOCS);
+  const calendarState = resolveGoogleServiceState("CALENDAR", GOOGLE_SCOPES.CALENDAR);
+  const classroomState = resolveGoogleServiceState(
+    "CLASSROOM",
+    GOOGLE_SCOPES.CLASSROOM
+  );
+
+  const geminiLog = latestLogs.find((l) => l.service === "GEMINI_API");
+  const geminiStatus: IntegrationServiceStatusCode = !gemini.isConfigured
+    ? "NOT_CONFIGURED"
+    : geminiLog?.status === "ERROR"
+    ? "ERROR"
+    : "CONNECTED";
+
+  return [
+    {
+      serviceCode: "GOOGLE_DRIVE",
+      serviceName: "Google Drive (Cây 6 thư mục EDUCARE_AI)",
+      category: "GOOGLE_WORKSPACE",
+      status: driveState.status,
+      statusLabel: STATUS_LABELS[driveState.status],
+      requiredScopes: GOOGLE_SCOPES.DRIVE,
+      requiredEnvVars: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "NEXTAUTH_URL"],
+      lastSyncAt: driveState.lastSyncAt,
+      lastErrorMessage: driveState.lastErrorMessage,
+      setupGuide:
+        "Bật Google Drive API trong Google Cloud Console và cấp quyền tối thiểu drive.file (chỉ truy cập tệp/thư mục do ứng dụng tạo).",
+    },
+    {
+      serviceCode: "GOOGLE_SHEETS",
+      serviceName: "Google Sheets (Tracking 6 Tabs & Bảng điểm lớp)",
+      category: "GOOGLE_WORKSPACE",
+      status: sheetsState.status,
+      statusLabel: STATUS_LABELS[sheetsState.status],
+      requiredScopes: GOOGLE_SCOPES.SHEETS,
+      requiredEnvVars: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "NEXTAUTH_URL"],
+      lastSyncAt: sheetsState.lastSyncAt,
+      lastErrorMessage: sheetsState.lastErrorMessage,
+      setupGuide:
+        "Bật Google Sheets API để đồng bộ bảng EDUCARE_AI_Tracking_<Lớp> qua values.batchUpdate (chống Formula Injection).",
+    },
+    {
+      serviceCode: "GOOGLE_DOCS",
+      serviceName: "Google Docs (Khởi tạo Đề thi & Giáo án từ mẫu)",
+      category: "GOOGLE_WORKSPACE",
+      status: docsState.status,
+      statusLabel: STATUS_LABELS[docsState.status],
+      requiredScopes: GOOGLE_SCOPES.DOCS,
+      requiredEnvVars: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "NEXTAUTH_URL"],
+      lastSyncAt: docsState.lastSyncAt,
+      lastErrorMessage: docsState.lastErrorMessage,
+      setupGuide:
+        "Bật Google Docs API để nhân bản mẫu đề kiểm tra/giáo án và điền biến tự động.",
+    },
+    {
+      serviceCode: "GOOGLE_CALENDAR",
+      serviceName: "Google Calendar (Lịch hạn nộp bài & Kiểm tra)",
+      category: "GOOGLE_WORKSPACE",
+      status: calendarState.status,
+      statusLabel: STATUS_LABELS[calendarState.status],
+      requiredScopes: GOOGLE_SCOPES.CALENDAR,
+      requiredEnvVars: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "NEXTAUTH_URL"],
+      lastSyncAt: calendarState.lastSyncAt,
+      lastErrorMessage: calendarState.lastErrorMessage,
+      setupGuide:
+        "Bật Google Calendar API với scope tối thiểu calendar.events để tạo sự kiện nhắc hạn nộp bài.",
+    },
+    {
+      serviceCode: "GOOGLE_CLASSROOM",
+      serviceName: "Google Classroom (Đồng bộ danh sách lớp & Bài tập)",
+      category: "GOOGLE_WORKSPACE",
+      status: classroomState.status,
+      statusLabel: STATUS_LABELS[classroomState.status],
+      requiredScopes: GOOGLE_SCOPES.CLASSROOM,
+      requiredEnvVars: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "NEXTAUTH_URL"],
+      lastSyncAt: classroomState.lastSyncAt,
+      lastErrorMessage: classroomState.lastErrorMessage,
+      setupGuide:
+        "Bật Google Classroom API với các scope tối thiểu classroom.courses.readonly, classroom.coursework.students, classroom.rosters.readonly.",
+    },
+    {
+      serviceCode: "GEMINI_API",
+      serviceName: `Gemini API trên Server (Mô hình: ${gemini.modelName})`,
+      category: "GEMINI_SERVER_API",
+      status: geminiStatus,
+      statusLabel: STATUS_LABELS[geminiStatus],
+      requiredScopes: ["Server-side API Key (Không lộ ra trình duyệt)"],
+      requiredEnvVars: ["GEMINI_API_KEY", "GEMINI_MODEL"],
+      lastSyncAt: geminiLog ? geminiLog.createdAt.toISOString() : null,
+      lastErrorMessage: !gemini.isConfigured
+        ? "Chưa cấu hình GEMINI_API_KEY trên máy chủ. Trợ lý AI đang hoạt động ở chế độ Socratic cục bộ an toàn."
+        : geminiLog?.errorMessage || null,
+      setupGuide:
+        "Cấu hình GEMINI_API_KEY và GEMINI_MODEL trong biến môi trường máy chủ (.env / Secret Manager). Khác với Gemini Gems (liên kết ngoài mở sang gemini.google.com).",
+    },
+  ];
+}
+
+export async function testWorkspaceOrGeminiConnection(
+  userId: string,
+  serviceCode: string
+) {
+  const statuses = await getWorkspaceAndGeminiServicesStatus(userId);
+  const target =
+    statuses.find((s) => s.serviceCode === serviceCode) || statuses[0];
+
+  const logServiceMap: Record<string, string> = {
+    GOOGLE_DRIVE: "DRIVE",
+    GOOGLE_SHEETS: "SHEETS",
+    GOOGLE_DOCS: "DOCS",
+    GOOGLE_CALENDAR: "CALENDAR",
+    GOOGLE_CLASSROOM: "CLASSROOM",
+    GEMINI_API: "GEMINI_API",
+  };
+
+  const logService = logServiceMap[target.serviceCode] || "DRIVE";
+  let liveStatus: IntegrationServiceStatusCode = target.status;
+  let liveErrorMessage = target.lastErrorMessage;
+  let verifiedDetail: string | null = null;
+
+  // Khi thực sự có API key (Gemini) hoặc OAuth access token (Google Workspace), gọi API thật để xác minh
+  if (target.serviceCode === "GEMINI_API") {
+    const gemini = await getEffectiveGeminiServerConfig();
+    if (gemini.isConfigured && gemini.apiKey) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+            gemini.modelName
+          )}?key=${encodeURIComponent(gemini.apiKey)}`,
+          { method: "GET" }
+        );
+        if (res.ok) {
+          liveStatus = "CONNECTED";
+          liveErrorMessage = null;
+          verifiedDetail = `Google Gemini API phản hồi HTTP ${res.status} cho model ${gemini.modelName}.`;
+        } else {
+          liveStatus = "ERROR";
+          liveErrorMessage = `Gemini API trả về HTTP ${res.status}. Kiểm tra lại GEMINI_API_KEY hoặc tên model ${gemini.modelName}.`;
+        }
+      } catch (err: any) {
+        liveStatus = "ERROR";
+        liveErrorMessage = `Lỗi mạng khi gọi Gemini API: ${err.message}`;
+      }
+    }
+  } else if (target.status === "CONNECTED") {
+    const tokenState = await getValidGoogleAccessToken(userId);
+    if (!tokenState.ok || !tokenState.accessToken) {
+      liveStatus = tokenState.status;
+      liveErrorMessage = tokenState.reason;
+    } else {
+      const probeUrls: Record<string, string> = {
+        GOOGLE_DRIVE: "https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)",
+        GOOGLE_SHEETS: "https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)",
+        GOOGLE_DOCS: "https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)",
+        GOOGLE_CALENDAR: "https://www.googleapis.com/calendar/v3/users/me/calendarList?maxResults=1",
+        GOOGLE_CLASSROOM: "https://classroom.googleapis.com/v1/courses?pageSize=1",
+      };
+      const probeUrl = probeUrls[target.serviceCode];
+      if (probeUrl) {
+        try {
+          const probeRes = await fetch(probeUrl, {
+            headers: { Authorization: `Bearer ${tokenState.accessToken}` },
+          });
+          if (probeRes.ok) {
+            liveStatus = "CONNECTED";
+            liveErrorMessage = null;
+            verifiedDetail = `Google API phản hồi HTTP ${probeRes.status} thành công.`;
+          } else {
+            liveStatus = "ERROR";
+            liveErrorMessage = `Google API trả về HTTP ${probeRes.status}. Kiểm tra đã bật API trên Google Cloud Console và cấp đủ scope chưa.`;
+          }
+        } catch (err: any) {
+          liveStatus = "ERROR";
+          liveErrorMessage = `Không thể kết nối tới Google API: ${err.message}`;
+        }
+      }
+    }
+  }
+
+  const syncLog = await prisma.syncLog.create({
+    data: {
+      userId,
+      service: logService,
+      action: `TEST_CONNECTION_${target.serviceCode}`,
+      resourceId: target.serviceCode,
+      status: liveStatus,
+      errorMessage: liveErrorMessage,
+    },
+  });
+
+  return {
+    serviceCode: target.serviceCode,
+    serviceName: target.serviceName,
+    status: liveStatus,
+    statusLabel: STATUS_LABELS[liveStatus],
+    connected: liveStatus === "CONNECTED",
+    lastSyncAt: syncLog.createdAt.toISOString(),
+    message:
+      liveStatus === "NOT_CONFIGURED"
+        ? `[Chưa cấu hình — NOT_CONFIGURED] ${target.serviceName}: ${liveErrorMessage}`
+        : liveStatus === "PENDING_CONSENT"
+        ? `[Chờ cấp quyền — PENDING_CONSENT] ${target.serviceName}: ${liveErrorMessage}`
+        : liveStatus === "CONNECTED"
+        ? `[Đã kết nối — CONNECTED] ${target.serviceName}: ${verifiedDetail || "Sẵn sàng hoạt động."}`
+        : `[Lỗi — ERROR] ${target.serviceName}: ${liveErrorMessage}`,
+  };
+}
+
+export async function disconnectGoogleWorkspace(userId: string) {
+  await prisma.googleConnection
+    .updateMany({
+      where: { userId },
+      data: {
+        status: "DISCONNECTED",
+        accessTokenHash: null,
+        refreshTokenHash: null,
+        scopesGranted: "[]",
+      },
+    })
+    .catch(() => null);
+
+  const syncLog = await prisma.syncLog.create({
+    data: {
+      userId,
+      service: "DRIVE",
+      action: "DISCONNECT_GOOGLE_OAUTH",
+      resourceId: "GOOGLE_WORKSPACE_CONNECTION",
+      status: "DISCONNECTED",
+      errorMessage: "Quản trị viên đã chủ động ngắt kết nối Google OAuth.",
+    },
+  });
+
+  return {
+    disconnected: true,
+    status: "NOT_CONFIGURED",
+    syncLog,
+    message:
+      "Đã ngắt kết nối tài khoản Google Workspace và thu hồi dấu vết token trên máy chủ.",
   };
 }
 
@@ -445,9 +1043,45 @@ export async function provisionEducareDriveTree(
 ) {
   const integrationMode = await resolveGoogleIntegrationMode(userId);
   const provisionedNodes = [];
+  const createdFolderIdByCode = new Map<string, string>();
+  let liveProvisionedCount = 0;
+  let apiErrorMessage: string | null = null;
 
   for (const node of EDUCARE_DRIVE_FOLDER_TREE) {
-    const placeholderFolderId = `UNCONNECTED_${node.folderCode}`;
+    let realGoogleFolderId: string | null = null;
+    if (integrationMode.accessToken && !apiErrorMessage) {
+      try {
+        const parentGoogleId = node.parentCode
+          ? createdFolderIdByCode.get(node.parentCode)
+          : undefined;
+        const driveRes = await fetch("https://www.googleapis.com/drive/v3/files", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${integrationMode.accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: node.name,
+            mimeType: "application/vnd.google-apps.folder",
+            ...(parentGoogleId ? { parents: [parentGoogleId] } : {}),
+          }),
+        });
+        if (driveRes.ok) {
+          const driveJson = (await driveRes.json()) as { id?: string };
+          if (driveJson.id) {
+            realGoogleFolderId = driveJson.id;
+            createdFolderIdByCode.set(node.folderCode, driveJson.id);
+            liveProvisionedCount += 1;
+          }
+        } else {
+          apiErrorMessage = `Google Drive API trả về HTTP ${driveRes.status}`;
+        }
+      } catch (err: any) {
+        apiErrorMessage = err?.message || "Lỗi gọi Google Drive API";
+      }
+    }
+
+    const folderIdToStore = realGoogleFolderId || `UNCONNECTED_${node.folderCode}`;
 
     const upserted = await prisma.driveFolderNode.upsert({
       where: { folderCode: node.folderCode },
@@ -455,6 +1089,7 @@ export async function provisionEducareDriveTree(
         name: node.name,
         parentCode: node.parentCode,
         folderPath: node.folderPath,
+        ...(realGoogleFolderId ? { googleFolderId: realGoogleFolderId } : {}),
         permissionScope: node.permissionScope,
         accountMode,
         subjectCode: node.subjectCode,
@@ -465,7 +1100,7 @@ export async function provisionEducareDriveTree(
         name: node.name,
         parentCode: node.parentCode,
         folderPath: node.folderPath,
-        googleFolderId: placeholderFolderId,
+        googleFolderId: folderIdToStore,
         permissionScope: node.permissionScope,
         accountMode,
         subjectCode: node.subjectCode,
@@ -475,25 +1110,36 @@ export async function provisionEducareDriveTree(
     provisionedNodes.push(upserted);
   }
 
+  const rootFolderId = createdFolderIdByCode.get("00_EDUCARE_AI_ROOT") || null;
+  const effectiveStatus =
+    integrationMode.accessToken && liveProvisionedCount === EDUCARE_DRIVE_FOLDER_TREE.length
+      ? "CONNECTED"
+      : apiErrorMessage
+        ? "ERROR"
+        : "DISCONNECTED";
+  const effectiveLogStatus =
+    effectiveStatus === "CONNECTED" ? "SUCCESS" : effectiveStatus === "ERROR" ? "FAILED" : "DISCONNECTED";
+
   const syncLog = await prisma.syncLog.create({
     data: {
       userId,
       service: "DRIVE",
       action: `PROVISION_6_FOLDER_TREE_${accountMode}`,
-      resourceId: "EDUCARE_AI_ROOT_TREE",
-      status: integrationMode.logStatus,
+      resourceId: rootFolderId || "EDUCARE_AI_ROOT_TREE",
+      status: effectiveLogStatus,
       errorMessage:
-        integrationMode.syncStatus === "DISCONNECTED"
-          ? "Chưa kết nối Google Drive API thật (Trạng thái: DISCONNECTED)."
-          : "Chế độ DEMO cục bộ (Chưa gọi Google Drive API thật).",
+        effectiveStatus === "CONNECTED"
+          ? null
+          : apiErrorMessage || "Chưa có OAuth token Google Drive hợp lệ (Trạng thái: DISCONNECTED).",
     },
   });
 
   return {
     accountMode,
-    connectionState: integrationMode.syncStatus,
+    connectionState: effectiveStatus,
     totalFoldersProvisioned: provisionedNodes.length,
-    rootFolderId: null,
+    liveFoldersCreated: liveProvisionedCount,
+    rootFolderId,
     securityPolicy:
       "Tất cả thư mục 01_QUAN_TRI, 03_LOP_HOC, 05_TRACKING_REPORTS, 06_BACKUP đều khóa link công khai (anyoneWithLink = false). Chỉ lưu folderId thật sau khi Google Drive API xác nhận.",
     nodes: provisionedNodes,
@@ -688,8 +1334,8 @@ export async function syncClassTrackingSheet(
   const integrationMode = await resolveGoogleIntegrationMode(userId);
   const spreadsheetTitle = `EDUCARE_AI_Tracking_${resolvedClassName}_${schoolClass?.academicYear?.name || resolvedAcademicYearId}`;
   // Không tự tạo ID GSHEET-TRACKING-... giả lập làm ID thật
-  const spreadsheetId: string | null = null;
-  const spreadsheetUrl: string | null = null;
+  let spreadsheetId: string | null = null;
+  let spreadsheetUrl: string | null = null;
 
   const tabsData = {
     tab1_TongQuan: {
@@ -870,6 +1516,86 @@ export async function syncClassTrackingSheet(
     tabsData.tab5_SanPhamSangTao.rows.length +
     tabsData.tab6_BaoCaoAI.rows.length;
 
+  let effectiveSyncStatus: string = integrationMode.syncStatus;
+  let effectiveLogStatus: string = integrationMode.logStatus;
+  let sheetsErrorMessage: string | null = null;
+
+  if (integrationMode.accessToken) {
+    try {
+      const existingSheet = await prisma.classTrackingSheet.findUnique({
+        where: {
+          classId_academicYearId_purpose: {
+            classId: resolvedClassId,
+            academicYearId: resolvedAcademicYearId,
+            purpose,
+          },
+        },
+        select: { spreadsheetId: true, spreadsheetUrl: true },
+      });
+
+      spreadsheetId = existingSheet?.spreadsheetId || null;
+      spreadsheetUrl = existingSheet?.spreadsheetUrl || null;
+
+      const tabEntries = Object.values(tabsData);
+      if (!spreadsheetId) {
+        const createRes = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${integrationMode.accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            properties: { title: spreadsheetTitle },
+            sheets: tabEntries.map((tab) => ({ properties: { title: tab.tabName } })),
+          }),
+        });
+        if (!createRes.ok) {
+          sheetsErrorMessage = `Google Sheets API create trả về HTTP ${createRes.status}`;
+        } else {
+          const created = (await createRes.json()) as {
+            spreadsheetId?: string;
+            spreadsheetUrl?: string;
+          };
+          spreadsheetId = created.spreadsheetId || null;
+          spreadsheetUrl = created.spreadsheetUrl || null;
+        }
+      }
+
+      if (spreadsheetId && !sheetsErrorMessage) {
+        const batchRes = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values:batchUpdate`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${integrationMode.accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              valueInputOption: "USER_ENTERED",
+              data: tabEntries.map((tab) => ({
+                range: `'${tab.tabName}'!A1`,
+                values: [tab.headers, ...tab.rows],
+              })),
+            }),
+          }
+        );
+        if (!batchRes.ok) {
+          sheetsErrorMessage = `Google Sheets API batchUpdate trả về HTTP ${batchRes.status}`;
+        } else {
+          effectiveSyncStatus = "SYNCED";
+          effectiveLogStatus = "SUCCESS";
+        }
+      }
+    } catch (err: any) {
+      sheetsErrorMessage = err?.message || "Lỗi gọi Google Sheets API";
+    }
+  }
+
+  if (sheetsErrorMessage) {
+    effectiveSyncStatus = "ERROR";
+    effectiveLogStatus = "FAILED";
+  }
+
   const savedSheet = await prisma.classTrackingSheet.upsert({
     where: {
       classId_academicYearId_purpose: {
@@ -885,7 +1611,7 @@ export async function syncClassTrackingSheet(
       spreadsheetUrl,
       driveFolderId: null,
       tabsJson: JSON.stringify(tabsData),
-      syncStatus: integrationMode.syncStatus,
+      syncStatus: effectiveSyncStatus,
       totalRowsSynced: totalRows,
       lastSyncedAt: new Date(),
     },
@@ -899,7 +1625,7 @@ export async function syncClassTrackingSheet(
       spreadsheetUrl,
       driveFolderId: null,
       tabsJson: JSON.stringify(tabsData),
-      syncStatus: integrationMode.syncStatus,
+      syncStatus: effectiveSyncStatus,
       totalRowsSynced: totalRows,
       lastSyncedAt: new Date(),
     },
@@ -911,17 +1637,18 @@ export async function syncClassTrackingSheet(
       service: "SHEETS",
       action: `SYNC_CLASS_TRACKING_6_TABS_${resolvedClassName}`,
       resourceId: spreadsheetId || `LOCAL_SNAPSHOT_${resolvedClassName}_${resolvedAcademicYearId}`,
-      status: integrationMode.logStatus,
+      status: effectiveLogStatus,
       errorMessage:
-        integrationMode.syncStatus === "DISCONNECTED"
-          ? "Chưa kết nối Google Sheets API thật. Đã tạo bản chụp dữ liệu lớp cục bộ (DISCONNECTED)."
-          : "Chế độ DEMO: Chưa xác nhận đọc lại từ Google Sheets API.",
+        effectiveSyncStatus === "SYNCED"
+          ? null
+          : sheetsErrorMessage ||
+            "Chưa có OAuth token Google Sheets hợp lệ. Đã tạo bản chụp dữ liệu lớp cục bộ (DISCONNECTED).",
     },
   });
 
   return {
     trackingSheet: savedSheet,
-    connectionState: integrationMode.syncStatus,
+    connectionState: effectiveSyncStatus,
     avgScore: avgScoreValue,
     tabsCount: 6,
     totalRowsSynced: totalRows,
@@ -1099,13 +1826,18 @@ export async function createEncryptedDatabaseBackup(userId: string, userEmail: s
     },
   });
 
+  const integrationMode = await resolveGoogleIntegrationMode(userId);
   await prisma.syncLog.create({
     data: {
       userId,
       service: "DRIVE",
       action: "CREATE_ENCRYPTED_DB_BACKUP",
       resourceId: backupCode,
-      status: "SUCCESS",
+      status: integrationMode.logStatus,
+      errorMessage:
+        integrationMode.syncStatus === "DISCONNECTED"
+          ? "Đã tạo bản chụp backup cục bộ. Chưa đẩy lên Google Drive 06_BACKUP do chưa kết nối Google Drive API."
+          : null,
     },
   });
 
@@ -1134,13 +1866,18 @@ export async function verifyBackupRestoreDrill(userId: string, backupId?: string
     },
   });
 
+  const integrationMode = await resolveGoogleIntegrationMode(userId);
   await prisma.syncLog.create({
     data: {
       userId,
       service: "DRIVE",
       action: "VERIFY_BACKUP_RESTORE_DRILL",
       resourceId: updated.backupCode,
-      status: "SUCCESS",
+      status: integrationMode.logStatus,
+      errorMessage:
+        integrationMode.syncStatus === "DISCONNECTED"
+          ? "Đã kiểm tra toàn vẹn SHA-256 cục bộ (Chưa kết nối Google Drive API)."
+          : null,
     },
   });
 
@@ -1324,17 +2061,86 @@ export async function syncAssignmentToClassroom(userId: string, assignmentId: st
 
   const integrationMode = await resolveGoogleIntegrationMode(userId);
   const isUpdate = Boolean(assignment.classroomCourseworkId);
-  const courseworkId = assignment.classroomCourseworkId || null;
+  let courseworkId = assignment.classroomCourseworkId || null;
+  let effectiveSyncStatus: string = integrationMode.syncStatus;
+  let effectiveLogStatus: string = integrationMode.logStatus;
+  let errorMessage: string | null =
+    integrationMode.syncStatus === "DISCONNECTED"
+      ? "Chưa kết nối Google Classroom API thật."
+      : null;
+
+  if (integrationMode.accessToken) {
+    try {
+      const coursesRes = await fetch(
+        "https://classroom.googleapis.com/v1/courses?courseStates=ACTIVE&pageSize=20",
+        {
+          headers: { Authorization: `Bearer ${integrationMode.accessToken}` },
+        }
+      );
+      if (!coursesRes.ok) {
+        effectiveSyncStatus = "ERROR";
+        effectiveLogStatus = "FAILED";
+        errorMessage = `Google Classroom courses API trả về HTTP ${coursesRes.status}`;
+      } else {
+        const coursesJson = (await coursesRes.json()) as {
+          courses?: Array<{ id: string; name?: string }>;
+        };
+        const courses = coursesJson.courses || [];
+        const matchedCourse =
+          courses.find((c) =>
+            assignment.schoolClass?.name
+              ? (c.name || "").toLowerCase().includes(assignment.schoolClass.name.toLowerCase())
+              : false
+          ) || courses[0];
+
+        if (!matchedCourse) {
+          effectiveSyncStatus = "ERROR";
+          effectiveLogStatus = "FAILED";
+          errorMessage = "Không tìm thấy lớp học ACTIVE trên Google Classroom để đồng bộ bài tập.";
+        } else {
+          const endpoint = courseworkId
+            ? `https://classroom.googleapis.com/v1/courses/${encodeURIComponent(matchedCourse.id)}/courseWork/${encodeURIComponent(courseworkId)}?updateMask=title,description,maxPoints`
+            : `https://classroom.googleapis.com/v1/courses/${encodeURIComponent(matchedCourse.id)}/courseWork`;
+          const cwRes = await fetch(endpoint, {
+            method: courseworkId ? "PATCH" : "POST",
+            headers: {
+              Authorization: `Bearer ${integrationMode.accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              title: assignment.title,
+              description: assignment.description || `Bài tập môn ${assignment.subject?.name || "Tin học"} - EDUCARE AI`,
+              workType: "ASSIGNMENT",
+              state: "PUBLISHED",
+              maxPoints: assignment.maxScore || 10,
+            }),
+          });
+          if (!cwRes.ok) {
+            effectiveSyncStatus = "ERROR";
+            effectiveLogStatus = "FAILED";
+            errorMessage = `Google Classroom courseWork API trả về HTTP ${cwRes.status}`;
+          } else {
+            const cwJson = (await cwRes.json()) as { id?: string };
+            courseworkId = cwJson.id || courseworkId;
+            effectiveSyncStatus = "SYNCED";
+            effectiveLogStatus = "SUCCESS";
+            errorMessage = null;
+          }
+        }
+      }
+    } catch (err: any) {
+      effectiveSyncStatus = "ERROR";
+      effectiveLogStatus = "FAILED";
+      errorMessage = err?.message || "Lỗi gọi Google Classroom API";
+    }
+  }
 
   const updatedAssignment = await prisma.assignment.update({
     where: { id: assignmentId },
     data: {
       classroomCourseworkId: courseworkId,
-      syncStatus: integrationMode.syncStatus,
-      syncErrorMessage:
-        integrationMode.syncStatus === "DISCONNECTED"
-          ? "Chưa kết nối Google Classroom API thật."
-          : null,
+      syncStatus: effectiveSyncStatus,
+      syncErrorMessage: errorMessage,
     },
   });
 
@@ -1344,14 +2150,15 @@ export async function syncAssignmentToClassroom(userId: string, assignmentId: st
       service: "CLASSROOM",
       action: isUpdate ? "UPDATE_COURSEWORK" : "CREATE_COURSEWORK_STUDENT_COPY",
       resourceId: courseworkId || `UNCONNECTED_COURSEWORK_${assignment.id.slice(0, 8)}`,
-      status: integrationMode.logStatus,
+      status: effectiveLogStatus,
+      errorMessage,
     },
   });
 
   return {
     assignment: updatedAssignment,
     courseworkId,
-    connectionState: integrationMode.syncStatus,
+    connectionState: effectiveSyncStatus,
     isIdempotentUpdate: isUpdate,
     shareMode: "STUDENT_COPY",
     syncLog,
@@ -1359,7 +2166,7 @@ export async function syncAssignmentToClassroom(userId: string, assignmentId: st
 }
 
 /**
- * 3. Google Docs Template Cloning (Drive files.copy + Docs batchUpdate replaceAllText)
+ * 3. Google Docs Creation (Docs API v1 documents.create + batchUpdate)
  */
 export async function createGoogleDocFromTemplate(
   userId: string,
@@ -1373,7 +2180,63 @@ export async function createGoogleDocFromTemplate(
   }
 ) {
   const integrationMode = await resolveGoogleIntegrationMode(userId);
-  const generatedDocId: string | null = null;
+  let generatedDocId: string | null = null;
+  let docUrl: string | null = null;
+  let effectiveStatus: string = integrationMode.syncStatus;
+  let effectiveLogStatus: string = integrationMode.logStatus;
+  let errorMessage: string | null = null;
+
+  if (integrationMode.accessToken) {
+    try {
+      const createRes = await fetch("https://docs.googleapis.com/v1/documents", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${integrationMode.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title: params.title }),
+      });
+      if (!createRes.ok) {
+        effectiveStatus = "ERROR";
+        effectiveLogStatus = "FAILED";
+        errorMessage = `Google Docs API trả về HTTP ${createRes.status}`;
+      } else {
+        const created = (await createRes.json()) as { documentId?: string };
+        generatedDocId = created.documentId || null;
+        if (generatedDocId) {
+          docUrl = `https://docs.google.com/document/d/${generatedDocId}/edit`;
+          const introText = [
+            `${params.title}\n`,
+            `Môn học: ${params.subjectName} | Khối ${params.gradeLevel}\n`,
+            `Chủ đề: ${params.topicName}\n`,
+            `Giáo viên phụ trách: ${params.teacherName}\n`,
+            `Mẫu tài liệu: ${params.templateType}\n\n`,
+          ].join("");
+          await fetch(
+            `https://docs.googleapis.com/v1/documents/${encodeURIComponent(generatedDocId)}:batchUpdate`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${integrationMode.accessToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                requests: [{ insertText: { location: { index: 1 }, text: introText } }],
+              }),
+            }
+          );
+          effectiveStatus = "CONNECTED";
+          effectiveLogStatus = "SUCCESS";
+        }
+      }
+    } catch (err: any) {
+      effectiveStatus = "ERROR";
+      effectiveLogStatus = "FAILED";
+      errorMessage = err?.message || "Lỗi gọi Google Docs API";
+    }
+  } else {
+    errorMessage = "Chưa có OAuth token Google Docs hợp lệ.";
+  }
 
   const syncLog = await prisma.syncLog.create({
     data: {
@@ -1381,13 +2244,15 @@ export async function createGoogleDocFromTemplate(
       service: "DOCS",
       action: `CLONE_TEMPLATE_${params.templateType}`,
       resourceId: generatedDocId || `UNCONNECTED_DOC_${params.templateType}`,
-      status: integrationMode.logStatus,
+      status: effectiveLogStatus,
+      errorMessage,
     },
   });
 
   return {
     docId: generatedDocId,
-    connectionState: integrationMode.syncStatus,
+    docUrl,
+    connectionState: effectiveStatus,
     title: params.title,
     templateType: params.templateType,
     metadata: {
@@ -1397,7 +2262,7 @@ export async function createGoogleDocFromTemplate(
       author: params.teacherName,
       createdAt: new Date().toISOString(),
       version: "v1.0",
-      status: integrationMode.syncStatus,
+      status: effectiveStatus,
       accessRole: "writer (Giáo viên) / reader (Học sinh lớp được giao)",
     },
     replacedPlaceholders: [
@@ -1426,11 +2291,57 @@ export async function syncAssignmentDeadlineToCalendar(
   }
 ) {
   const integrationMode = await resolveGoogleIntegrationMode(userId);
-  const eventId: string | null = null;
+  let eventId: string | null = null;
+  let htmlLink: string | null = null;
+  let effectiveStatus: string = integrationMode.syncStatus;
+  let effectiveLogStatus: string = integrationMode.logStatus;
+  let errorMessage: string | null = null;
+
   const overrides = [];
   if (params.reminder1Day) overrides.push({ method: "email", minutes: 1440 });
   if (params.reminder1Hour) overrides.push({ method: "popup", minutes: 60 });
   if (params.customMinutes) overrides.push({ method: "popup", minutes: params.customMinutes });
+
+  if (integrationMode.accessToken) {
+    try {
+      const startIso = new Date(params.dueDate).toISOString();
+      const endIso = new Date(new Date(params.dueDate).getTime() + 60 * 60 * 1000).toISOString();
+      const calRes = await fetch(
+        "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${integrationMode.accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            summary: `[Hạn nộp UNIGO] ${params.title} - Lớp ${params.className}`,
+            description: `Nhắc hạn nộp bài tập lớp ${params.className} trên hệ thống EDUCARE AI.`,
+            start: { dateTime: startIso },
+            end: { dateTime: endIso },
+            reminders: { useDefault: false, overrides },
+          }),
+        }
+      );
+      if (!calRes.ok) {
+        effectiveStatus = "ERROR";
+        effectiveLogStatus = "FAILED";
+        errorMessage = `Google Calendar API trả về HTTP ${calRes.status}`;
+      } else {
+        const calJson = (await calRes.json()) as { id?: string; htmlLink?: string };
+        eventId = calJson.id || null;
+        htmlLink = calJson.htmlLink || null;
+        effectiveStatus = "CONNECTED";
+        effectiveLogStatus = "SUCCESS";
+      }
+    } catch (err: any) {
+      effectiveStatus = "ERROR";
+      effectiveLogStatus = "FAILED";
+      errorMessage = err?.message || "Lỗi gọi Google Calendar API";
+    }
+  } else {
+    errorMessage = "Chưa có OAuth token Google Calendar hợp lệ.";
+  }
 
   const syncLog = await prisma.syncLog.create({
     data: {
@@ -1438,13 +2349,15 @@ export async function syncAssignmentDeadlineToCalendar(
       service: "CALENDAR",
       action: "CREATE_DEADLINE_EVENT",
       resourceId: eventId || `UNCONNECTED_CAL_${params.className}`,
-      status: integrationMode.logStatus,
+      status: effectiveLogStatus,
+      errorMessage,
     },
   });
 
   return {
     eventId,
-    connectionState: integrationMode.syncStatus,
+    htmlLink,
+    connectionState: effectiveStatus,
     calendarName: `Lịch học tập & Kiểm tra Lớp ${params.className} - UNIGO`,
     summary: `[Hạn nộp UNIGO] ${params.title}`,
     dueDate: params.dueDate,

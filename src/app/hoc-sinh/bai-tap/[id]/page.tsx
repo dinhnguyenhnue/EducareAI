@@ -115,11 +115,11 @@ export default async function StudentAssignmentDetailPage({ params }: Props) {
               </p>
 
               {assignment.instructions && (
-                <div className="mt-6 p-4 rounded-panel bg-canvas border border-border">
+                <div className="mt-6 p-4 rounded-xl bg-canvas border border-slate-200">
                   <h4 className="text-xs font-bold text-ink uppercase tracking-wide mb-2">
                     Hướng dẫn thực hiện từ giáo viên:
                   </h4>
-                  <p className="text-xs text-ink leading-relaxed whitespace-pre-line">
+                  <p className="text-sm text-ink leading-relaxed whitespace-pre-line">
                     {assignment.instructions}
                   </p>
                 </div>
@@ -179,7 +179,7 @@ export default async function StudentAssignmentDetailPage({ params }: Props) {
                     Tiêu chí đánh giá (Rubric)
                   </h3>
                 </div>
-                <span className="text-xs text-amber-700 font-bold">Tổ THCS UNIGO</span>
+                <span className="text-xs text-amber-700 font-bold">Tổ chuyên môn THCS</span>
               </div>
 
               <div className="mt-4 space-y-4">
@@ -188,12 +188,12 @@ export default async function StudentAssignmentDetailPage({ params }: Props) {
                   return (
                     <div
                       key={crit.id}
-                      className="p-3.5 rounded-xl bg-canvas border border-slate-200/80 text-xs space-y-1.5"
+                      className="p-3.5 rounded-xl bg-canvas border border-slate-200/80 text-sm space-y-1.5"
                     >
                       <div className="flex items-center justify-between font-bold text-ink">
                         <span>{crit.name}</span>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                          <span className="text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
                             {crit.weight}%
                           </span>
                           {studentScore !== undefined && (
@@ -203,7 +203,7 @@ export default async function StudentAssignmentDetailPage({ params }: Props) {
                           )}
                         </div>
                       </div>
-                      <p className="text-[11px] text-ink-muted">{crit.description}</p>
+                      <p className="text-xs text-ink-muted leading-relaxed">{crit.description}</p>
                     </div>
                   );
                 })}

@@ -540,6 +540,8 @@ async function finalizeAndGradeAttempt(
 
     let totalEarnedPoints = 0;
     let totalPossiblePoints = 0;
+    let correctCount = 0;
+    const wrongQuestionIds: string[] = [];
 
     for (const item of attempt.assessment.items) {
       totalPossiblePoints += item.points;
@@ -548,6 +550,11 @@ async function finalizeAndGradeAttempt(
       const isCorrect = rawStudentResp.length > 0 && rawStudentResp === expectedAnswer;
       const earnedPoints = isCorrect ? item.points : 0;
       totalEarnedPoints += earnedPoints;
+      if (isCorrect) {
+        correctCount += 1;
+      } else {
+        wrongQuestionIds.push(item.questionId);
+      }
 
       await tx.answer.upsert({
         where: {
@@ -575,12 +582,21 @@ async function finalizeAndGradeAttempt(
       totalPossiblePoints > 0
         ? Math.round(((totalEarnedPoints / totalPossiblePoints) * 10 + Number.EPSILON) * 100) / 100
         : 0;
+    const accuracyRate =
+      attempt.assessment.items.length > 0
+        ? Math.round((correctCount / attempt.assessment.items.length) * 10000) / 100
+        : 0;
+
+    const submittedAt = new Date();
+    const timeSpentSeconds = attempt.startedAt
+      ? Math.max(0, Math.round((submittedAt.getTime() - attempt.startedAt.getTime()) / 1000))
+      : undefined;
 
     const updatedAttempt = await tx.attempt.update({
       where: { id: attempt.id },
       data: {
         status: expiredAutoSubmit ? "EXPIRED_AUTO_SUBMITTED" : "SUBMITTED",
-        submittedAt: new Date(),
+        submittedAt,
         totalScore: normalizedScore10,
         idempotencyKey:
           idempotencyKey && String(idempotencyKey).trim().length > 0
@@ -589,6 +605,61 @@ async function finalizeAndGradeAttempt(
       },
       include: { answers: true },
     });
+
+    // Tái sử dụng bảng LearningRecord và Grade có sẵn để lưu điểm, số lần làm và danh sách câu sai
+    const [studentProfile, subject, currentYear] = await Promise.all([
+      tx.studentProfile.findUnique({ where: { userId: attempt.studentId } }),
+      tx.subject.findFirst({
+        where: {
+          OR: [
+            { code: `TIN${attempt.assessment.gradeLevel}` },
+            { name: { contains: attempt.assessment.subjectName || "Tin học" } },
+          ],
+        },
+      }),
+      tx.academicYear.findFirst({ where: { isCurrent: true } }),
+    ]);
+
+    if (studentProfile && subject) {
+      await tx.learningRecord.create({
+        data: {
+          studentId: studentProfile.id,
+          subjectId: subject.id,
+          activityType:
+            attempt.assessment.mode === "EXAM"
+              ? "EXAM_ATTEMPT"
+              : "PRACTICE_ATTEMPT",
+          score: normalizedScore10,
+          accuracyRate,
+          timeSpentSeconds,
+          detailData: JSON.stringify({
+            attemptId: updatedAttempt.id,
+            assessmentId: attempt.assessmentId,
+            assessmentCode: attempt.assessment.code,
+            attemptNumber: updatedAttempt.attemptNumber,
+            correctCount,
+            totalItems: attempt.assessment.items.length,
+            wrongQuestionIds,
+            timeSpentSeconds,
+          }),
+        },
+      });
+    }
+
+    if (studentProfile && subject && currentYear) {
+      await tx.grade.create({
+        data: {
+          studentId: studentProfile.id,
+          subjectId: subject.id,
+          academicYearId: currentYear.id,
+          gradeType:
+            attempt.assessment.mode === "EXAM" ? "REGULAR" : "PRACTICE",
+          score: normalizedScore10,
+          maxScore: 10,
+          feedback: `Tự động ghi nhận từ đề ${attempt.assessment.code} (Lần làm #${updatedAttempt.attemptNumber}, sai ${wrongQuestionIds.length} câu).`,
+        },
+      });
+    }
 
     return {
       attempt: updatedAttempt,

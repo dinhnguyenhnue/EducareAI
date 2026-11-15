@@ -8,9 +8,9 @@ import {
   FileText,
   ExternalLink,
   CheckCircle2,
-  X,
   Network,
 } from "lucide-react";
+import { Modal } from "@/components/ui";
 import {
   MultiFileAssetUploader,
   type UploadedAssetItem,
@@ -98,7 +98,7 @@ export function TeacherLessonsClient({
         <button
           type="button"
           onClick={() => setShowModal(true)}
-          className="px-4 py-2.5 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 transition-colors shadow-sm flex items-center gap-1.5"
+          className="min-h-[44px] px-5 py-2.5 rounded-xl bg-ocean-600 text-white text-sm font-semibold hover:bg-ocean-700 transition-colors shadow-sm flex items-center justify-center gap-2"
         >
           <PlusCircle className="w-4 h-4" />
           <span>Soạn bài giảng mới</span>
@@ -161,125 +161,116 @@ export function TeacherLessonsClient({
         ))}
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm">
-          <form
-            onSubmit={handleCreateLesson}
-            className="w-full max-w-lg bg-surface rounded-panel border border-border shadow-dialog p-6 space-y-4 text-xs"
-          >
-            <div className="flex items-center justify-between pb-2 border-b border-border">
-              <h3 className="text-base font-bold text-ink">
-                Soạn Bài giảng & Đính kèm Google Docs / Drive
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="text-ink-muted hover:text-ink"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title="Soạn Bài giảng & Đính kèm Google Docs / Drive"
+        maxWidth="max-w-lg"
+      >
+        <form onSubmit={handleCreateLesson} className="space-y-4 text-xs">
+          <div>
+            <label htmlFor="lesson-topic-select" className="font-semibold text-ink block mb-1">
+              Thuộc Chủ đề Môn học:
+            </label>
+            <select
+              id="lesson-topic-select"
+              value={topicId}
+              onChange={(e) => setTopicId(e.target.value)}
+              className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+            >
+              {topics.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.subject?.name} — {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            <div>
-              <label className="font-semibold text-ink block mb-1">
-                Thuộc Chủ đề Môn học:
-              </label>
-              <select
-                value={topicId}
-                onChange={(e) => setTopicId(e.target.value)}
-                className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
-              >
-                {topics.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.subject?.name} — {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="font-semibold text-ink block mb-1">
-                Tiêu đề bài giảng:
-              </label>
-              <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="VD: Bài 5: Sử dụng hàm tính toán cơ bản trên Google Sheets"
-                className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
-              />
-            </div>
-
-            <div>
-              <label className="font-semibold text-ink block mb-1">
-                Tóm tắt kiến thức & Câu hỏi khởi động:
-              </label>
-              <textarea
-                rows={3}
-                required
-                value={summaryParagraph}
-                onChange={(e) => setSummaryParagraph(e.target.value)}
-                placeholder="Nội dung trọng tâm giúp học sinh tự đặt câu hỏi và khám phá..."
-                className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
-              />
-            </div>
-
-            <MultiFileAssetUploader
-              onAssetsChange={setUploadedAssets}
-              label="Tải học liệu trực tiếp lên Kho Bài giảng (PDF, DOCX, PPTX, XLSX, Ảnh, Video, HTML, ZIP):"
+          <div>
+            <label htmlFor="lesson-title-input" className="font-semibold text-ink block mb-1">
+              Tiêu đề bài giảng:
+            </label>
+            <input
+              id="lesson-title-input"
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="VD: Bài 5: Sử dụng hàm tính toán cơ bản trên Google Sheets"
+              className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
             />
+          </div>
 
-            <div>
-              <label className="font-semibold text-ink block mb-1">
-                Hoặc dán Link tài liệu Google Drive đính kèm (Tùy chọn):
-              </label>
+          <div>
+            <label htmlFor="lesson-summary-textarea" className="font-semibold text-ink block mb-1">
+              Tóm tắt kiến thức & Câu hỏi khởi động:
+            </label>
+            <textarea
+              id="lesson-summary-textarea"
+              rows={3}
+              required
+              value={summaryParagraph}
+              onChange={(e) => setSummaryParagraph(e.target.value)}
+              placeholder="Nội dung trọng tâm giúp học sinh tự đặt câu hỏi và khám phá..."
+              className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+            />
+          </div>
+
+          <MultiFileAssetUploader
+            onAssetsChange={setUploadedAssets}
+            label="Tải học liệu trực tiếp lên Kho Bài giảng (PDF, DOCX, PPTX, XLSX, Ảnh, Video, HTML, ZIP):"
+          />
+
+          <div>
+            <label htmlFor="lesson-drive-url" className="font-semibold text-ink block mb-1">
+              Hoặc dán Link tài liệu Google Drive đính kèm (Tùy chọn):
+            </label>
+            <input
+              id="lesson-drive-url"
+              type="url"
+              value={driveFileUrl}
+              onChange={(e) => setDriveFileUrl(e.target.value)}
+              placeholder="https://drive.google.com/file/d/..."
+              className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+            />
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 space-y-2">
+            <div className="font-bold text-sky-700 flex items-center gap-1.5">
+              <Network className="w-3.5 h-3.5" />
+              <span>Tích hợp Google Docs theo ngữ cảnh:</span>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
-                type="url"
-                value={driveFileUrl}
-                onChange={(e) => setDriveFileUrl(e.target.value)}
-                placeholder="https://drive.google.com/file/d/..."
-                className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+                type="checkbox"
+                checked={createGoogleDoc}
+                onChange={(e) => setCreateGoogleDoc(e.target.checked)}
+                className="accent-ocean-600"
               />
-            </div>
+              <span>
+                Tự động khởi tạo <strong>Giáo án / Phiếu học tập Google Docs</strong> từ mẫu chuẩn UNIGO
+              </span>
+            </label>
+          </div>
 
-            <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 space-y-2">
-              <div className="font-bold text-sky-700 flex items-center gap-1.5">
-                <Network className="w-3.5 h-3.5" />
-                <span>Tích hợp Google Docs theo ngữ cảnh:</span>
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={createGoogleDoc}
-                  onChange={(e) => setCreateGoogleDoc(e.target.checked)}
-                  className="accent-ocean-600"
-                />
-                <span>
-                  Tự động khởi tạo <strong>Giáo án / Phiếu học tập Google Docs</strong> từ mẫu chuẩn UNIGO
-                </span>
-              </label>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-border">
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 rounded-xl bg-canvas text-ink font-semibold"
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="px-5 py-2 rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white font-semibold"
-              >
-                {isSaving ? "Đang xuất bản..." : "Xuất bản bài giảng"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <button
+              type="button"
+              onClick={() => setShowModal(false)}
+              className="px-4 py-2 rounded-xl bg-canvas text-ink font-semibold"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="px-5 py-2 rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white font-semibold"
+            >
+              {isSaving ? "Đang xuất bản..." : "Xuất bản bài giảng"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

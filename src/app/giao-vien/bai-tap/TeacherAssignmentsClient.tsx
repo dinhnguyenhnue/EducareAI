@@ -7,9 +7,9 @@ import {
   Calendar,
   CheckCircle2,
   Network,
-  X,
   RefreshCw,
 } from "lucide-react";
+import { Modal } from "@/components/ui";
 
 export function TeacherAssignmentsClient({
   initialAssignments,
@@ -223,139 +223,130 @@ export function TeacherAssignmentsClient({
       </div>
 
       {/* Create Assignment Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm">
-          <form
-            onSubmit={handleCreateAssignment}
-            className="w-full max-w-lg bg-surface rounded-panel border border-border shadow-dialog p-6 space-y-4 text-xs"
-          >
-            <div className="flex items-center justify-between pb-2 border-b border-border">
-              <h3 className="text-base font-bold text-ink">
-                Giao Bài tập mới & Tích hợp Google Workspace
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="text-ink-muted hover:text-ink"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="font-semibold text-ink block mb-1">
-                  Lớp học:
-                </label>
-                <select
-                  value={classId}
-                  onChange={(e) => setClassId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
-                >
-                  {classes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      Lớp {c.name} (Khối {c.gradeLevel})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="font-semibold text-ink block mb-1">
-                  Môn học:
-                </label>
-                <select
-                  value={subjectId}
-                  onChange={(e) => setSubjectId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
-                >
-                  {subjects.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
+      <Modal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        title="Giao Bài tập mới & Tích hợp Google Workspace"
+        maxWidth="max-w-lg"
+      >
+        <form onSubmit={handleCreateAssignment} className="space-y-4 text-xs">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="font-semibold text-ink block mb-1">
-                Tiêu đề bài tập / Dự án:
+              <label htmlFor="assignment-class-select" className="font-semibold text-ink block mb-1">
+                Lớp học:
               </label>
+              <select
+                id="assignment-class-select"
+                value={classId}
+                onChange={(e) => setClassId(e.target.value)}
+                className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+              >
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    Lớp {c.name} (Khối {c.gradeLevel})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="assignment-subject-select" className="font-semibold text-ink block mb-1">
+                Môn học:
+              </label>
+              <select
+                id="assignment-subject-select"
+                value={subjectId}
+                onChange={(e) => setSubjectId(e.target.value)}
+                className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+              >
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.code})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="assignment-title-input" className="font-semibold text-ink block mb-1">
+              Tiêu đề bài tập / Dự án:
+            </label>
+            <input
+              id="assignment-title-input"
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="VD: Thiết kế bảng thống kê dữ liệu trên Google Sheets"
+              className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="assignment-desc-textarea" className="font-semibold text-ink block mb-1">
+              Mô tả nhiệm vụ & Yêu cầu cần đạt:
+            </label>
+            <textarea
+              id="assignment-desc-textarea"
+              rows={3}
+              required
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Mô tả mục tiêu sản phẩm, cách thức tự nghiên cứu và tiêu chí tự đánh giá..."
+              className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+            />
+          </div>
+
+          {/* Contextual Google Workspace Options (Section X) */}
+          <div className="p-3.5 rounded-2xl bg-cyan-50/70 border border-cyan-200 space-y-2">
+            <div className="font-bold text-cyan-700 flex items-center gap-1.5">
+              <Network className="w-3.5 h-3.5" />
+              <span>Tích hợp Google Workspace theo ngữ cảnh:</span>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
-                type="text"
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="VD: Thiết kế bảng thống kê dữ liệu trên Google Sheets"
-                className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+                type="checkbox"
+                checked={syncClassroom}
+                onChange={(e) => setSyncClassroom(e.target.checked)}
+                className="accent-ocean-600"
               />
-            </div>
-
-            <div>
-              <label className="font-semibold text-ink block mb-1">
-                Mô tả nhiệm vụ & Yêu cầu cần đạt:
-              </label>
-              <textarea
-                rows={3}
-                required
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Mô tả mục tiêu sản phẩm, cách thức tự nghiên cứu và tiêu chí tự đánh giá..."
-                className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+              <span>
+                Đồng bộ sang <strong>Google Classroom</strong> (Chế độ{" "}
+                <code>STUDENT_COPY</code>)
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={syncCalendar}
+                onChange={(e) => setSyncCalendar(e.target.checked)}
+                className="accent-ocean-600"
               />
-            </div>
+              <span>
+                Tạo sự kiện hạn nộp và nhắc việc trên{" "}
+                <strong>Google Calendar</strong> của lớp
+              </span>
+            </label>
+          </div>
 
-            {/* Contextual Google Workspace Options (Section X) */}
-            <div className="p-3.5 rounded-2xl bg-cyan-50/70 border border-cyan-200 space-y-2">
-              <div className="font-bold text-cyan-700 flex items-center gap-1.5">
-                <Network className="w-3.5 h-3.5" />
-                <span>Tích hợp Google Workspace theo ngữ cảnh:</span>
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={syncClassroom}
-                  onChange={(e) => setSyncClassroom(e.target.checked)}
-                  className="accent-ocean-600"
-                />
-                <span>
-                  Đồng bộ sang <strong>Google Classroom</strong> (Chế độ{" "}
-                  <code>STUDENT_COPY</code>)
-                </span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={syncCalendar}
-                  onChange={(e) => setSyncCalendar(e.target.checked)}
-                  className="accent-ocean-600"
-                />
-                <span>
-                  Tạo sự kiện hạn nộp và nhắc việc trên{" "}
-                  <strong>Google Calendar</strong> của lớp
-                </span>
-              </label>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-border">
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 rounded-xl bg-canvas text-ink font-semibold"
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                disabled={isCreating}
-                className="px-5 py-2 rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white font-semibold"
-              >
-                {isCreating ? "Đang tạo & đồng bộ..." : "Giao bài tập ngay"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+          <div className="flex justify-end gap-2 pt-3 border-t border-border">
+            <button
+              type="button"
+              onClick={() => setShowModal(false)}
+              className="px-4 py-2 rounded-xl bg-canvas text-ink font-semibold"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={isCreating}
+              className="px-5 py-2 rounded-xl bg-ocean-600 hover:bg-ocean-700 text-white font-semibold"
+            >
+              {isCreating ? "Đang tạo & đồng bộ..." : "Giao bài tập ngay"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

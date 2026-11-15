@@ -97,7 +97,7 @@ export default async function StudentAssignmentsPage() {
                       <Link href={`/hoc-sinh/bai-tap/${a.id}`}>{a.title}</Link>
                     </h3>
 
-                    <p className="text-xs text-ink-muted line-clamp-2 max-w-3xl">
+                    <p className="text-sm text-ink-muted line-clamp-2 max-w-3xl leading-relaxed">
                       {a.description}
                     </p>
                   </div>
@@ -105,7 +105,7 @@ export default async function StudentAssignmentsPage() {
                   <div className="flex items-center gap-4 shrink-0">
                     {isGraded ? (
                       <div className="text-right">
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700">
+                        <div className="flex items-center gap-1.5 text-sm font-bold text-emerald-700">
                           <CheckCircle2 className="w-4 h-4" />
                           <span>
                             Đã chấm điểm: {submission.score !== null ? `${submission.score}/10` : "Chưa có dữ liệu"}
@@ -113,20 +113,20 @@ export default async function StudentAssignmentsPage() {
                         </div>
                         <Link
                           href={`/hoc-sinh/bai-tap/${a.id}`}
-                          className="text-[11px] text-ocean-700 font-semibold hover:underline block mt-1"
+                          className="text-xs text-ocean-700 font-semibold hover:underline block mt-1"
                         >
                           Xem nhận xét & rubric →
                         </Link>
                       </div>
                     ) : isSubmitted ? (
                       <div className="text-right">
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-sky-700">
+                        <div className="flex items-center gap-1.5 text-sm font-semibold text-sky-700">
                           <Clock className="w-4 h-4" />
                           <span>Đã nộp bài • Chờ chấm</span>
                         </div>
                         <Link
                           href={`/hoc-sinh/bai-tap/${a.id}`}
-                          className="text-[11px] text-ocean-700 font-semibold hover:underline block mt-1"
+                          className="text-xs text-ocean-700 font-semibold hover:underline block mt-1"
                         >
                           Xem lại bài nộp →
                         </Link>
@@ -134,7 +134,7 @@ export default async function StudentAssignmentsPage() {
                     ) : (
                       <Link
                         href={`/hoc-sinh/bai-tap/${a.id}`}
-                        className="px-4 py-2.5 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 active:scale-[0.98] transition-all shadow-sm flex items-center gap-1.5"
+                        className="min-h-[44px] px-5 py-2.5 rounded-xl bg-ocean-600 text-white text-sm font-semibold hover:bg-ocean-700 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-1.5"
                       >
                         <span>Làm bài & Nộp</span>
                         <ArrowRight className="w-4 h-4" />

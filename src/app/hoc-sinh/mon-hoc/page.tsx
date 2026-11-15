@@ -22,7 +22,7 @@ export default async function StudentSubjectsPage() {
           badge="Thư viện học liệu"
           badgeIcon={<BookOpen className="w-3.5 h-3.5" />}
           title="Môn học & Khóa học của em"
-          description="Chương trình THCS UNIGO kết hợp lý thuyết, bài giảng tương tác và thực hành sản phẩm số."
+          description="Chương trình THCS kết hợp lý thuyết, bài giảng tương tác và thực hành sản phẩm số."
         />
 
         {subjects.length === 0 ? (
@@ -67,10 +67,10 @@ export default async function StudentSubjectsPage() {
                               <Link
                                 key={l.id}
                                 href={`/hoc-sinh/mon-hoc/${l.id}`}
-                                className="text-ink-muted hover:text-sky-700 flex items-center justify-between text-[11px] group py-0.5"
+                                className="text-ink-muted hover:text-ocean-700 flex items-center justify-between text-xs group py-1"
                               >
                                 <span className="truncate group-hover:underline">• {l.title}</span>
-                                <ChevronRight className="w-3 h-3 text-ink-muted group-hover:text-sky-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                                <ChevronRight className="w-3.5 h-3.5 text-ink-muted group-hover:text-ocean-600 group-hover:translate-x-0.5 transition-all shrink-0" />
                               </Link>
                             ))}
                           </div>
@@ -82,7 +82,7 @@ export default async function StudentSubjectsPage() {
                   <div className="mt-6 pt-4 border-t border-slate-100">
                     <Link
                       href={firstLessonId ? `/hoc-sinh/mon-hoc/${firstLessonId}` : "/hoc-sinh/mon-hoc"}
-                      className="w-full text-center block py-2.5 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 active:scale-[0.98] transition-all shadow-sm"
+                      className="min-h-[44px] w-full text-center flex items-center justify-center py-2.5 rounded-xl bg-ocean-600 text-white text-sm font-semibold hover:bg-ocean-700 active:scale-[0.98] transition-all shadow-sm"
                     >
                       Vào học chủ đề 1
                     </Link>

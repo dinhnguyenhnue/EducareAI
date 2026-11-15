@@ -1,54 +1,46 @@
 # BÀN GIAO PHIÊN LÀM VIỆC (SESSION HANDOFF) — EDUCARE AI
 
-> **Cập nhật lần cuối**: `2026-11-14T09:57:00+07:00`
-> **Trạng thái**: **ĐÃ SỬA LỖI GOOGLE OAUTH CALLBACK (`[GOOGLE_ID_TOKEN_INVALID] TOKEN_EXPIRED`) + HOÀN TẤT EDUCARE AI 3.0** — `prisma validate` PASS, `tsc --noEmit` PASS, `pnpm test` 37/37 PASS, `pnpm build` PASS.
+> **Cập nhật lần cuối**: `2026-11-15T14:32:00+07:00`
+> **Trạng thái**: **HOÀN TẤT KIỂM TRA TRÌNH DUYỆT (`LIVE-01` – `LIVE-05`) & ĐỒNG BỘ KỸ THUẬT 5 TÀI LIỆU (`SKILL.md`, `PRODUCT_SPEC.md`, `DESIGN.md`, `MOTION_SPEC.md`, `AUDIT_REPORT.md`)** — `prisma validate` PASS, `tsc --noEmit` PASS, `pnpm test` **47/47 PASS** (7 suites), `pnpm build` **PASS** (`First Load JS shared by all = 103 kB`), Playwright Headless Chromium **24/24 khung nhìn PASS** (`375px`, `768px`, `1440px`).
 
-## 0. Bản vá mới nhất (`fix(auth)` Google OAuth Callback)
-- [src/lib/auth.ts](file:///d:/Educare_AI/src/lib/auth.ts): `validateGoogleIdTokenClaims` hỗ trợ ép kiểu `exp`/`iat` dạng `string` từ Google `tokeninfo`, kiểm tra `options.verifiedByGoogleTokenInfo` tránh hết hạn giả do lệch đồng hồ hệ thống, chuẩn hóa `.trim()` cho `aud`/`iss`, và `authenticateVerifiedGoogleUser` cho phép nâng cấp `googleSub` giả lập cũ (`google-oidc-sub-...`) sang Google `sub` thật dạng số (`/^\d+$/`).
-- [src/app/api/auth/google/callback/route.ts](file:///d:/Educare_AI/src/app/api/auth/google/callback/route.ts): Truyền `{ verifiedByGoogleTokenInfo: tokenInfoRes.ok }`, lưu `googleSub` vào `GoogleConnection`, bọc `prisma.googleConnection.upsert` trong `try/catch` để không chặn luồng tạo phiên đăng nhập.
-- [tests/submission-and-rbac.test.ts](file:///d:/Educare_AI/tests/submission-and-rbac.test.ts): Bổ sung 4 unit tests kiểm thử `validateGoogleIdTokenClaims` (37/37 PASS trên 7 suites).
+## 0. Kết quả Kiểm tra Trình duyệt Đang chạy (Live Browser QA)
+1. **Khắc phục 5 lỗi thực tế phát hiện qua trình duyệt thật (`LIVE-01` – `LIVE-05`)**:
+   - **`LIVE-01` ([src/app/page.tsx](file:///d:/Educare_AI/src/app/page.tsx))**: Sửa lỗi tràn ngang `scrollWidth = 450px` ở màn hình `375x812` trên trang chủ do dòng phụ đề dài của `<BrandLogo>` đẩy nút `"Đăng nhập"` khuất khỏi mép phải; tách `<BrandLogo>` responsive (`hidden sm:flex` và `flex sm:hidden`) đạt `scrollWidth = 375px` (`overflowX = false`).
+   - **`LIVE-02` ([Modal.tsx](file:///d:/Educare_AI/src/components/ui/Modal.tsx) & [Drawer.tsx](file:///d:/Educare_AI/src/components/ui/Drawer.tsx))**: Bọc `<Modal>` và `<Drawer>` bằng `createPortal(..., document.body)` để thoát khỏi khối chứa CSS `transform` của `<PageTransition>`, giúp lớp phủ (backdrop) che kín 100% khung nhìn (chặn thao tác nền trên `AppSidebar`/`AppHeader`) và đóng được bằng thao tác click nền.
+   - **`LIVE-03` ([Modal.tsx](file:///d:/Educare_AI/src/components/ui/Modal.tsx), [Drawer.tsx](file:///d:/Educare_AI/src/components/ui/Drawer.tsx), [AppHeader.tsx](file:///d:/Educare_AI/src/components/layout/AppHeader.tsx))**: Lưu đồng bộ `previousFocusRef.current` ngay khi `open` chuyển từ `false -> true` trước khi `autoFocus` của phần tử con chạy, đảm bảo hộp thoại Tìm kiếm nhanh (`Ctrl+K`) luôn trả focus về nút kích hoạt khi nhấn `Escape`.
+   - **`LIVE-04` ([FloatingAIAssistant.tsx](file:///d:/Educare_AI/src/components/ai/FloatingAIAssistant.tsx))**: Gỡ bỏ `mode="wait"` trên `<AnimatePresence>` và dùng callback ref trên ô `<input>` và nút `<m.button>` FAB (kèm `aria-label="Mở Trợ lý AI Socratic UNIGO"`), đảm bảo chuyển focus ngay vào ô nhập khi mở và trả focus về nút FAB khi nhấn `Escape`.
+   - **`LIVE-05` ([AppHeader.tsx](file:///d:/Educare_AI/src/components/layout/AppHeader.tsx) & [RoleSwitcher.tsx](file:///d:/Educare_AI/src/components/layout/RoleSwitcher.tsx))**: Bỏ `role="menu"` / `role="menuitem"` và `role="dialog"` không đúng ngữ nghĩa trên dropdown thông thường, chuyển sang mẫu **WAI-ARIA Disclosure Pattern** (`aria-expanded`, `aria-controls`, `<nav aria-label="Liên kết tài khoản">`, `<section id="header-notifications-panel">`) và trả focus về nút mở khi nhấn `Escape`.
+2. **Bằng chứng Kiểm thử Tự động & Trình duyệt**:
+   - Đã cập nhật [AUDIT_REPORT.md](file:///d:/Educare_AI/AUDIT_REPORT.md) với số liệu đo trực tiếp trên Chromium (`TTFB`, `FCP`, `LCP`, `CLS`), bảng 24 khung nhìn (`375px`, `768px`, `1440px`) và ảnh chụp màn hình lưu tại thư mục artifacts.
 
-## 1. Tiến độ EDUCARE AI 3.0 hiện tại
-- **Phase A–C (`complete`)**: Cài `framer-motion@14.12.0`, nâng cấp `tailwind.config.ts` (đã gỡ alias `brand.teal` và hoàn thiện thang `ocean-50..950`), `globals.css`, `next.config.ts`, tạo `src/lib/motion.ts` & `src/lib/theme.ts`, dựng toàn bộ thư viện `src/components/ui/*` (20 components + `AuthSplitShell` + `RoleSwitcher`) và nâng cấp `AppShell`, `AppSidebar`, `AppHeader`, `FloatingAIAssistant`, `loading.tsx`.
-- **Phase D & E (`complete`)**: Redesign Split-Screen Auth (`/dang-nhap`, `/dang-ky`, `/quen-mat-khau`, `/dat-lai-mat-khau`, `/khong-co-quyen`), Trang chủ `/` và 5 Role Dashboards (`/admin/overview`, `/quan-tri/tong-quan`, `/giao-vien/tong-quan`, `/hoc-sinh/tong-quan`, `/phu-huynh/tong-quan`).
-- **Phase F (`complete`)**: Hoàn tất Batch 1–5 (`/privacy`, `/terms`, `/embed/tro-choi/[slug]`, `/admin/settings/integrations`, `quan-tri/*`, `giao-vien/*`, `hoc-sinh/*`, `phu-huynh/*`); sửa `giao-vien/lop-hoc`, `giao-vien/phan-tich`, `hoc-sinh/san-pham`, `phu-huynh/diem-manh-can-cai-thien` thay thế mọi fallback/chỉ số tĩnh bằng dữ liệu thật hoặc `"Chưa có dữ liệu"`; xác nhận `0` token `brand-teal`/`teal-*`/`#197C78`/`#146562`/`#E7F2F1` và `0` thẻ `<img>` thuần còn lại trong `src/`.
-- **Phase G (`complete`)**: `LazyMotion features={domAnimation}` + `<MotionConfig reducedMotion="user">`, `@media (prefers-reduced-motion: reduce)` trong `globals.css`, lazy-load `SandboxedHtmlGamePlayer` (`xuong-tro-choi`, `duyet-tro-choi`) và `FloatingAIAssistant` (`AppShell`) qua `next/dynamic`.
-- **Phase H (`complete` ngoại trừ `chrome_devtools` bị chặn)**:
-  - `pnpm exec prisma validate` → **PASS**
-  - `pnpm exec tsc --noEmit` → **PASS (0 errors)**
-  - `pnpm test` → **33/33 PASS** (6 suites)
-  - `pnpm build` (với quyền mạng cho `next/font/google`) → **PASS** (`First Load JS shared by all: 103 kB`; `/_next/static/css/d8ff7d670f8dc374.css`: 78,649 bytes, có `#2563eb` và `prefers-reduced-motion`, không còn `#197c78`)
-  - Server production `pnpm start` đang chạy tại `http://localhost:3000`: 10/10 trang công khai trả HTTP 200 (`OldTeal=False`, `SecretLeak=False`, `FontVar=True`); 5/5 portal theo vai trò trả HTTP 307 redirect về `/dang-nhap`.
-  - **OAuth env hardening**: [google-workspace.ts](file:///d:/Educare_AI/src/lib/google-workspace.ts) đã thêm `.trim()` + bỏ dấu ngoặc bao quanh cho `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXTAUTH_URL`. Lưu ý đồng bộ biến môi trường Vercel & Google Cloud Console nếu trước đó gặp `invalid_client`.
+## 1. Trạng thái Kiểm thử
+| Lệnh | Kết quả |
+|---|---|
+| `pnpm exec prisma validate` | **PASS** |
+| `pnpm exec tsc --noEmit` | **PASS (0 errors)** |
+| `pnpm test` | **47/47 PASS (7 suites)** |
+| `pnpm build` | **PASS (`First Load JS shared by all: 103 kB`)** |
+| Playwright Chromium (`375px`, `768px`, `1440px`) | **24/24 Viewports PASS (`overflowX = false`, `page_errors = 0`)** |
 
-## 1. Tóm tắt kết quả đã hoàn thành
-Toàn bộ yêu cầu trong `docs/LMS_MASTER_PROMPT.md`, `docs/LMS_DATA_DESIGN.md` và `docs/LMS_QA_2026-11-12.md` đã được triển khai và kiểm chứng:
-1. **Cô lập HTML Game & CSP (`T1.1`, `T1.2`)**:
-   - `wrapHtmlWithStrictCsp` (`src/lib/html-game-sandbox.ts`) luôn đặt `<meta CSP>` ở đầu tài liệu trước mọi script/comment, loại bỏ `<meta http-equiv="refresh">` và `<base>`.
-   - Route `/api/game-frame` trả HTTP header `Content-Security-Policy` chuẩn.
-   - Đồng bộ tên sự kiện `postMessage` trong `src/components/game/SandboxedHtmlGamePlayer.tsx`.
-   - `node scratch/lms-sandbox-audit.cjs`: **7/7 PASS**.
-2. **Bảo mật RBAC, Chống IDOR & Chống Race Condition (`T1.5`, `T1.7`)**:
-   - `src/lib/submission-guard.ts`: `withKeyLock`, `validateAssignmentSubmissionRules`, `verifyTeacherClassScope`, `submitAssignmentTransactional`.
-   - Đã áp dụng trên `/api/submissions`, `/api/grading`, `/api/tin-hoc/assessments`, `/api/assets`, `/api/sheets/import`, và `syncClassTrackingSheet`.
-3. **Loại bỏ dữ liệu giả & Chống Formula Injection (`T1.3`, `T1.4`, `T3.4`, `T3.5`)**:
-   - `src/lib/google-workspace.ts`: `sanitizeSheetCell`, `sanitizeSheetRows`, `resolveGoogleIntegrationMode` (chỉ báo `DISCONNECTED`/`DEMO` khi chưa có Google API thật), lọc theo `classId` + `academicYearId`, nối đúng `StudentProfile.userId` cho `Attempt.studentId`, xóa toàn bộ `"8.45"`, `"83%"`, nhận xét giả, log AI giả.
-   - Đã làm sạch các trang `/giao-vien/phan-tich`, `/hoc-sinh/ho-so-nang-luc`, `/phu-huynh/tong-quan`, `/phu-huynh/bai-tap-kiem-tra`, `/phu-huynh/diem-manh-can-cai-thien`.
-4. **Kho Học liệu & Tải tệp Đa định dạng (`T2.1`, `T2.2`)**:
-   - `src/lib/asset-validation.ts`, `/api/assets`, `/api/assets/[id]`, `src/components/assets/MultiFileAssetUploader.tsx`.
-   - Tích hợp vào `AssignmentSubmissionForm.tsx` và `TeacherLessonsClient.tsx`.
-5. **Pipeline Nhập Google Sheets & Công thức Đánh giá Minh bạch (`T3.1`, `T3.2`, `T3.3`)**:
-   - `src/lib/sheets-import-pipeline.ts` và `/api/sheets/import`.
-6. **Cổng Tích hợp `IntegrationSlot` & Hợp nhất Điều hướng AI (`T1.6`, `T4.1`, `T4.2`)**:
-   - `src/lib/integration-slots.ts`, `/api/integrations/slots`, `src/components/ai/StudentAiCenterTabs.tsx`, `src/app/hoc-sinh/gemini-gems/GeminiGemsClient.tsx`, `src/components/layout/AppSidebar.tsx`.
-
-## 2. Bằng chứng Kiểm thử & Build
-- `node scratch/lms-sandbox-audit.cjs` → **7/7 PASS**
-- `pnpm test` (`tsx --test tests/*.test.ts`) → **33/33 PASS** (6 suites)
-- `pnpm exec prisma validate` → **PASS**
-- `pnpm exec tsc --noEmit` → **PASS** (0 errors)
-- `pnpm build` → **PASS** (Next.js 15 production build thành công toàn bộ routes)
-
-## 3. Hướng dẫn cho model/phiên tiếp theo (nếu có yêu cầu mở rộng thêm)
-1. Đọc `.agents/skills/educare-session-handoff/SKILL.md` và `docs/LMS_IMPLEMENTATION_REPORT.md`.
+## 2. Hướng dẫn cho phiên tiếp theo
+1. Đọc `.agents/skills/educare-session-handoff/SKILL.md` và `.agents/skills/educare-uiux-performance/SKILL.md`.
 2. Chạy `git status --short` và `pnpm test` để kiểm tra trạng thái.
+
+## Bổ sung 15/11/2026 — Hoàn tất Redesign Toàn diện EDUCARE AI (TR-1 -> TR-9)
+- **Đặc tả thực thi**: Hoàn tất theo đúng yêu cầu trong [docs/EDUCAREAI_REDESIGN_PROMPT.md](file:///d:/Educare_AI/docs/EDUCAREAI_REDESIGN_PROMPT.md) và quyết định trong [docs/EDUCAREAI_VISION_AND_DECISIONS.md](file:///d:/Educare_AI/docs/EDUCAREAI_VISION_AND_DECISIONS.md).
+- **Hệ thống Design System & Component Dùng chung**:
+  - `src/lib/theme.ts` & `globals.css`: Giữ chuẩn Ocean Blue (`#2563EB`, `#F8FAFC`, `#FFFFFF`, `#0F172A`), loại bỏ toàn bộ AI-slop (gradient text, một phía border, blur blob).
+  - `src/components/layout/AppSidebar.tsx`: Tái cấu trúc menu theo nhóm nghiệp vụ riêng biệt cho 4 vai trò, loại bỏ nhãn kỹ thuật cấm ("Sandbox", "3 Tab").
+  - `src/components/layout/BottomNav.tsx`: Bổ sung điều hướng di động (`md:hidden`, `h-16 pb-safe`) với các nút bấm đạt vùng chạm tối thiểu 44px, hỗ trợ thao tác ≤2 lần chạm tới tác vụ cốt lõi.
+  - `src/components/ui/PageHeader.tsx`: Chuyển từ hero banner gradient gây chói mắt sang thẻ sáng tương phản cao (AAA), tiêu đề 20-28px rõ ràng.
+  - `src/components/ui/OceanButton.tsx`, `DataTable.tsx`: Vùng chạm tương tác tối thiểu 44px (`min-h-[44px]`), font bảng tăng lên 14px (`text-sm`), ô tìm kiếm 14px.
+- **Không gian 4 Vai trò & Quy trình Nghiệp vụ**:
+  - **Học sinh (`/hoc-sinh/*`)**: Trang tổng quan chia rõ "Hôm nay em cần làm gì?" và tiến độ thực tế; bài giảng nâng font đọc lên 16px (`text-base`); bài tập loại bỏ tên cá nhân gán cứng, ô nhập liệu 16px chống tự phóng to trên iOS; xưởng trò chơi phân tách rõ ràng Thư viện trò chơi đã duyệt và Xưởng sáng tạo với Sandbox CSP cô lập.
+  - **Giáo viên (`/giao-vien/*`)**: Hàng đợi chấm bài theo Rubric 4 mức chuyển tiếp mượt mà, gợi ý nhận xét AI sư phạm giữ vai trò trợ lý; công cụ biên soạn bài giảng hỗ trợ tạo phiếu học tập Google Docs thật; ngân hàng câu hỏi hiển thị rõ mức độ nhận thức và nhãn dữ liệu trung thực.
+  - **Phụ huynh (`/phu-huynh/*`)**: Báo cáo tiến bộ, điểm mạnh và nội dung gia đình có thể hỗ trợ bằng ngôn ngữ sư phạm tích cực, không xếp loại thi đua; cam kết bảo mật quyền riêng tư của học sinh.
+  - **Quản trị (`/quan-tri/*` & `/admin/settings/integrations`)**: Cấp mã học sinh không email, nhập danh sách Excel/CSV, hiển thị mật khẩu tạm một lần an toàn; quản lý tích hợp Google Workspace, Gemini Server API và Gems phân tách rõ ràng, secret bảo vệ write-only.
+- **Kết quả Kiểm thử Baseline**:
+  - `pnpm exec prisma validate`: **PASS**
+  - `pnpm exec tsc --noEmit`: **PASS (0 errors)**
+  - `pnpm test`: **53/53 PASS** trên 8 test suites (`tests/*.test.ts`)
+  - `pnpm build`: **PASS** — Toàn bộ 27 trang tĩnh/động biên dịch thành công, First Load JS chia sẻ giữ ở mức tối ưu 103 kB.

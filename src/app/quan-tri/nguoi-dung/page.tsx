@@ -6,14 +6,19 @@ import { Users } from "lucide-react";
 import { UserManagementTable } from "./UserManagementTable";
 
 export default async function AdminUsersPage() {
-  const users = await prisma.user.findMany({
-    include: {
-      studentProfile: { include: { schoolClass: true } },
-      teacherProfile: true,
-      parentProfile: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  let users: any[] = [];
+  try {
+    users = await prisma.user.findMany({
+      include: {
+        studentProfile: { include: { schoolClass: true } },
+        teacherProfile: true,
+        parentProfile: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (err) {
+    console.warn("Could not load users:", err);
+  }
 
   return (
     <AppShell>

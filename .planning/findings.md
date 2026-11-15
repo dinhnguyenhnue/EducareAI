@@ -33,3 +33,31 @@
   - `src/app/dang-ky/page.tsx` và `src/app/quen-mat-khau/page.tsx`: vẫn dùng card giữa trang đơn lẻ, chưa đồng bộ split-screen Ocean Blue + minh họa vector 3D như `/dang-nhap`.
   - `src/app/page.tsx`: giao diện còn mang tính landing đơn giản màu teal, chưa thể hiện chiều sâu Ocean Blue 3.0.
   - Thiếu `loading.tsx` skeleton cho các route phân hệ (`/admin`, `/quan-tri`, `/giao-vien`, `/hoc-sinh`, `/phu-huynh`).
+
+## 2026-11-15 — Shared conversation and redesign prompt (Codex)
+- Read visible text of https://chatgpt.com/share/6af9deec-75dc-83ec-9112-58a4058dc913 via CUA after web fetch cache miss. Attachment contents were not verified.
+- Current config API source has Workspace/Gemini write-only configuration, encryptSecret and ENCRYPTION_KEY_MISSING guard; do not repeat the old claim that no in-app config exists. Historical runtime claims were not re-tested.
+- AppSidebar has Ocean Blue groups but retains technical labels Sandbox/3 Tab and separate AI Tutor; proposed redesign organizes navigation by user task, preserves routes and RBAC.
+- DESIGN body text 12–14px is a candidate for 16–18px learning text and 16px mobile inputs; long authoring forms should use a page when warranted. These are proposals, not implemented UI changes.
+- Two existing screenshots show sparse empty lesson state and lengthy technical HTML-studio copy; check current app before treating archived screenshots as live defects.
+- Latest read progress reports 51/51 tests; HANDOFF earlier 47/47 is historical. No app tests executed for documentation-only task. New decisions and executable prompt saved in docs/EDUCAREAI_VISION_AND_DECISIONS.md and docs/EDUCAREAI_REDESIGN_PROMPT.md.
+
+---
+
+## 2026-11-15 — TR-1 Redesign Audit & Architecture Decisions
+1. **Visual Hierarchy & Anti-AI-Slop**:
+   - Chuyển `PageHeader variant="hero"` (gradient xanh to, blur-3xl, chữ trắng trên nền tương phản khó đọc khi co nhỏ) thành biến thể thẻ gọn gàng, nền sáng (`bg-surface`), chữ sắc nét (`text-ink`), với CTA chính nổi bật và badge ngữ nghĩa.
+   - Nâng cấp type scale: Body học tập và mô tả bài giảng 16px (`text-base`, `leading-relaxed`), ô nhập liệu 16px (`text-base` trên mobile chống iOS zoom), bảng dữ liệu 14px (`text-sm`), metadata/badge 12–13px (`text-xs`).
+   - Xóa bỏ các nhãn kỹ thuật cấm đối với học sinh: "Sandbox", "3 Tab", "REST API", "RBAC", "3 Tầng Dữ liệu".
+2. **Navigation & Information Architecture**:
+   - Phân nhóm `AppSidebar` thành 4-5 nhóm mục đích nghiệp vụ cho từng vai trò thay vì danh sách phẳng 10–12 mục:
+     - Học sinh: Hôm nay -> Học tập -> Sáng tạo -> Trợ lý AI -> Tiến bộ
+     - Giáo viên: Hôm nay -> Lớp học -> Học liệu -> Giao & Chấm bài -> Phân tích -> Công cụ
+     - Phụ huynh: Hôm nay -> Bài tập & Kết quả -> Điểm mạnh & Rèn luyện -> Đồng hành
+     - Quản trị: Tổng quan -> Người dùng -> Lớp & Môn -> Tích hợp -> Nhật ký
+   - Bổ sung `BottomNav` mobile cho Học sinh và Phụ huynh (`md:hidden`), cao 56px, vùng bấm tối thiểu 44px, hiển thị 4-5 điểm đến thường dùng nhất để đạt mục tiêu ≤2 thao tác điều hướng.
+3. **Role Specific Priorities**:
+   - Học sinh: Nửa trên ưu tiên "Hôm nay em cần làm gì?" (nội dung học tiếp, bài cần nộp có đếm ngược, phản hồi giáo viên), nửa dưới là danh sách bài giảng & khám phá trò chơi HTML; không để hàng KPI/điểm thưởng lấn át việc học.
+   - Giáo viên: Bàn làm việc sư phạm ưu tiên hàng đợi việc cần xử lý (bài nộp chờ chấm, trò chơi chờ duyệt, lịch dạy sắp tới).
+   - Phụ huynh: Nhấn mạnh tiến bộ thật bằng ngôn ngữ ấm áp, dễ hiểu, không so sánh hay bịa xếp hạng.
+   - Quản trị: Đơn giản hóa quy trình cấp tài khoản học sinh bằng mã và trung tâm tích hợp Google Workspace / Gemini có hướng dẫn rõ ràng.

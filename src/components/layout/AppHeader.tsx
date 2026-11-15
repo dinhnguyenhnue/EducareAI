@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -85,6 +85,8 @@ export function AppHeader({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [avatarError, setAvatarError] = useState(false);
+  const notifBtnRef = useRef<HTMLButtonElement | null>(null);
+  const profileBtnRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -93,8 +95,18 @@ export function AppHeader({
         setSearchOpen((prev) => !prev);
       }
       if (e.key === "Escape") {
-        setProfileOpen(false);
-        setNotifOpen(false);
+        setProfileOpen((wasOpen) => {
+          if (wasOpen) {
+            requestAnimationFrame(() => profileBtnRef.current?.focus());
+          }
+          return false;
+        });
+        setNotifOpen((wasOpen) => {
+          if (wasOpen) {
+            requestAnimationFrame(() => notifBtnRef.current?.focus());
+          }
+          return false;
+        });
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -219,15 +231,17 @@ export function AppHeader({
 
         {/* Right Controls */}
         <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Quick Search Trigger */}
+          {/* Quick Search Trigger (Mobile + Desktop) */}
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-button bg-canvas hover:bg-surface-muted border border-border hover:border-ocean-300 text-xs text-ink-muted transition-all"
+            aria-label="Tìm nhanh phân hệ (Ctrl+K)"
+            title="Tìm nhanh phân hệ (Ctrl+K)"
+            className="flex items-center gap-2 p-2 md:px-3 md:py-1.5 rounded-button bg-canvas hover:bg-surface-muted border border-border hover:border-ocean-300 text-xs text-ink-muted transition-all cursor-pointer"
           >
-            <Search className="w-3.5 h-3.5 text-ocean-600" />
-            <span>Tìm nhanh...</span>
-            <kbd className="ml-1.5 px-1.5 py-0.5 text-[10px] font-mono bg-surface border border-border rounded text-ink-muted">
+            <Search className="w-4 h-4 md:w-3.5 md:h-3.5 text-ocean-600" />
+            <span className="hidden md:inline">Tìm nhanh...</span>
+            <kbd className="hidden md:inline-block ml-1.5 px-1.5 py-0.5 text-[10px] font-mono bg-surface border border-border rounded text-ink-muted">
               Ctrl K
             </kbd>
           </button>
@@ -264,14 +278,17 @@ export function AppHeader({
           {/* Notification Center */}
           <div className="relative">
             <button
+              ref={notifBtnRef}
               type="button"
               onClick={() => {
                 setProfileOpen(false);
                 setNotifOpen((prev) => !prev);
               }}
               aria-label="Trung tâm thông báo"
+              aria-expanded={notifOpen}
+              aria-controls="header-notifications-panel"
               title="Trung tâm thông báo"
-              className="relative p-2 rounded-button text-ink-muted hover:text-ocean-600 hover:bg-ocean-light/60 transition-colors"
+              className="relative p-2 rounded-button text-ink-muted hover:text-ocean-600 hover:bg-ocean-light/60 transition-colors cursor-pointer"
             >
               <Bell className="w-4 h-4" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-ocean-600 ring-2 ring-surface" />
@@ -284,7 +301,9 @@ export function AppHeader({
                     className="fixed inset-0 z-20"
                     onClick={() => setNotifOpen(false)}
                   />
-                  <m.div
+                  <m.section
+                    id="header-notifications-panel"
+                    aria-label="Thông báo hệ thống"
                     variants={modalPanelVariants}
                     initial="initial"
                     animate="animate"
@@ -320,7 +339,7 @@ export function AppHeader({
                         </div>
                       )}
                     </div>
-                  </m.div>
+                  </m.section>
                 </>
               )}
             </AnimatePresence>
@@ -329,13 +348,17 @@ export function AppHeader({
           {/* Profile Menu */}
           <div className="relative pl-2 border-l border-border">
             <button
+              ref={profileBtnRef}
               type="button"
               onClick={() => {
                 setNotifOpen(false);
                 setProfileOpen((prev) => !prev);
               }}
+              aria-label={`Tài khoản ${user.name}`}
+              aria-expanded={profileOpen}
+              aria-controls="header-profile-dropdown"
               data-testid="profile-menu-button"
-              className="flex items-center gap-2 text-left hover:bg-surface-muted px-2 py-1 rounded-button transition-colors"
+              className="flex items-center gap-2 text-left hover:bg-surface-muted px-2 py-1 rounded-button transition-colors cursor-pointer"
             >
               {!avatarError && user.avatar ? (
                 <Image
@@ -366,6 +389,9 @@ export function AppHeader({
                     onClick={() => setProfileOpen(false)}
                   />
                   <m.div
+                    id="header-profile-dropdown"
+                    role="region"
+                    aria-label="Thông tin và tác vụ tài khoản"
                     variants={modalPanelVariants}
                     initial="initial"
                     animate="animate"
@@ -405,35 +431,45 @@ export function AppHeader({
                       </div>
                     )}
 
-                    <div className="py-1.5">
-                      {isSuperAdmin && (
-                        <>
-                          <Link
-                            href="/quan-tri/nhat-ky"
-                            onClick={() => setProfileOpen(false)}
-                            className="block px-4 py-2 text-ink hover:bg-ocean-50 hover:text-ocean-700 transition-colors"
-                          >
-                            Nhật ký đăng nhập & phiên (Audit Log)
-                          </Link>
-                          <Link
-                            href="/admin/settings/integrations"
-                            onClick={() => setProfileOpen(false)}
-                            className="block px-4 py-2 text-ink hover:bg-ocean-50 hover:text-ocean-700 transition-colors"
-                          >
-                            Cấu hình OAuth & Quyền kết nối
-                          </Link>
-                        </>
-                      )}
-                      {role === "TEACHER" && !isSuperAdmin && (
-                        <Link
-                          href="/giao-vien/google-workspace"
-                          onClick={() => setProfileOpen(false)}
-                          className="block px-4 py-2 text-ink hover:bg-ocean-50 hover:text-ocean-700 transition-colors"
-                        >
-                          Quản lý kết nối Google Workspace
-                        </Link>
-                      )}
-                    </div>
+                    {(isSuperAdmin || role === "TEACHER") && (
+                      <nav aria-label="Liên kết tài khoản" className="py-1.5">
+                        <ul className="space-y-0.5">
+                          {isSuperAdmin && (
+                            <>
+                              <li>
+                                <Link
+                                  href="/quan-tri/nhat-ky"
+                                  onClick={() => setProfileOpen(false)}
+                                  className="block px-4 py-2 text-ink hover:bg-ocean-50 hover:text-ocean-700 transition-colors"
+                                >
+                                  Nhật ký đăng nhập & phiên (Audit Log)
+                                </Link>
+                              </li>
+                              <li>
+                                <Link
+                                  href="/admin/settings/integrations"
+                                  onClick={() => setProfileOpen(false)}
+                                  className="block px-4 py-2 text-ink hover:bg-ocean-50 hover:text-ocean-700 transition-colors"
+                                >
+                                  Cấu hình OAuth & Quyền kết nối
+                                </Link>
+                              </li>
+                            </>
+                          )}
+                          {role === "TEACHER" && !isSuperAdmin && (
+                            <li>
+                              <Link
+                                href="/giao-vien/google-workspace"
+                                onClick={() => setProfileOpen(false)}
+                                className="block px-4 py-2 text-ink hover:bg-ocean-50 hover:text-ocean-700 transition-colors"
+                              >
+                                Quản lý kết nối Google Workspace
+                              </Link>
+                            </li>
+                          )}
+                        </ul>
+                      </nav>
+                    )}
 
                     <div className="pt-1 border-t border-border">
                       <button
@@ -461,14 +497,15 @@ export function AppHeader({
       <Modal
         open={searchOpen}
         onClose={() => setSearchOpen(false)}
+        title="Tìm kiếm nhanh phân hệ (Ctrl+K)"
         maxWidth="max-w-lg"
       >
         <div className="space-y-3">
           <div className="pb-3 border-b border-border flex items-center gap-2.5">
             <Command className="w-4 h-4 text-ocean-600 shrink-0" />
             <input
-              type="text"
-              autoFocus
+              type="search"
+              aria-label="Tìm kiếm nhanh phân hệ"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Nhập tên phân hệ, lớp học, hoặc công cụ cần mở..."
@@ -476,22 +513,28 @@ export function AppHeader({
             />
           </div>
           <div className="max-h-72 overflow-y-auto divide-y divide-border/50">
-            {quickCommands.map((cmd) => (
-              <button
-                key={cmd.href}
-                type="button"
-                onClick={() => {
-                  setSearchOpen(false);
-                  router.push(cmd.href);
-                }}
-                className="w-full px-3 py-2.5 text-left rounded-button hover:bg-ocean-50 flex items-center justify-between text-xs transition-colors"
-              >
-                <span className="font-semibold text-ink">{cmd.label}</span>
-                <span className="text-[10px] font-bold bg-ocean-light text-ocean-700 px-2 py-0.5 rounded-full">
-                  {cmd.group}
-                </span>
-              </button>
-            ))}
+            {quickCommands.length === 0 ? (
+              <div className="py-6 text-center text-xs text-ink-muted">
+                Không tìm thấy phân hệ khớp với từ khóa &ldquo;{searchQuery}&rdquo;.
+              </div>
+            ) : (
+              quickCommands.map((cmd) => (
+                <button
+                  key={cmd.href}
+                  type="button"
+                  onClick={() => {
+                    setSearchOpen(false);
+                    router.push(cmd.href);
+                  }}
+                  className="w-full px-3 py-2.5 text-left rounded-button hover:bg-ocean-50 flex items-center justify-between text-xs transition-colors cursor-pointer"
+                >
+                  <span className="font-semibold text-ink">{cmd.label}</span>
+                  <span className="text-[10px] font-bold bg-ocean-light text-ocean-700 px-2 py-0.5 rounded-full shrink-0">
+                    {cmd.group}
+                  </span>
+                </button>
+              ))
+            )}
           </div>
         </div>
       </Modal>

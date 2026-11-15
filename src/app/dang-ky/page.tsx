@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, m } from "framer-motion";
@@ -43,6 +43,28 @@ const ROLE_TABS: Array<{
 export default function RegisterPage() {
   const router = useRouter();
   const [activeRole, setActiveRole] = useState<RegistrationRole>("STUDENT");
+  const roleTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const handleRoleTabKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    idx: number
+  ) => {
+    let nextIdx: number | null = null;
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      nextIdx = (idx + 1) % ROLE_TABS.length;
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      nextIdx = (idx - 1 + ROLE_TABS.length) % ROLE_TABS.length;
+    } else if (e.key === "Home") {
+      nextIdx = 0;
+    } else if (e.key === "End") {
+      nextIdx = ROLE_TABS.length - 1;
+    }
+    if (nextIdx !== null) {
+      e.preventDefault();
+      setActiveRole(ROLE_TABS[nextIdx].id);
+      roleTabRefs.current[nextIdx]?.focus();
+    }
+  };
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -186,17 +208,30 @@ export default function RegisterPage() {
         </div>
 
         {/* Animated Role Tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 rounded-xl bg-surface-muted border border-border mb-5">
-          {ROLE_TABS.map((tab) => {
+        <div
+          role="tablist"
+          aria-label="Chọn vai trò đăng ký"
+          className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 rounded-xl bg-surface-muted border border-border mb-5"
+        >
+          {ROLE_TABS.map((tab, idx) => {
             const Icon = tab.icon;
             const isActive = activeRole === tab.id;
             return (
               <button
                 key={tab.id}
+                ref={(el) => {
+                  roleTabRefs.current[idx] = el;
+                }}
+                id={`register-role-tab-${tab.id}`}
                 type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls="register-role-tabpanel"
+                tabIndex={isActive ? 0 : -1}
                 onClick={() => setActiveRole(tab.id)}
+                onKeyDown={(e) => handleRoleTabKeyDown(e, idx)}
                 className={cn(
-                  "relative flex flex-col items-center justify-center gap-1 py-2.5 px-2 rounded-lg text-xs font-semibold transition-colors",
+                  "relative flex flex-col items-center justify-center gap-1 py-2.5 px-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
                   isActive
                     ? tab.activeColor
                     : "text-ink-muted hover:text-ink"
@@ -244,29 +279,38 @@ export default function RegisterPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
+              <label
+                htmlFor="register-fullname"
+                className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5"
+              >
                 Họ và tên đầy đủ
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
+                  id="register-fullname"
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Ví dụ: Nguyễn Văn A"
                   required
+                  autoComplete="name"
                   className="w-full pl-10 pr-4 py-2.5 rounded-button bg-canvas border border-border focus:bg-surface focus:border-ocean-600 focus:ring-2 focus:ring-ocean-light text-sm text-ink outline-none transition-all placeholder:text-ink-muted/55"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
+              <label
+                htmlFor="register-email"
+                className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5"
+              >
                 Email
               </label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
+                  id="register-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -276,6 +320,7 @@ export default function RegisterPage() {
                       : "email@unigo.edu.vn hoặc gmail"
                   }
                   required
+                  autoComplete="email"
                   className="w-full pl-10 pr-4 py-2.5 rounded-button bg-canvas border border-border focus:bg-surface focus:border-ocean-600 focus:ring-2 focus:ring-ocean-light text-sm text-ink outline-none transition-all placeholder:text-ink-muted/55"
                 />
               </div>
@@ -285,6 +330,9 @@ export default function RegisterPage() {
           <AnimatePresence mode="wait">
             <m.div
               key={activeRole}
+              id="register-role-tabpanel"
+              role="tabpanel"
+              aria-labelledby={`register-role-tab-${activeRole}`}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -4 }}
@@ -294,10 +342,11 @@ export default function RegisterPage() {
                 <div className="space-y-3.5 p-4 rounded-xl bg-emerald-50/45 border border-emerald-200/80">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                      <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
+                      <label htmlFor="register-grade-level" className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
                         Khối lớp
                       </label>
                       <select
+                        id="register-grade-level"
                         value={gradeLevel}
                         onChange={(e) => setGradeLevel(e.target.value)}
                         className="w-full px-3 py-2.5 rounded-button bg-surface border border-border text-sm text-ink outline-none focus:border-ocean-600 focus:ring-2 focus:ring-ocean-light"
@@ -309,10 +358,11 @@ export default function RegisterPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
+                      <label htmlFor="register-class-name" className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
                         Lớp học
                       </label>
                       <select
+                        id="register-class-name"
                         value={className}
                         onChange={(e) => setClassName(e.target.value)}
                         className="w-full px-3 py-2.5 rounded-button bg-surface border border-border text-sm text-ink outline-none focus:border-ocean-600 focus:ring-2 focus:ring-ocean-light"
@@ -326,10 +376,11 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
+                    <label htmlFor="register-student-code" className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
                       Mã học sinh UNIGO (Nếu đã có)
                     </label>
                     <input
+                      id="register-student-code"
                       type="text"
                       value={studentCode}
                       onChange={(e) => setStudentCode(e.target.value)}
@@ -355,10 +406,11 @@ export default function RegisterPage() {
               {activeRole === "TEACHER" && (
                 <div className="space-y-3.5 p-4 rounded-xl bg-ocean-50/55 border border-ocean-200/80">
                   <div>
-                    <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
+                    <label htmlFor="register-specialization" className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
                       Bộ môn giảng dạy
                     </label>
                     <select
+                      id="register-specialization"
                       value={specialization}
                       onChange={(e) => setSpecialization(e.target.value)}
                       className="w-full px-3 py-2.5 rounded-button bg-surface border border-border text-sm text-ink outline-none focus:border-ocean-600 focus:ring-2 focus:ring-ocean-light"
@@ -372,10 +424,11 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
+                    <label htmlFor="register-teacher-invite" className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
                       Mã mời tổ chuyên môn (Tùy chọn)
                     </label>
                     <input
+                      id="register-teacher-invite"
                       type="text"
                       value={teacherInviteCode}
                       onChange={(e) => setTeacherInviteCode(e.target.value)}
@@ -394,10 +447,11 @@ export default function RegisterPage() {
                 <div className="space-y-3.5 p-4 rounded-xl bg-violet-50/55 border border-violet-200/80">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                      <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
+                      <label htmlFor="register-parent-phone" className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
                         Số điện thoại
                       </label>
                       <input
+                        id="register-parent-phone"
                         type="tel"
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value)}
@@ -406,10 +460,11 @@ export default function RegisterPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
+                      <label htmlFor="register-parent-relationship" className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
                         Mối quan hệ
                       </label>
                       <select
+                        id="register-parent-relationship"
                         value={relationship}
                         onChange={(e) => setRelationship(e.target.value)}
                         className="w-full px-3 py-2.5 rounded-button bg-surface border border-border text-sm text-ink outline-none focus:border-ocean-600 focus:ring-2 focus:ring-ocean-light"
@@ -422,10 +477,11 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
+                    <label htmlFor="register-child-code" className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
                       Mã học sinh của con (Để liên kết)
                     </label>
                     <input
+                      id="register-child-code"
                       type="text"
                       value={childStudentCode}
                       onChange={(e) => setChildStudentCode(e.target.value)}
@@ -460,24 +516,29 @@ export default function RegisterPage() {
           {/* Password Fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
+              <label
+                htmlFor="register-password"
+                className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5"
+              >
                 Mật khẩu
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
+                  id="register-password"
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Tối thiểu 8 ký tự"
                   required
+                  autoComplete="new-password"
                   className="w-full pl-10 pr-10 py-2.5 rounded-button bg-canvas border border-border focus:bg-surface focus:border-ocean-600 focus:ring-2 focus:ring-ocean-light text-sm text-ink outline-none transition-all placeholder:text-ink-muted/55"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink p-1 rounded"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink p-1 rounded cursor-pointer"
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4" />
@@ -489,17 +550,22 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
+              <label
+                htmlFor="register-confirm-password"
+                className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5"
+              >
                 Xác nhận mật khẩu
               </label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
+                  id="register-confirm-password"
                   type={showPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Nhập lại mật khẩu"
                   required
+                  autoComplete="new-password"
                   className="w-full pl-10 pr-4 py-2.5 rounded-button bg-canvas border border-border focus:bg-surface focus:border-ocean-600 focus:ring-2 focus:ring-ocean-light text-sm text-ink outline-none transition-all placeholder:text-ink-muted/55"
                 />
               </div>

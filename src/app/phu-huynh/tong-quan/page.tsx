@@ -111,7 +111,7 @@ export default async function ParentDashboardPage() {
           </span>
           <span className="leading-relaxed">
             <strong className="text-ocean-deep font-bold">
-              Quy chuẩn An toàn dữ liệu UNIGO:
+              Quy chuẩn An toàn dữ liệu học sinh:
             </strong>{" "}
             Phụ huynh xem báo cáo học tập, kết quả điểm và nhận xét chính thức từ thầy cô của con đã xác minh liên kết. Lịch sử hội thoại riêng tư với AI Tutor được bảo mật để khuyến khích con tự do đặt câu hỏi khám phá.
           </span>

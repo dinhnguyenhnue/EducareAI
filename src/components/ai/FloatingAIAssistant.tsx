@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { AnimatePresence, m } from "framer-motion";
 import { useRole } from "@/context/RoleContext";
@@ -11,6 +11,32 @@ export function FloatingAIAssistant() {
   const { role } = useRole();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
+  const fabRef = useRef<HTMLButtonElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const wasOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      wasOpenRef.current = true;
+      const rafId = window.requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
+      const onKeyDown = (e: KeyboardEvent) => {
+        if (e.key === "Escape") setIsOpen(false);
+      };
+      window.addEventListener("keydown", onKeyDown);
+      return () => {
+        window.cancelAnimationFrame(rafId);
+        window.removeEventListener("keydown", onKeyDown);
+      };
+    } else if (wasOpenRef.current) {
+      wasOpenRef.current = false;
+      const rafId = window.requestAnimationFrame(() => {
+        fabRef.current?.focus();
+      });
+      return () => window.cancelAnimationFrame(rafId);
+    }
+  }, [isOpen]);
   const [messages, setMessages] = useState<
     Array<{ role: "user" | "assistant"; text: string }>
   >([
@@ -65,11 +91,19 @@ export function FloatingAIAssistant() {
 
   return (
     <div className="fixed bottom-5 right-5 z-40">
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {!isOpen ? (
           <m.button
+            ref={(el) => {
+              fabRef.current = el;
+              if (el && wasOpenRef.current) {
+                wasOpenRef.current = false;
+                el.focus();
+              }
+            }}
             key="ai-fab"
             type="button"
+            aria-label="Mở Trợ lý AI Socratic UNIGO"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
@@ -88,6 +122,8 @@ export function FloatingAIAssistant() {
         ) : (
           <m.div
             key="ai-panel"
+            role="dialog"
+            aria-label="Trợ lý AI Socratic UNIGO"
             variants={modalPanelVariants}
             initial="initial"
             animate="animate"
@@ -116,6 +152,7 @@ export function FloatingAIAssistant() {
               <div className="flex items-center gap-1">
                 <Link
                   href="/hoc-sinh/ai-tutor"
+                  aria-label="Mở Trợ lý AI toàn màn hình"
                   title="Mở toàn màn hình"
                   className="p-1.5 text-white/80 hover:text-white hover:bg-white/15 rounded-lg transition-colors"
                 >
@@ -126,14 +163,17 @@ export function FloatingAIAssistant() {
                   onClick={() => setIsOpen(false)}
                   aria-label="Thu nhỏ trợ lý AI"
                   title="Thu nhỏ"
-                  className="p-1.5 text-white/80 hover:text-white hover:bg-white/15 rounded-lg transition-colors"
+                  className="p-1.5 text-white/80 hover:text-white hover:bg-white/15 rounded-lg transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 p-3.5 overflow-y-auto space-y-3 bg-canvas/50 text-xs">
+            <div
+              aria-live="polite"
+              className="flex-1 p-3.5 overflow-y-auto space-y-3 bg-canvas/50 text-xs"
+            >
               {messages.map((msg, idx) => (
                 <div
                   key={idx}
@@ -202,7 +242,14 @@ export function FloatingAIAssistant() {
 
             <div className="p-2.5 bg-surface border-t border-border flex items-center gap-2">
               <input
+                ref={(el) => {
+                  inputRef.current = el;
+                  if (el && isOpen) {
+                    el.focus();
+                  }
+                }}
                 type="text"
+                aria-label="Nhập câu hỏi cho Trợ lý AI Socratic"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
@@ -213,7 +260,7 @@ export function FloatingAIAssistant() {
                 type="button"
                 onClick={() => handleSend()}
                 aria-label="Gửi tin nhắn"
-                className="p-2.5 rounded-button bg-gradient-ai text-white hover:brightness-105 transition-all active:scale-95"
+                className="p-2.5 rounded-button bg-gradient-ai text-white hover:brightness-105 transition-all active:scale-95 cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>

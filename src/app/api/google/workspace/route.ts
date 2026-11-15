@@ -3,6 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth";
 import {
   getGoogleOAuthConfig,
+  getGeminiServerConfig,
+  getWorkspaceAndGeminiServicesStatus,
+  testWorkspaceOrGeminiConnection,
+  disconnectGoogleWorkspace,
   UNIGO_DRIVE_FOLDERS,
   EDUCARE_DRIVE_FOLDER_TREE,
   UNIGO_SYNC_CADENCE_POLICY,
@@ -29,17 +33,19 @@ export async function GET() {
     }
 
     const [
-      teacher,
+      fallbackConnection,
       assignments,
       syncLogs,
       driveFolderNodes,
       classTrackingSheets,
       backupRecords,
+      servicesStatus,
     ] = await Promise.all([
-      prisma.user.findFirst({
-        where: { email: "thay.tuan@unigo.edu.vn" },
-        include: { googleConnection: true },
-      }),
+      prisma.googleConnection
+        .findFirst({
+          orderBy: { createdAt: "desc" },
+        })
+        .catch(() => null),
       prisma.assignment.findMany({
         include: { subject: true, schoolClass: true, submissions: true },
         orderBy: { dueAt: "asc" },
@@ -59,16 +65,23 @@ export async function GET() {
         orderBy: { createdAt: "desc" },
         take: 10,
       }),
+      getWorkspaceAndGeminiServicesStatus(session.user.id),
     ]);
 
     const oauthConfig = getGoogleOAuthConfig();
+    const geminiConfig = getGeminiServerConfig();
 
     return NextResponse.json({
       oauthConfig: {
         isConfigured: oauthConfig.isConfigured,
         redirectUri: oauthConfig.redirectUri,
       },
-      connection: session.user.googleConnection || teacher?.googleConnection || null,
+      geminiConfig: {
+        isConfigured: geminiConfig.isConfigured,
+        modelName: geminiConfig.modelName,
+      },
+      servicesStatus,
+      connection: session.user.googleConnection || fallbackConnection || null,
       driveFolders: UNIGO_DRIVE_FOLDERS,
       driveFolderTreeTemplate: EDUCARE_DRIVE_FOLDER_TREE,
       driveFolderNodes,
@@ -114,11 +127,61 @@ export async function POST(req: Request) {
     const actorEmail = session.user.email;
 
     switch (action) {
-      case "SYNC_SHEETS": {
-        const result = await syncDatabaseToGoogleSheets(actorId);
+      case "TEST_SERVICE_CONNECTION": {
+        const serviceCode = payload?.serviceCode || "GOOGLE_DRIVE";
+        const result = await testWorkspaceOrGeminiConnection(actorId, serviceCode);
+        await prisma.auditLog.create({
+          data: {
+            actorId,
+            actorEmail,
+            actorRole: session.role,
+            action: "ADMIN_TEST_INTEGRATION_CONNECTION",
+            resource: "GOOGLE_WORKSPACE_INTEGRATION",
+            resourceId: result.serviceCode,
+            status: result.connected ? "SUCCESS" : "NOT_CONFIGURED",
+            details: JSON.stringify({
+              serviceCode: result.serviceCode,
+              status: result.status,
+            }),
+          },
+        });
         return NextResponse.json({
           success: true,
-          message: `Đã đồng bộ thành công ${result.tablesSynced} bảng tổng hợp và bảng EDUCARE_AI_Tracking_7A1 (6 tabs) sang Google Sheets bằng batchUpdate.`,
+          status: result.status,
+          message: result.message,
+          data: result,
+        });
+      }
+
+      case "DISCONNECT_GOOGLE_OAUTH": {
+        const result = await disconnectGoogleWorkspace(actorId);
+        await prisma.auditLog.create({
+          data: {
+            actorId,
+            actorEmail,
+            actorRole: session.role,
+            action: "ADMIN_DISCONNECT_GOOGLE_OAUTH",
+            resource: "GOOGLE_WORKSPACE_INTEGRATION",
+            status: "SUCCESS",
+          },
+        });
+        return NextResponse.json({
+          success: true,
+          status: result.status,
+          message: result.message,
+          data: result,
+        });
+      }
+
+      case "SYNC_SHEETS": {
+        const result = await syncDatabaseToGoogleSheets(actorId);
+        const isNotConfigured = result.connectionState === "DISCONNECTED";
+        return NextResponse.json({
+          success: true,
+          status: isNotConfigured ? "NOT_CONFIGURED" : result.connectionState,
+          message: isNotConfigured
+            ? `[Chưa cấu hình Google Sheets API — NOT_CONFIGURED] Đã tạo bản chụp dữ liệu 5 bảng cục bộ (${result.totalRowsExported} dòng). Chưa đẩy lên Google Sheets thật.`
+            : `Đã đồng bộ ${result.tablesSynced} bảng tổng hợp và bảng EDUCARE_AI_Tracking_7A1 (6 tabs).`,
           data: result,
         });
       }
@@ -126,9 +189,13 @@ export async function POST(req: Request) {
       case "SYNC_CLASS_TRACKING_SHEET": {
         const className = payload?.className || "7A1";
         const result = await syncClassTrackingSheet(actorId, className);
+        const isNotConfigured = result.connectionState === "DISCONNECTED";
         return NextResponse.json({
           success: true,
-          message: `Đã tự động khởi tạo & đồng bộ bảng "${result.trackingSheet.spreadsheetTitle}" (6 tabs: Tổng quan, Danh sách HS, Tiến độ học tập, Điểm & Rubric, Sản phẩm sáng tạo, Báo cáo AI) với ${result.totalRowsSynced} dòng dữ liệu.`,
+          status: isNotConfigured ? "NOT_CONFIGURED" : result.connectionState,
+          message: isNotConfigured
+            ? `[Chưa cấu hình Google Sheets API — NOT_CONFIGURED] Đã tổng hợp dữ liệu "${result.trackingSheet.spreadsheetTitle}" (6 tabs, ${result.totalRowsSynced} dòng) vào bộ nhớ đệm cục bộ.`
+            : `Đã tự động khởi tạo & đồng bộ bảng "${result.trackingSheet.spreadsheetTitle}" (6 tabs) với ${result.totalRowsSynced} dòng dữ liệu.`,
           data: result,
         });
       }
@@ -175,9 +242,13 @@ export async function POST(req: Request) {
             ? "WORKSPACE_DOMAIN"
             : "PERSONAL_GMAIL_HYBRID";
         const result = await provisionEducareDriveTree(actorId, accountMode);
+        const isNotConfigured = result.connectionState === "DISCONNECTED";
         return NextResponse.json({
           success: true,
-          message: `Đã khởi tạo cấu trúc 6 thư mục gốc & 15 thư mục con (${result.totalFoldersProvisioned} nodes) trên Google Drive theo chế độ ${accountMode === "WORKSPACE_DOMAIN" ? "Google Workspace Trường (@unigo.edu.vn)" : "Tài khoản Gmail Cá nhân / Hybrid"} và lưu folderId vào Supabase.`,
+          status: isNotConfigured ? "NOT_CONFIGURED" : result.connectionState,
+          message: isNotConfigured
+            ? `[Chưa cấu hình Google Drive API — NOT_CONFIGURED] Đã khởi tạo cấu trúc 21 nút thư mục mẫu trong CSDL cục bộ. Khi nhà trường cung cấp GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET và cấp quyền OAuth, hệ thống sẽ tạo thư mục thật trên Google Drive.`
+            : `Đã khởi tạo cấu trúc 6 thư mục gốc & 15 thư mục con (${result.totalFoldersProvisioned} nodes) trên Google Drive.`,
           data: result,
         });
       }
@@ -186,7 +257,7 @@ export async function POST(req: Request) {
         const backupRecord = await createEncryptedDatabaseBackup(actorId, actorEmail);
         return NextResponse.json({
           success: true,
-          message: `Đã tạo bản sao lưu CSDL mã hóa AES-256-GCM (${backupRecord.backupCode}, SHA-256: ${backupRecord.sha256Checksum.slice(0, 12)}...) và lưu vào EDUCARE_AI/06_BACKUP/Database_Encrypted.`,
+          message: `Đã tạo bản sao lưu CSDL mã hóa AES-256-GCM (${backupRecord.backupCode}, SHA-256: ${backupRecord.sha256Checksum.slice(0, 12)}...).`,
           data: backupRecord,
         });
       }
@@ -203,11 +274,15 @@ export async function POST(req: Request) {
       case "SYNC_CLASSROOM": {
         const assignmentId = payload?.assignmentId;
         const result = await syncAssignmentToClassroom(actorId, assignmentId);
+        const isNotConfigured = result.connectionState === "DISCONNECTED";
         return NextResponse.json({
           success: true,
-          message: result.isIdempotentUpdate
-            ? `Đã cập nhật đồng bộ (Idempotent) bài tập lên Google Classroom (${result.courseworkId}) mà không tạo bản trùng lặp.`
-            : `Đã phát hành bài tập mới lên Google Classroom (${result.courseworkId}) với chế độ STUDENT_COPY.`,
+          status: isNotConfigured ? "NOT_CONFIGURED" : result.connectionState,
+          message: isNotConfigured
+            ? `[Chưa cấu hình Google Classroom API — NOT_CONFIGURED] Đã lưu trạng thái bài tập trong CSDL cục bộ. Cần cấp quyền OAuth Classroom để phát hành lên Google Classroom.`
+            : result.isIdempotentUpdate
+            ? `Đã cập nhật đồng bộ (Idempotent) bài tập lên Google Classroom (${result.courseworkId}).`
+            : `Đã phát hành bài tập mới lên Google Classroom (${result.courseworkId}).`,
           data: result,
         });
       }
@@ -221,9 +296,13 @@ export async function POST(req: Request) {
           topicName: payload?.topicName || "Chủ đề A: Máy tính và cộng đồng",
           teacherName: session.user.fullName,
         });
+        const isNotConfigured = result.connectionState === "DISCONNECTED";
         return NextResponse.json({
           success: true,
-          message: `Đã khởi tạo tài liệu Google Docs "${result.title}" từ mẫu chuẩn UNIGO (Drive files.copy + Docs replaceAllText).`,
+          status: isNotConfigured ? "NOT_CONFIGURED" : result.connectionState,
+          message: isNotConfigured
+            ? `[Chưa cấu hình Google Docs API — NOT_CONFIGURED] Đã tạo bộ khung siêu dữ liệu cho "${result.title}". Cần cấu hình Google OAuth để nhân bản file trên Google Docs.`
+            : `Đã khởi tạo tài liệu Google Docs "${result.title}" từ mẫu chuẩn.`,
           data: result,
         });
       }
@@ -237,9 +316,13 @@ export async function POST(req: Request) {
           reminder1Hour: payload?.reminder1Hour ?? true,
           customMinutes: payload?.customMinutes,
         });
+        const isNotConfigured = result.connectionState === "DISCONNECTED";
         return NextResponse.json({
           success: true,
-          message: `Đã tạo sự kiện lịch và thiết lập nhắc việc tự động trên "${result.calendarName}".`,
+          status: isNotConfigured ? "NOT_CONFIGURED" : result.connectionState,
+          message: isNotConfigured
+            ? `[Chưa cấu hình Google Calendar API — NOT_CONFIGURED] Đã lưu cấu hình nhắc hẹn cho "${result.summary}". Cần kết nối Google Calendar OAuth để đẩy lên lịch thật.`
+            : `Đã tạo sự kiện lịch và thiết lập nhắc việc tự động trên "${result.calendarName}".`,
           data: result,
         });
       }

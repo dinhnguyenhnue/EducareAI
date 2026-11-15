@@ -95,15 +95,29 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-ocean-mesh text-ink flex flex-col">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-button focus:bg-ocean-600 focus:text-white focus:font-bold focus:text-xs focus:shadow-dialog"
+      >
+        Chuyển đến nội dung chính
+      </a>
       {/* Top Navigation */}
-      <header className="h-16 bg-surface/85 backdrop-blur-md border-b border-border px-5 sm:px-10 flex items-center justify-between sticky top-0 z-30">
+      <header className="h-16 bg-surface/85 backdrop-blur-md border-b border-border px-4 sm:px-10 flex items-center justify-between gap-2 sticky top-0 z-30">
         <BrandLogo
           href="/"
-          subtitle="Hệ sinh thái học tập số • Trường Tiểu học & THCS UNIGO"
+          subtitle="Hệ sinh thái học tập số THCS"
           size="md"
+          className="hidden sm:flex"
+        />
+        <BrandLogo
+          href="/"
+          subtitle={null}
+          showBadge={false}
+          size="sm"
+          className="flex sm:hidden"
         />
 
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <Link
             href="/chinh-sach-bao-mat"
             className="text-xs font-medium text-ink-muted hover:text-ocean-600 hidden md:inline transition-colors"
@@ -125,26 +139,27 @@ export default function HomePage() {
         </div>
       </header>
 
-      <PageTransition className="flex-1">
-        {/* Hero Overview Banner */}
-        <section className="pt-10 pb-8 sm:pt-14 sm:pb-10 px-5 sm:px-10 max-w-6xl mx-auto w-full text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-ocean-light border border-ocean-200 text-ocean-deep text-xs font-bold mb-5 shadow-xs">
-            <Sparkles className="w-3.5 h-3.5 text-ocean-600" />
-            <span>EDUCARE AI 3.0 • Biết hỏi • Biết làm • Biết phản biện</span>
-          </div>
+      <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
+        <PageTransition>
+          {/* Hero Overview Banner */}
+          <section className="pt-10 pb-8 sm:pt-14 sm:pb-10 px-5 sm:px-10 max-w-6xl mx-auto w-full text-center">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-ocean-light border border-ocean-200 text-ocean-deep text-xs font-bold mb-5 shadow-xs">
+              <Sparkles className="w-3.5 h-3.5 text-ocean-600" />
+              <span>EDUCARE AI 3.0 • Biết hỏi • Biết làm • Biết phản biện</span>
+            </div>
 
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-ink tracking-tight max-w-3xl mx-auto leading-[1.15]">
-            Hệ sinh thái Học tập Số{" "}
-            <span className="bg-gradient-primary bg-clip-text text-transparent">
-              UNIGO Ocean Blue
-            </span>
-          </h1>
+            <h1 className="text-3xl sm:text-5xl font-extrabold text-ink tracking-tight max-w-3xl mx-auto leading-[1.15] text-balance">
+              Hệ sinh thái Học tập Số{" "}
+              <span className="text-ocean-600 underline decoration-ocean-300 decoration-2 underline-offset-8">
+                EDUCARE AI
+              </span>
+            </h1>
 
-          <p className="mt-4 text-sm sm:text-base text-ink-muted max-w-2xl mx-auto leading-relaxed">
-            Trung tâm điều phối dữ liệu học tập, giao bài, đánh giá năng lực và sáng tạo cùng{" "}
-            <strong className="text-ink font-semibold">Gemini AI</strong> &{" "}
-            <strong className="text-ink font-semibold">Google Workspace</strong>.
-          </p>
+            <p className="mt-4 text-sm sm:text-base text-ink-muted max-w-2xl mx-auto leading-relaxed text-pretty">
+              Trung tâm điều phối dữ liệu học tập, giao bài, đánh giá năng lực và sáng tạo cùng{" "}
+              <strong className="text-ink font-semibold">Gemini AI</strong> &{" "}
+              <strong className="text-ink font-semibold">Google Workspace</strong>.
+            </p>
 
           <div className="mt-7 flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto text-xs font-semibold">
             {[
@@ -258,7 +273,8 @@ export default function HomePage() {
             })}
           </div>
         </section>
-      </PageTransition>
+        </PageTransition>
+      </main>
 
       {/* Footer */}
       <footer className="bg-surface border-t border-border py-6 px-5 sm:px-10 text-xs text-ink-muted">

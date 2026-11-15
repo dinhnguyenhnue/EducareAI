@@ -10,6 +10,7 @@ import {
   buildUnigoWorkbookBuffer,
   type ParsedStudentRow,
 } from "@/lib/excel-parser";
+import { generateTemporaryStudentPassword, hashPassword } from "@/lib/password";
 
 const WORKSPACE_EXCEL_FILENAME = "DANH SÁCH HỌC SINH NĂM HỌC 2026 - 2027.xlsx";
 
@@ -156,6 +157,12 @@ export async function POST(req: Request) {
       let failedCount = 0;
       const rowErrors: Array<{ studentCode: string; reason: string }> = [];
       const classesCreatedOrUpdated = new Set<string>();
+      const issuedCredentials: Array<{
+        studentCode: string;
+        fullName: string;
+        className: string;
+        temporaryPassword: string;
+      }> = [];
 
       for (const row of rows) {
         if (!row.isValid || !row.studentCode || !row.fullName) {
@@ -192,11 +199,37 @@ export async function POST(req: Request) {
           });
 
           if (existingProfile) {
+            // Nếu tài khoản cũ có đuôi giả @no-email.internal.unigo, chuẩn hóa sang mã học sinh trực tiếp
+            const cleanedIdentifier =
+              row.emailFromFile ||
+              (existingProfile.user.email.endsWith("@no-email.internal.unigo")
+                ? row.studentCode
+                : existingProfile.user.email);
+
+            // Nếu tài khoản cũ chưa có mật khẩu băm, cấp mật khẩu tạm một lần
+            let extraPasswordUpdate: Record<string, unknown> = {};
+            if (!existingProfile.user.passwordHash) {
+              const temporaryPassword = generateTemporaryStudentPassword();
+              const passwordHash = await hashPassword(temporaryPassword);
+              extraPasswordUpdate = {
+                passwordHash,
+                accountStatus: "MUST_CHANGE_PASSWORD",
+                resetTokenHash: "FORCE_CHANGE_ON_FIRST_LOGIN",
+              };
+              issuedCredentials.push({
+                studentCode: row.studentCode,
+                fullName: row.fullName,
+                className: row.className,
+                temporaryPassword,
+              });
+            }
+
             await prisma.user.update({
               where: { id: existingProfile.userId },
               data: {
                 fullName: row.fullName,
-                ...(row.emailFromFile ? { email: row.emailFromFile } : {}),
+                email: cleanedIdentifier,
+                ...extraPasswordUpdate,
               },
             });
 
@@ -229,25 +262,30 @@ export async function POST(req: Request) {
 
             updatedIdempotentCount++;
           } else {
-            // Do NOT fabricate a personal email if file does not have one; use internal placeholder & PENDING_ACTIVATION
-            const safeEmail =
-              row.emailFromFile ||
-              `${row.studentCode.toLowerCase()}@no-email.internal.unigo`;
+            // Không tạo email giả (@unigo.edu.vn hay @no-email.internal.unigo). Dùng trực tiếp mã học sinh làm định danh đăng nhập nếu không có email.
+            const loginIdentifier = row.emailFromFile || row.studentCode;
+            const temporaryPassword = generateTemporaryStudentPassword();
+            const passwordHash = await hashPassword(temporaryPassword);
 
             const newUser = await prisma.user.upsert({
-              where: { email: safeEmail },
+              where: { email: loginIdentifier },
               update: {
                 fullName: row.fullName,
                 role: "STUDENT",
+                passwordHash,
+                accountStatus: "MUST_CHANGE_PASSWORD",
+                resetTokenHash: "FORCE_CHANGE_ON_FIRST_LOGIN",
+                isActive: true,
               },
               create: {
-                email: safeEmail,
+                email: loginIdentifier,
                 fullName: row.fullName,
                 role: "STUDENT",
+                passwordHash,
+                isActive: true,
                 emailVerified: Boolean(row.emailFromFile),
-                accountStatus: row.emailFromFile
-                  ? "ACTIVE"
-                  : "PENDING_ACTIVATION",
+                accountStatus: "MUST_CHANGE_PASSWORD",
+                resetTokenHash: "FORCE_CHANGE_ON_FIRST_LOGIN",
               },
             });
 
@@ -288,6 +326,12 @@ export async function POST(req: Request) {
               },
             });
 
+            issuedCredentials.push({
+              studentCode: row.studentCode,
+              fullName: row.fullName,
+              className: row.className,
+              temporaryPassword,
+            });
             createdCount++;
           }
         } catch (rowErr: any) {
@@ -312,6 +356,7 @@ export async function POST(req: Request) {
             createdCount,
             updatedIdempotentCount,
             failedCount,
+            issuedCredentialsCount: issuedCredentials.length,
             classes: Array.from(classesCreatedOrUpdated),
           }),
         },
@@ -335,6 +380,7 @@ export async function POST(req: Request) {
           failedCount,
           classesAffected: Array.from(classesCreatedOrUpdated),
           rowErrors,
+          issuedCredentials,
         },
         users: allUsers,
       });

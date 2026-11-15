@@ -119,6 +119,7 @@ export default function EmbedGamePage() {
       <SandboxedHtmlGamePlayer
         title={project.title}
         htmlSourceCode={project.approvedVersion.htmlSourceCode}
+        projectId={project.id}
         slug={project.slug}
         versionNumber={project.approvedVersion.versionNumber}
         authorName={project.displayAuthorName}

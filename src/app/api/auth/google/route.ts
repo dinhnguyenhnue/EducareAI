@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { buildGoogleOAuthUrl, getGoogleOAuthConfig, getSafeBaseUrl } from "@/lib/google-workspace";
+import { buildGoogleOAuthUrl, getEffectiveGoogleOAuthConfig, getSafeBaseUrl } from "@/lib/google-workspace";
 import { getServerSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -18,12 +18,15 @@ export async function GET(req: Request) {
         : ["DRIVE", "DOCS", "SHEETS", "CLASSROOM", "CALENDAR"];
 
   const reqBaseUrl = getSafeBaseUrl(req.url);
-  const config = getGoogleOAuthConfig(reqBaseUrl);
+  const config = await getEffectiveGoogleOAuthConfig(reqBaseUrl);
   const stateNonce = crypto.randomBytes(16).toString("hex");
   const statePayload = JSON.stringify({ purpose, callbackUrl, baseUrl: reqBaseUrl, nonce: stateNonce });
   const encodedState = Buffer.from(statePayload).toString("base64url");
   const oauthUrl = config.isConfigured
-    ? buildGoogleOAuthUrl(selectedServices, encodedState, reqBaseUrl)
+    ? buildGoogleOAuthUrl(selectedServices, encodedState, reqBaseUrl, {
+        clientId: config.clientId,
+        redirectUri: config.redirectUri,
+      })
     : null;
 
   return NextResponse.json({
@@ -42,7 +45,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const config = getGoogleOAuthConfig();
+    const reqBaseUrl = getSafeBaseUrl(req.url);
+    const config = await getEffectiveGoogleOAuthConfig(reqBaseUrl);
     if (!config.isConfigured) {
       return NextResponse.json(
         {
@@ -73,7 +77,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, message: "Đã hủy liên kết Google Workspace." });
     }
 
-    const reqBaseUrl = getSafeBaseUrl(req.url);
     const statePayload = JSON.stringify({
       purpose: "workspace",
       userId: session.user.id,
@@ -81,7 +84,10 @@ export async function POST(req: Request) {
       baseUrl: reqBaseUrl,
     });
     const encodedState = Buffer.from(statePayload).toString("base64url");
-    const incrementalOAuthUrl = buildGoogleOAuthUrl(services || [], encodedState, reqBaseUrl);
+    const incrementalOAuthUrl = buildGoogleOAuthUrl(services || [], encodedState, reqBaseUrl, {
+      clientId: config.clientId,
+      redirectUri: config.redirectUri,
+    });
 
     return NextResponse.json({
       success: true,

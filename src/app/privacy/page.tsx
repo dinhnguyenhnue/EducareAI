@@ -69,6 +69,12 @@ export default function PrivacyPolicyPage() {
 
   return (
     <div className="min-h-screen bg-canvas text-ink flex flex-col">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-button focus:bg-ocean-600 focus:text-white focus:font-bold focus:text-xs focus:shadow-dialog"
+      >
+        Chuyển đến nội dung chính
+      </a>
       {/* Top Header */}
       <header className="sticky top-0 z-30 h-16 bg-surface/95 backdrop-blur-md border-b border-border px-6 sm:px-12 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -92,7 +98,7 @@ export default function PrivacyPolicyPage() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-10 space-y-8">
+      <main id="main-content" tabIndex={-1} className="flex-1 max-w-5xl w-full mx-auto px-6 py-10 space-y-8 focus:outline-none">
         {/* Back link */}
         <div className="flex items-center justify-between">
           <Link

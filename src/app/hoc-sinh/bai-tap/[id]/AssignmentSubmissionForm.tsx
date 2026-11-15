@@ -65,11 +65,11 @@ export function AssignmentSubmissionForm({ assignmentId }: { assignmentId: strin
   if (success) {
     return (
       <div className="p-6 rounded-panel bg-status-success-soft border border-status-success/30 text-center space-y-2">
-        <h3 className="text-sm font-bold text-status-success">
+        <h3 className="text-base font-bold text-status-success">
           🎉 Nộp bài tập thành công!
         </h3>
-        <p className="text-xs text-ink-muted">
-          Bài làm đã được chuyển đến Thầy Tuấn để chấm điểm và nhận xét.
+        <p className="text-sm text-ink-muted">
+          Bài làm đã được chuyển đến Thầy/Cô bộ môn để chấm điểm và gửi phản hồi chi tiết.
         </p>
       </div>
     );
@@ -78,13 +78,13 @@ export function AssignmentSubmissionForm({ assignmentId }: { assignmentId: strin
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {errorMsg && (
-        <div className="p-3 rounded-lg bg-status-danger-soft border border-status-danger/30 text-xs text-status-danger font-semibold">
+        <div className="p-3.5 rounded-xl bg-status-danger-soft border border-status-danger/30 text-sm text-status-danger font-semibold">
           {errorMsg}
         </div>
       )}
 
       <div>
-        <label className="block text-xs font-bold text-ink uppercase tracking-wide mb-1.5">
+        <label className="block text-sm font-bold text-ink mb-1.5">
           1. Tóm tắt nội dung bài làm hoặc thuyết minh sản phẩm
         </label>
         <textarea
@@ -92,7 +92,7 @@ export function AssignmentSubmissionForm({ assignmentId }: { assignmentId: strin
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Mô tả các bước thực hiện, giải pháp em đã áp dụng..."
-          className="w-full p-3 rounded-xl bg-canvas border border-slate-200 text-xs text-ink focus:outline-none focus:border-ocean-600 focus:ring-2 focus:ring-ocean-500/20 leading-relaxed"
+          className="w-full p-3.5 rounded-xl bg-canvas border border-slate-200 text-base sm:text-sm text-ink focus:outline-none focus:border-ocean-600 focus:ring-2 focus:ring-ocean-500/20 leading-relaxed placeholder:text-ink-muted/70"
         />
       </div>
 
@@ -103,8 +103,8 @@ export function AssignmentSubmissionForm({ assignmentId }: { assignmentId: strin
       />
 
       <div>
-        <label className="block text-xs font-bold text-ink uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-          <LinkIcon className="w-3.5 h-3.5 text-ocean-600" />
+        <label className="block text-sm font-bold text-ink mb-1.5 flex items-center gap-1.5">
+          <LinkIcon className="w-4 h-4 text-ocean-600" />
           <span>3. Hoặc đính kèm liên kết Google Drive / sản phẩm số (Tùy chọn)</span>
         </label>
         <input
@@ -112,16 +112,16 @@ export function AssignmentSubmissionForm({ assignmentId }: { assignmentId: strin
           value={driveUrl}
           onChange={(e) => setDriveUrl(e.target.value)}
           placeholder="https://drive.google.com/file/d/... (hoặc link Canva, Scratch, Figma)"
-          className="w-full px-3 py-2.5 rounded-xl bg-canvas border border-slate-200 text-xs text-ink focus:outline-none focus:border-ocean-600 focus:ring-2 focus:ring-ocean-500/20"
+          className="w-full px-3.5 py-3 rounded-xl bg-canvas border border-slate-200 text-base sm:text-sm text-ink focus:outline-none focus:border-ocean-600 focus:ring-2 focus:ring-ocean-500/20 placeholder:text-ink-muted/70"
         />
-        <p className="text-[11px] text-ink-muted mt-1">
+        <p className="text-xs text-ink-muted mt-1.5">
           Lưu ý: Hãy chắc chắn em đã chia sẻ quyền "Người xem" cho thầy cô giáo nhé.
         </p>
       </div>
 
       <div className="p-4 rounded-xl bg-orange-50/40 border border-orange-200/80 space-y-2">
-        <label className="block text-xs font-bold text-ink uppercase tracking-wide flex items-center gap-1.5">
-          <CheckSquare className="w-3.5 h-3.5 text-orange-600" />
+        <label className="block text-sm font-bold text-ink flex items-center gap-1.5">
+          <CheckSquare className="w-4 h-4 text-orange-600" />
           <span>4. Phần tự đánh giá của học sinh (Tiêu chí Tổ THCS)</span>
         </label>
         <textarea
@@ -129,7 +129,7 @@ export function AssignmentSubmissionForm({ assignmentId }: { assignmentId: strin
           value={selfAssessment}
           onChange={(e) => setSelfAssessment(e.target.value)}
           placeholder="Em tự đánh giá bài mình đạt mức nào theo 4 tiêu chí rubric? Điều gì em hài lòng nhất và điều gì cần hoàn thiện thêm?"
-          className="w-full p-2.5 rounded-xl bg-surface border border-slate-200 text-xs text-ink focus:outline-none focus:border-ocean-600 focus:ring-2 focus:ring-ocean-500/20"
+          className="w-full p-3 rounded-xl bg-surface border border-slate-200 text-base sm:text-sm text-ink focus:outline-none focus:border-ocean-600 focus:ring-2 focus:ring-ocean-500/20 placeholder:text-ink-muted/70"
         />
       </div>
 
@@ -137,7 +137,7 @@ export function AssignmentSubmissionForm({ assignmentId }: { assignmentId: strin
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-6 py-2.5 rounded-xl bg-ocean-600 text-white text-xs font-semibold hover:bg-ocean-700 active:scale-[0.98] transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
+          className="min-h-[44px] px-6 py-2.5 rounded-xl bg-ocean-600 text-white text-sm font-semibold hover:bg-ocean-700 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <Send className="w-4 h-4" />
           <span>{isSubmitting ? "Đang ghi nhận..." : "Nộp bài cho giáo viên"}</span>

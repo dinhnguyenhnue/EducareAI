@@ -13,11 +13,17 @@ function ForbiddenContent() {
 
   return (
     <div className="min-h-screen bg-ocean-mesh flex flex-col justify-between">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-button focus:bg-ocean-600 focus:text-white focus:font-bold focus:text-xs focus:shadow-dialog"
+      >
+        Chuyển đến nội dung chính
+      </a>
       <header className="h-16 px-6 sm:px-10 flex items-center justify-between border-b border-border bg-surface/85 backdrop-blur-md">
         <BrandLogo href="/" subtitle="Bảo vệ RBAC" size="sm" />
       </header>
 
-      <main className="flex-1 flex items-center justify-center p-6">
+      <main id="main-content" tabIndex={-1} className="flex-1 flex items-center justify-center p-6 focus:outline-none">
         <PageTransition className="max-w-md w-full">
           <div className="bg-surface border border-border rounded-panel shadow-panel p-8 space-y-5 text-center">
             <div className="w-14 h-14 rounded-2xl bg-status-danger-soft text-status-danger flex items-center justify-center mx-auto border border-red-200">

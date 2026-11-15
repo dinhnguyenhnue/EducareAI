@@ -86,30 +86,30 @@ export default async function LessonPlayerPage({ params }: Props) {
               </h1>
 
               {/* Lesson 4-Phases Content Blocks */}
-              <div className="mt-8 space-y-6 text-sm text-ink leading-relaxed">
+              <div className="mt-8 space-y-6 text-base text-ink leading-relaxed">
                 {contentBlocks.map((block: any, idx: number) => {
                   if (block.type === "heading") {
                     return (
-                      <h3
+                      <h2
                         key={idx}
-                        className="text-lg font-bold text-ink pt-4 border-t border-slate-100"
+                        className="text-xl font-bold text-ink pt-6 border-t border-slate-100"
                       >
                         {block.content}
-                      </h3>
+                      </h2>
                     );
                   }
                   if (block.type === "callout") {
                     return (
                       <div
                         key={idx}
-                        className="p-4 rounded-2xl bg-violet-50/70 border border-violet-200 flex items-start gap-3"
+                        className="p-5 rounded-2xl bg-violet-50/70 border border-violet-200 flex items-start gap-3.5"
                       >
                         <Sparkles className="w-5 h-5 text-violet-600 shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-bold text-violet-800 text-xs">
-                            Gợi ý tư duy phản biện Tổ THCS
+                          <p className="font-bold text-violet-900 text-sm">
+                            Gợi ý tư duy phản biện &amp; Khám phá
                           </p>
-                          <p className="text-xs text-ink mt-1">{block.content}</p>
+                          <p className="text-sm text-ink mt-1 leading-relaxed">{block.content}</p>
                         </div>
                       </div>
                     );
@@ -118,19 +118,19 @@ export default async function LessonPlayerPage({ params }: Props) {
                     return (
                       <div
                         key={idx}
-                        className="p-5 rounded-2xl bg-sky-50/50 border border-sky-200 space-y-2"
+                        className="p-5 rounded-2xl bg-sky-50/60 border border-sky-200 space-y-2"
                       >
-                        <span className="text-xs font-bold uppercase tracking-wide text-sky-700">
+                        <span className="text-xs font-bold uppercase tracking-wider text-sky-800">
                           {block.title || "Nhiệm vụ thực hành"}
                         </span>
-                        <p className="text-xs text-ink font-medium leading-relaxed">
+                        <p className="text-sm text-ink font-medium leading-relaxed">
                           {block.content}
                         </p>
                       </div>
                     );
                   }
                   return (
-                    <p key={idx} className="text-ink leading-relaxed">
+                    <p key={idx} className="text-base text-ink leading-relaxed">
                       {block.content}
                     </p>
                   );

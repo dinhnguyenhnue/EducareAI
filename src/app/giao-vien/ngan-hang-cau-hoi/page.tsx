@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { Modal } from "@/components/ui";
 import {
   Database,
   CheckCircle2,
@@ -452,179 +453,188 @@ export default function TeacherQuestionBankPage() {
       </div>
 
       {/* Create Question Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4">
-          <div className="max-w-xl w-full rounded-2xl bg-white border border-slate-200 p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
-            <h3 className="text-base font-bold text-slate-900">
-              Thêm Câu Hỏi Mới Hoặc Lưu Bản Nháp Từ AI
-            </h3>
-            <form onSubmit={handleCreateQuestion} className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Bài học SGK
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={newLessonTitle}
-                    onChange={(e) => setNewLessonTitle(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Mức độ nhận thức
-                  </label>
-                  <select
-                    value={newCognitive}
-                    onChange={(e) => setNewCognitive(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                  >
-                    <option value="REMEMBER">Nhận biết (REMEMBER)</option>
-                    <option value="UNDERSTAND">Thông hiểu (UNDERSTAND)</option>
-                    <option value="APPLY">Vận dụng (APPLY)</option>
-                    <option value="HIGH_APPLY">Vận dụng cao (HIGH_APPLY)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Sách giáo khoa / Nguồn
-                  </label>
-                  <input
-                    type="text"
-                    value={newSourceBook}
-                    onChange={(e) => setNewSourceBook(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Trang SGK
-                  </label>
-                  <input
-                    type="text"
-                    value={newSourcePage}
-                    onChange={(e) => setNewSourcePage(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Nội dung câu hỏi *
-                </label>
-                <textarea
-                  rows={2}
-                  required
-                  value={newQuestionText}
-                  onChange={(e) => setNewQuestionText(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  required
-                  placeholder="Phương án A"
-                  value={optA}
-                  onChange={(e) => setOptA(e.target.value)}
-                  className="rounded-lg border border-slate-300 px-3 py-1.5"
-                />
-                <input
-                  type="text"
-                  required
-                  placeholder="Phương án B"
-                  value={optB}
-                  onChange={(e) => setOptB(e.target.value)}
-                  className="rounded-lg border border-slate-300 px-3 py-1.5"
-                />
-                <input
-                  type="text"
-                  required
-                  placeholder="Phương án C"
-                  value={optC}
-                  onChange={(e) => setOptC(e.target.value)}
-                  className="rounded-lg border border-slate-300 px-3 py-1.5"
-                />
-                <input
-                  type="text"
-                  required
-                  placeholder="Phương án D"
-                  value={optD}
-                  onChange={(e) => setOptD(e.target.value)}
-                  className="rounded-lg border border-slate-300 px-3 py-1.5"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Đáp án đúng
-                  </label>
-                  <select
-                    value={newCorrect}
-                    onChange={(e) => setNewCorrect(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 font-bold"
-                  >
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
-                    <option value="D">D</option>
-                  </select>
-                </div>
-                <div className="col-span-2 flex items-center pt-5">
-                  <label className="inline-flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={newIsAiDraft}
-                      onChange={(e) => setNewIsAiDraft(e.target.checked)}
-                    />
-                    <span className="font-semibold text-amber-900 flex items-center gap-1">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      Đánh dấu là câu hỏi do AI sinh (Bắt buộc chờ duyệt)
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Giải thích vì sao đáp án đúng *
-                </label>
-                <textarea
-                  rows={2}
-                  required
-                  value={newExplanation}
-                  onChange={(e) => setNewExplanation(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 font-medium"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-lg bg-ocean-600 hover:bg-ocean-700 text-white font-bold"
-                >
-                  Lưu câu hỏi
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Thêm Câu Hỏi Mới Hoặc Lưu Bản Nháp Từ AI"
+        maxWidth="max-w-xl"
+      >
+        <form onSubmit={handleCreateQuestion} className="space-y-3 text-xs">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="question-lesson-title" className="block font-semibold text-slate-700 mb-1">
+                Bài học SGK
+              </label>
+              <input
+                id="question-lesson-title"
+                type="text"
+                required
+                value={newLessonTitle}
+                onChange={(e) => setNewLessonTitle(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label htmlFor="question-cognitive-level" className="block font-semibold text-slate-700 mb-1">
+                Mức độ nhận thức
+              </label>
+              <select
+                id="question-cognitive-level"
+                value={newCognitive}
+                onChange={(e) => setNewCognitive(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2"
+              >
+                <option value="REMEMBER">Nhận biết (REMEMBER)</option>
+                <option value="UNDERSTAND">Thông hiểu (UNDERSTAND)</option>
+                <option value="APPLY">Vận dụng (APPLY)</option>
+                <option value="HIGH_APPLY">Vận dụng cao (HIGH_APPLY)</option>
+              </select>
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="question-source-book" className="block font-semibold text-slate-700 mb-1">
+                Sách giáo khoa / Nguồn
+              </label>
+              <input
+                id="question-source-book"
+                type="text"
+                value={newSourceBook}
+                onChange={(e) => setNewSourceBook(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2"
+              />
+            </div>
+            <div>
+              <label htmlFor="question-source-page" className="block font-semibold text-slate-700 mb-1">
+                Trang SGK
+              </label>
+              <input
+                id="question-source-page"
+                type="text"
+                value={newSourcePage}
+                onChange={(e) => setNewSourcePage(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="question-content-text" className="block font-semibold text-slate-700 mb-1">
+              Nội dung câu hỏi *
+            </label>
+            <textarea
+              id="question-content-text"
+              rows={2}
+              required
+              value={newQuestionText}
+              onChange={(e) => setNewQuestionText(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="text"
+              required
+              aria-label="Phương án A"
+              placeholder="Phương án A"
+              value={optA}
+              onChange={(e) => setOptA(e.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-1.5"
+            />
+            <input
+              type="text"
+              required
+              aria-label="Phương án B"
+              placeholder="Phương án B"
+              value={optB}
+              onChange={(e) => setOptB(e.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-1.5"
+            />
+            <input
+              type="text"
+              required
+              aria-label="Phương án C"
+              placeholder="Phương án C"
+              value={optC}
+              onChange={(e) => setOptC(e.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-1.5"
+            />
+            <input
+              type="text"
+              required
+              aria-label="Phương án D"
+              placeholder="Phương án D"
+              value={optD}
+              onChange={(e) => setOptD(e.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-1.5"
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label htmlFor="question-correct-answer" className="block font-semibold text-slate-700 mb-1">
+                Đáp án đúng
+              </label>
+              <select
+                id="question-correct-answer"
+                value={newCorrect}
+                onChange={(e) => setNewCorrect(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 font-bold"
+              >
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+              </select>
+            </div>
+            <div className="col-span-2 flex items-center pt-5">
+              <label className="inline-flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={newIsAiDraft}
+                  onChange={(e) => setNewIsAiDraft(e.target.checked)}
+                />
+                <span className="font-semibold text-amber-900 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Đánh dấu là câu hỏi do AI sinh (Bắt buộc chờ duyệt)
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="question-explanation-text" className="block font-semibold text-slate-700 mb-1">
+              Giải thích vì sao đáp án đúng *
+            </label>
+            <textarea
+              id="question-explanation-text"
+              rows={2}
+              required
+              value={newExplanation}
+              onChange={(e) => setNewExplanation(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 font-medium"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-lg bg-ocean-600 hover:bg-ocean-700 text-white font-bold"
+            >
+              Lưu câu hỏi
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
     </AppShell>
   );

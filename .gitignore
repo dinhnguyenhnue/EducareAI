@@ -19,5 +19,6 @@ prisma/dev.db
 prisma/dev.db-journal
 DANH SÁCH HỌC SINH*.xlsx
 tsconfig.tsbuildinfo
+scratch/
 
 .neon

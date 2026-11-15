@@ -21,7 +21,9 @@ function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") || "";
+  const isFirstLogin = searchParams.get("firstLogin") === "1" || !token;
 
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -33,10 +35,15 @@ function ResetPasswordForm() {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!token) {
+    if (!isFirstLogin && !token) {
       setErrorMessage(
         "Thiếu mã xác thực khôi phục mật khẩu. Vui lòng bấm vào liên kết trong email."
       );
+      return;
+    }
+
+    if (isFirstLogin && !currentPassword) {
+      setErrorMessage("Vui lòng nhập mật khẩu tạm do nhà trường/giáo viên cấp.");
       return;
     }
 
@@ -50,27 +57,36 @@ function ResetPasswordForm() {
       return;
     }
 
+    if (isFirstLogin && newPassword === currentPassword) {
+      setErrorMessage("Mật khẩu mới phải khác mật khẩu tạm ban đầu.");
+      return;
+    }
+
     setIsLoading(true);
     try {
+      const payload = isFirstLogin
+        ? { mode: "FIRST_LOGIN_CHANGE", currentPassword, newPassword }
+        : { token, newPassword };
+
       const res = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, newPassword }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
       if (!res.ok) {
         setErrorMessage(
           data.error ||
-            "Không thể đặt lại mật khẩu. Liên kết có thể đã hết hạn."
+            "Không thể đặt lại mật khẩu. Vui lòng kiểm tra lại thông tin."
         );
         return;
       }
 
       setSuccessMessage(data.message || "Đặt lại mật khẩu thành công!");
       setTimeout(() => {
-        router.push("/dang-nhap");
-      }, 2000);
+        router.push(data.redirectUrl || "/dang-nhap");
+      }, 1500);
     } catch {
       setErrorMessage("Không thể kết nối máy chủ. Vui lòng thử lại sau.");
     } finally {
@@ -82,13 +98,15 @@ function ResetPasswordForm() {
     <div className="w-full max-w-md mx-auto">
       <div className="mb-6">
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-ocean-light text-ocean-700 text-[11px] font-bold mb-2.5">
-          Thiết lập mật khẩu mới
+          {isFirstLogin ? "Kích hoạt tài khoản học sinh" : "Thiết lập mật khẩu mới"}
         </span>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight">
-          Đặt lại mật khẩu mới
+          {isFirstLogin ? "Đổi mật khẩu lần đầu" : "Đặt lại mật khẩu mới"}
         </h1>
         <p className="text-xs sm:text-sm text-ink-muted mt-1.5">
-          Vui lòng nhập mật khẩu mới bảo mật cho tài khoản UNIGO của bạn.
+          {isFirstLogin
+            ? "Để bảo vệ tài khoản học tập, bạn cần đổi mật khẩu tạm do quản trị viên cấp trước khi bắt đầu."
+            : "Vui lòng nhập mật khẩu mới bảo mật cho tài khoản của bạn."}
         </p>
       </div>
 
@@ -109,30 +127,59 @@ function ResetPasswordForm() {
           </div>
           <h3 className="font-bold text-ink text-sm">Thành công!</h3>
           <p className="text-xs text-ink-muted leading-relaxed">
-            Mật khẩu đã được cập nhật an toàn. Đang chuyển hướng bạn về trang đăng nhập...
+            {successMessage}
           </p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
+          {isFirstLogin && (
+            <div>
+              <label
+                htmlFor="reset-current-password"
+                className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5"
+              >
+                Mật khẩu tạm hiện tại
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  id="reset-current-password"
+                  type={showPassword ? "text" : "password"}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu tạm được cấp"
+                  required
+                  autoComplete="current-password"
+                  className="w-full pl-10 pr-10 py-2.5 rounded-button bg-canvas border border-border focus:bg-surface focus:border-ocean-600 focus:ring-2 focus:ring-ocean-light text-sm text-ink outline-none transition-all placeholder:text-ink-muted/55"
+                />
+              </div>
+            </div>
+          )}
+
           <div>
-            <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
+            <label
+              htmlFor="reset-new-password"
+              className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5"
+            >
               Mật khẩu mới
             </label>
             <div className="relative">
               <Lock className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
+                id="reset-new-password"
                 type={showPassword ? "text" : "password"}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Tối thiểu 8 ký tự"
                 required
+                autoComplete="new-password"
                 className="w-full pl-10 pr-10 py-2.5 rounded-button bg-canvas border border-border focus:bg-surface focus:border-ocean-600 focus:ring-2 focus:ring-ocean-light text-sm text-ink outline-none transition-all placeholder:text-ink-muted/55"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink p-1 rounded"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink p-1 rounded cursor-pointer"
               >
                 {showPassword ? (
                   <EyeOff className="w-4 h-4" />
@@ -144,17 +191,22 @@ function ResetPasswordForm() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5">
+            <label
+              htmlFor="reset-confirm-password"
+              className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5"
+            >
               Xác nhận mật khẩu mới
             </label>
             <div className="relative">
               <Lock className="w-4 h-4 text-ink-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
+                id="reset-confirm-password"
                 type={showPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Nhập lại mật khẩu mới"
                 required
+                autoComplete="new-password"
                 className="w-full pl-10 pr-4 py-2.5 rounded-button bg-canvas border border-border focus:bg-surface focus:border-ocean-600 focus:ring-2 focus:ring-ocean-light text-sm text-ink outline-none transition-all placeholder:text-ink-muted/55"
               />
             </div>
