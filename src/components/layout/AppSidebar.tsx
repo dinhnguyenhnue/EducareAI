@@ -78,6 +78,13 @@ export function AppSidebar({
           tone: "materials",
         },
         {
+          label: "Ôn tập lớp 6 (KNTT)",
+          href: "/hoc-sinh/on-tap",
+          icon: <BookOpen className="w-4 h-4" />,
+          tone: "materials",
+          badge: "Mới",
+        },
+        {
           label: "Bài tập & Nộp bài",
           href: "/hoc-sinh/bai-tap",
           icon: <ClipboardList className="w-4 h-4" />,
@@ -180,6 +187,13 @@ export function AppSidebar({
           href: "/giao-vien/bai-giang",
           icon: <BookOpen className="w-4 h-4" />,
           tone: "materials",
+        },
+        {
+          label: "SGK & Sinh đề ôn tập",
+          href: "/giao-vien/on-tap",
+          icon: <BookOpen className="w-4 h-4" />,
+          tone: "materials",
+          badge: "Mới",
         },
         {
           label: "Ngân hàng câu hỏi & Đề",

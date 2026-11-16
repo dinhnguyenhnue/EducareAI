@@ -19,6 +19,7 @@ import {
   syncAssignmentToClassroom,
   createGoogleDocFromTemplate,
   syncAssignmentDeadlineToCalendar,
+  syncLocalSgkToDrive,
   type GoogleAccountMode,
 } from "@/lib/google-workspace";
 
@@ -247,8 +248,28 @@ export async function POST(req: Request) {
           success: true,
           status: isNotConfigured ? "NOT_CONFIGURED" : result.connectionState,
           message: isNotConfigured
-            ? `[Chưa cấu hình Google Drive API — NOT_CONFIGURED] Đã khởi tạo cấu trúc 21 nút thư mục mẫu trong CSDL cục bộ. Khi nhà trường cung cấp GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET và cấp quyền OAuth, hệ thống sẽ tạo thư mục thật trên Google Drive.`
-            : `Đã khởi tạo cấu trúc 6 thư mục gốc & 15 thư mục con (${result.totalFoldersProvisioned} nodes) trên Google Drive.`,
+            ? `[Chưa cấu hình Google Drive API — NOT_CONFIGURED] Đã khởi tạo cấu trúc ${result.totalFoldersProvisioned} nút thư mục mẫu trong CSDL cục bộ. Khi nhà trường cung cấp GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET và cấp quyền OAuth, hệ thống sẽ tạo thư mục thật trên Google Drive.`
+            : `Đã khởi tạo cấu trúc 6 thư mục gốc & ${result.totalFoldersProvisioned} nodes trên Google Drive.`,
+          data: result,
+        });
+      }
+
+      case "SYNC_LOCAL_SGK_TO_DRIVE": {
+        const accountMode: GoogleAccountMode =
+          payload?.accountMode === "WORKSPACE_DOMAIN"
+            ? "WORKSPACE_DOMAIN"
+            : "PERSONAL_GMAIL_HYBRID";
+        const result = await syncLocalSgkToDrive(actorId, session.role, accountMode);
+        return NextResponse.json({
+          success: true,
+          status:
+            result.connectionState === "DISCONNECTED"
+              ? "NOT_CONFIGURED"
+              : result.syncState,
+          message:
+            result.localReadyCount > 0
+              ? `Đã phân lớp & lập chỉ mục ${result.localReadyCount}/${result.totalExpectedCount} SGK KNTT lớp 6 vào kho Asset và cây thư mục 02_HOC_LIEU (trạng thái: ${result.syncState}; Google Drive API: ${result.connectionState} — chưa tải tệp nhị phân trực tiếp lên Google Drive).`
+              : `Đã khởi tạo cây thư mục 02_HOC_LIEU cho SGK KNTT lớp 6 (trạng thái: ${result.connectionState}; không tìm thấy tệp PDF gốc trên máy chủ).`,
           data: result,
         });
       }

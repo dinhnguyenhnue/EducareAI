@@ -1,0 +1,195 @@
+{
+  "schemaVersion": "1.0.0",
+  "bookSeries": "Kết nối tri thức với cuộc sống",
+  "publisher": "Nhà xuất bản Giáo dục Việt Nam",
+  "gradeLevel": 6,
+  "term": 1,
+  "driveRootStandard": "EDUCARE_AI/02_HOC_LIEU",
+  "items": [
+    {
+      "id": "toan-6-tap-1-kntt",
+      "subjectCode": "TOAN6",
+      "subjectName": "Toán",
+      "driveSubjectFolder": "Toan",
+      "bookTitle": "Toán 6 - Tập một",
+      "bookSeries": "Kết nối tri thức với cuộc sống",
+      "isbn": "978-604-0-25151-0",
+      "fileName": "SGK_Toan_6_Tap_1_KNTT.pdf",
+      "localRelativePath": "SGK/Lop_6/Toan/Tap_1/SGK_Toan_6_Tap_1_KNTT.pdf",
+      "unigoArchivePath": "D:/UNIGO/SGK/Lớp_6/Toan/Tap_1/SGK_Toan_6_Tap_1_KNTT.pdf",
+      "driveFolderCode": "02_HOC_LIEU_TOAN_LOP6_TAP1",
+      "driveTargetFolder": "EDUCARE_AI/02_HOC_LIEU/Toan/Lop_6/Tap_1",
+      "driveTargetPath": "EDUCARE_AI/02_HOC_LIEU/Toan/Lop_6/Tap_1/SGK_Toan_6_Tap_1_KNTT.pdf",
+      "sizeBytes": 20388850,
+      "pdfPages": 126,
+      "pageOffset": 1,
+      "sha256": "E31436F853DC01193E446AC271A7B53F395A7066F1840A3A7585B79721293BD4",
+      "chapters": [
+        {
+          "code": "TOAN6_CH1",
+          "title": "Chương I. Tập hợp các số tự nhiên",
+          "printPages": "5-28",
+          "pdfPages": "6-29",
+          "lessons": [
+            "Bài 1. Tập hợp (tr.5)",
+            "Bài 2. Cách ghi số tự nhiên (tr.9)",
+            "Bài 3. Thứ tự trong tập hợp các số tự nhiên (tr.13)",
+            "Bài 4. Phép cộng và phép trừ số tự nhiên (tr.15)",
+            "Bài 5. Phép nhân và phép chia số tự nhiên (tr.17)",
+            "Bài 6. Lũy thừa với số mũ tự nhiên (tr.22)",
+            "Bài 7. Thứ tự thực hiện các phép tính (tr.25)",
+            "Luyện tập chung & Bài tập cuối chương I (tr.20, 27, 28)"
+          ]
+        },
+        {
+          "code": "TOAN6_CH2",
+          "title": "Chương II. Tính chia hết trong tập hợp các số tự nhiên",
+          "printPages": "29-56",
+          "pdfPages": "30-57",
+          "lessons": [
+            "Bài 8. Quan hệ chia hết và tính chất (tr.29)",
+            "Bài 9. Dấu hiệu chia hết (tr.34)",
+            "Bài 10. Số nguyên tố (tr.38)",
+            "Bài 11. Ước chung. Ước chung lớn nhất (tr.44)",
+            "Bài 12. Bội chung. Bội chung nhỏ nhất (tr.49)",
+            "Luyện tập chung & Bài tập cuối chương II (tr.43, 54, 56)"
+          ]
+        },
+        {
+          "code": "TOAN6_CH3",
+          "title": "Chương III. Số nguyên",
+          "printPages": "57-76",
+          "pdfPages": "58-77",
+          "lessons": [
+            "Bài 13. Tập hợp các số nguyên (tr.57)",
+            "Bài 14. Phép cộng và phép trừ số nguyên (tr.62)",
+            "Bài 15. Quy tắc dấu ngoặc (tr.67)",
+            "Bài 16. Phép nhân số nguyên (tr.70)",
+            "Bài 17. Phép chia hết. Ước và bội của một số nguyên (tr.73)",
+            "Luyện tập chung & Bài tập cuối chương III (tr.69, 75, 76)"
+          ]
+        },
+        {
+          "code": "TOAN6_CH4",
+          "title": "Chương IV. Một số hình phẳng trong thực tiễn",
+          "printPages": "77-97",
+          "pdfPages": "78-98",
+          "lessons": [
+            "Bài 18. Hình tam giác đều. Hình vuông. Hình lục giác đều (tr.77)",
+            "Bài 19. Hình chữ nhật. Hình thoi. Hình bình hành. Hình thang cân (tr.83)",
+            "Bài 20. Chu vi và diện tích của một số tứ giác đã học (tr.90)",
+            "Luyện tập chung & Bài tập cuối chương IV (tr.95, 97)"
+          ]
+        },
+        {
+          "code": "TOAN6_CH5",
+          "title": "Chương V. Tính đối xứng của hình phẳng trong tự nhiên",
+          "printPages": "98-110",
+          "pdfPages": "99-111",
+          "lessons": [
+            "Bài 21. Hình có trục đối xứng (tr.98)",
+            "Bài 22. Hình có tâm đối xứng (tr.103)",
+            "Luyện tập chung & Bài tập cuối chương V (tr.108, 110)"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ngu-van-6-tap-1-kntt",
+      "subjectCode": "VAN6",
+      "subjectName": "Ngữ văn",
+      "driveSubjectFolder": "Ngu_van",
+      "bookTitle": "Ngữ văn 6 - Tập một",
+      "bookSeries": "Kết nối tri thức với cuộc sống",
+      "isbn": "978-604-0-25154-1",
+      "fileName": "SGK_Ngu_van_6_Tap_1_KNTT.pdf",
+      "localRelativePath": "SGK/Lop_6/Ngu_van/Tap_1/SGK_Ngu_van_6_Tap_1_KNTT.pdf",
+      "unigoArchivePath": "D:/UNIGO/SGK/Lớp_6/Ngu_van/Tap_1/SGK_Ngu_van_6_Tap_1_KNTT.pdf",
+      "driveFolderCode": "02_HOC_LIEU_VAN_LOP6_TAP1",
+      "driveTargetFolder": "EDUCARE_AI/02_HOC_LIEU/Ngu_van/Lop_6/Tap_1",
+      "driveTargetPath": "EDUCARE_AI/02_HOC_LIEU/Ngu_van/Lop_6/Tap_1/SGK_Ngu_van_6_Tap_1_KNTT.pdf",
+      "sizeBytes": 28820270,
+      "pdfPages": 138,
+      "pageOffset": 1,
+      "sha256": "6D370295E8A224AF46ADC98E652B63FF5D35C4611236E25BF045C5B47E4615F5",
+      "chapters": [
+        {
+          "code": "VAN6_B1",
+          "title": "Bài 1. Tôi và các bạn",
+          "printPages": "10-37",
+          "pdfPages": "11-38",
+          "lessons": [
+            "Đọc: Bài học đường đời đầu tiên (Tô Hoài, tr.12)",
+            "Thực hành tiếng Việt (Từ đơn và từ phức, từ ghép và từ láy, nghĩa của từ, tr.20, 26)",
+            "Đọc: Nếu cậu muốn có một người bạn... (tr.21) & Bắt nạt (tr.27)",
+            "Viết bài văn kể lại một trải nghiệm của em (tr.28)",
+            "Nói và nghe, Củng cố mở rộng, Thực hành đọc: Những người bạn (tr.32-37)"
+          ]
+        },
+        {
+          "code": "VAN6_B2",
+          "title": "Bài 2. Gõ cửa trái tim",
+          "printPages": "38-58",
+          "pdfPages": "39-59",
+          "lessons": [
+            "Đọc: Chuyện cổ tích về loài người (Xuân Quỳnh, tr.40)",
+            "Thực hành tiếng Việt (Biện pháp tu từ so sánh, nhân hóa, điệp ngữ, tr.43, 47)",
+            "Đọc: Mây và sóng (Ta-go, tr.44) & Bức tranh của em gái tôi (Tạ Duy Anh, tr.48)",
+            "Viết đoạn văn ghi lại cảm xúc về một bài thơ có yếu tố tự sự và miêu tả (tr.52)",
+            "Nói và nghe, Củng cố mở rộng, Thực hành đọc: Những cánh buồm (tr.55-58)"
+          ]
+        },
+        {
+          "code": "VAN6_B3",
+          "title": "Bài 3. Yêu thương và chia sẻ",
+          "printPages": "59-87",
+          "pdfPages": "60-88",
+          "lessons": [
+            "Đọc: Cô bé bán diêm (An-đéc-xen, tr.61)",
+            "Thực hành tiếng Việt (Cụm danh từ, mở rộng thành phần chính của câu, tr.66, 74)",
+            "Đọc: Gió lạnh đầu mùa (Thạch Lam, tr.67) & Con chào mào (Mai Văn Phấn, tr.75)",
+            "Viết bài văn kể lại một trải nghiệm của em (tr.77)",
+            "Nói và nghe, Củng cố mở rộng, Thực hành đọc: Lắc-ki thực sự may mắn, Đọc mở rộng (tr.82-87)"
+          ]
+        },
+        {
+          "code": "VAN6_B4",
+          "title": "Bài 4. Quê hương yêu dấu",
+          "printPages": "88-107",
+          "pdfPages": "89-108",
+          "lessons": [
+            "Đọc: Chùm ca dao về quê hương đất nước (tr.90)",
+            "Thực hành tiếng Việt (Thơ lục bát, từ đồng âm, từ đa nghĩa, hoán dụ, tr.92, 99)",
+            "Đọc: Chuyện cổ nước mình (tr.93) & Cây tre Việt Nam (Thép Mới, tr.95)",
+            "Viết: Tập làm một bài thơ lục bát & Viết đoạn văn cảm xúc về bài thơ lục bát (tr.100-103)",
+            "Nói và nghe, Củng cố mở rộng, Thực hành đọc: Hành trình của bầy ong (tr.104-107)"
+          ]
+        },
+        {
+          "code": "VAN6_B5",
+          "title": "Bài 5. Những nẻo đường xứ sở",
+          "printPages": "108-130",
+          "pdfPages": "109-131",
+          "lessons": [
+            "Đọc: Cô Tô (Nguyễn Tuân, tr.110)",
+            "Thực hành tiếng Việt (Dấu ngoặc kép, ẩn dụ, nhân hóa, lựa chọn từ ngữ, tr.113, 118)",
+            "Đọc: Hang Én (Hà My, tr.114) & Cửu Long Giang ta ơi (Nguyên Hồng, tr.119)",
+            "Viết bài văn tả cảnh sinh hoạt (tr.122)",
+            "Nói và nghe, Củng cố mở rộng, Thực hành đọc: Nghìn năm tháp Khương Mỹ (tr.126-130)"
+          ]
+        },
+        {
+          "code": "VAN6_HK1",
+          "title": "Ôn tập Học kì I & Phụ lục thuật ngữ",
+          "printPages": "131-135",
+          "pdfPages": "132-136",
+          "lessons": [
+            "Ôn tập Học kì I (tr.131)",
+            "Phụ lục 1: Bảng tra cứu thuật ngữ (tr.132)",
+            "Phụ lục 2: Giải thích một số thuật ngữ (tr.134)"
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,7 @@
 import crypto from "crypto";
+import { createReadStream } from "fs";
+import fs from "fs/promises";
+import path from "path";
 import { prisma } from "./prisma";
 import {
   decryptSecret,
@@ -120,6 +123,24 @@ export const EDUCARE_DRIVE_FOLDER_TREE = [
     desc: "Học liệu, phiếu bài tập và đề kiểm tra môn Toán học",
   },
   {
+    folderCode: "02_HOC_LIEU_TOAN_LOP6",
+    name: "Lop_6",
+    parentCode: "02_HOC_LIEU_TOAN",
+    folderPath: "EDUCARE_AI/02_HOC_LIEU/Toan/Lop_6",
+    permissionScope: "RESTRICTED_ADMIN_TEACHER",
+    subjectCode: "TOAN6",
+    desc: "SGK Kết nối tri thức và học liệu Toán lớp 6",
+  },
+  {
+    folderCode: "02_HOC_LIEU_TOAN_LOP6_TAP1",
+    name: "Tap_1",
+    parentCode: "02_HOC_LIEU_TOAN_LOP6",
+    folderPath: "EDUCARE_AI/02_HOC_LIEU/Toan/Lop_6/Tap_1",
+    permissionScope: "RESTRICTED_ADMIN_TEACHER",
+    subjectCode: "TOAN6",
+    desc: "SGK Toán 6 - Tập một (Kết nối tri thức với cuộc sống) & học liệu HK1",
+  },
+  {
     folderCode: "02_HOC_LIEU_NGU_VAN",
     name: "Ngu_van",
     parentCode: "02_HOC_LIEU",
@@ -127,6 +148,24 @@ export const EDUCARE_DRIVE_FOLDER_TREE = [
     permissionScope: "RESTRICTED_ADMIN_TEACHER",
     subjectCode: "VAN7",
     desc: "Học liệu, văn bản đọc hiểu và đề kiểm tra môn Ngữ văn",
+  },
+  {
+    folderCode: "02_HOC_LIEU_VAN_LOP6",
+    name: "Lop_6",
+    parentCode: "02_HOC_LIEU_NGU_VAN",
+    folderPath: "EDUCARE_AI/02_HOC_LIEU/Ngu_van/Lop_6",
+    permissionScope: "RESTRICTED_ADMIN_TEACHER",
+    subjectCode: "VAN6",
+    desc: "SGK Kết nối tri thức và học liệu Ngữ văn lớp 6",
+  },
+  {
+    folderCode: "02_HOC_LIEU_VAN_LOP6_TAP1",
+    name: "Tap_1",
+    parentCode: "02_HOC_LIEU_VAN_LOP6",
+    folderPath: "EDUCARE_AI/02_HOC_LIEU/Ngu_van/Lop_6/Tap_1",
+    permissionScope: "RESTRICTED_ADMIN_TEACHER",
+    subjectCode: "VAN6",
+    desc: "SGK Ngữ văn 6 - Tập một (Kết nối tri thức với cuộc sống) & học liệu HK1",
   },
   {
     folderCode: "02_HOC_LIEU_TIN_HOC",
@@ -2365,6 +2404,305 @@ export async function syncAssignmentDeadlineToCalendar(
       useDefault: false,
       overrides,
     },
+    syncLog,
+  };
+}
+
+export interface LocalSgkSyncItemResult {
+  id: string;
+  subjectCode: string;
+  subjectName: string;
+  bookTitle: string;
+  bookSeries: string;
+  fileName: string;
+  localRelativePath: string;
+  driveFolderCode: string;
+  driveTargetFolder: string;
+  driveTargetPath: string;
+  foundOnDisk: boolean;
+  sizeBytes: number | null;
+  sha256: string | null;
+  assetId: string | null;
+  status: "LOCAL_READY" | "DISCONNECTED";
+}
+
+interface ManifestSgkEntry {
+  id: string;
+  subjectCode: string;
+  subjectName: string;
+  driveSubjectFolder: string;
+  bookTitle: string;
+  bookSeries: string;
+  fileName: string;
+  localRelativePath: string;
+  driveFolderCode: string;
+  driveTargetFolder: string;
+  driveTargetPath: string;
+}
+
+const DEFAULT_LOP6_SGK_ENTRIES: ManifestSgkEntry[] = [
+  {
+    id: "toan-6-tap-1-kntt",
+    subjectCode: "TOAN6",
+    subjectName: "Toán",
+    driveSubjectFolder: "Toan",
+    bookTitle: "Toán 6 - Tập một",
+    bookSeries: "Kết nối tri thức với cuộc sống",
+    fileName: "SGK_Toan_6_Tap_1_KNTT.pdf",
+    localRelativePath: "SGK/Lop_6/Toan/Tap_1/SGK_Toan_6_Tap_1_KNTT.pdf",
+    driveFolderCode: "02_HOC_LIEU_TOAN_LOP6_TAP1",
+    driveTargetFolder: "EDUCARE_AI/02_HOC_LIEU/Toan/Lop_6/Tap_1",
+    driveTargetPath: "EDUCARE_AI/02_HOC_LIEU/Toan/Lop_6/Tap_1/SGK_Toan_6_Tap_1_KNTT.pdf",
+  },
+  {
+    id: "ngu-van-6-tap-1-kntt",
+    subjectCode: "VAN6",
+    subjectName: "Ngữ văn",
+    driveSubjectFolder: "Ngu_van",
+    bookTitle: "Ngữ văn 6 - Tập một",
+    bookSeries: "Kết nối tri thức với cuộc sống",
+    fileName: "SGK_Ngu_van_6_Tap_1_KNTT.pdf",
+    localRelativePath: "SGK/Lop_6/Ngu_van/Tap_1/SGK_Ngu_van_6_Tap_1_KNTT.pdf",
+    driveFolderCode: "02_HOC_LIEU_VAN_LOP6_TAP1",
+    driveTargetFolder: "EDUCARE_AI/02_HOC_LIEU/Ngu_van/Lop_6/Tap_1",
+    driveTargetPath: "EDUCARE_AI/02_HOC_LIEU/Ngu_van/Lop_6/Tap_1/SGK_Ngu_van_6_Tap_1_KNTT.pdf",
+  },
+];
+
+async function computeFileSha256(filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash("sha256");
+    const stream = createReadStream(filePath);
+    stream.on("data", (chunk) => hash.update(chunk));
+    stream.on("end", () => resolve(hash.digest("hex").toUpperCase()));
+    stream.on("error", reject);
+  });
+}
+
+async function loadExpectedSgkEntries(): Promise<ManifestSgkEntry[]> {
+  const manifestPath = path.join(process.cwd(), "SGK", "sgk-kntt-manifest.json");
+  let entries: ManifestSgkEntry[] = [...DEFAULT_LOP6_SGK_ENTRIES];
+  try {
+    const raw = await fs.readFile(manifestPath, "utf-8");
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed?.items) && parsed.items.length > 0) {
+      entries = parsed.items;
+    }
+  } catch {
+    // Fallback to built-in KNTT Lop 6 entries if manifest file is absent
+  }
+
+  const knownRelPaths = new Set(entries.map((e) => e.localRelativePath.replace(/\\/g, "/")));
+  for (const subject of [
+    { folder: "Toan", code: "TOAN6", name: "Toán", folderCode: "02_HOC_LIEU_TOAN_LOP6_TAP1" },
+    { folder: "Ngu_van", code: "VAN6", name: "Ngữ văn", folderCode: "02_HOC_LIEU_VAN_LOP6_TAP1" },
+  ]) {
+    const dirPath = path.join(process.cwd(), "SGK", "Lop_6", subject.folder, "Tap_1");
+    try {
+      const dirFiles = await fs.readdir(dirPath);
+      for (const file of dirFiles) {
+        if (!file.toLowerCase().endsWith(".pdf")) continue;
+        const rel = `SGK/Lop_6/${subject.folder}/Tap_1/${file}`;
+        if (knownRelPaths.has(rel)) continue;
+        knownRelPaths.add(rel);
+        entries.push({
+          id: `${subject.code.toLowerCase()}-${file.replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase()}`,
+          subjectCode: subject.code,
+          subjectName: subject.name,
+          driveSubjectFolder: subject.folder,
+          bookTitle: `${subject.name} 6 - ${file}`,
+          bookSeries: "Kết nối tri thức với cuộc sống",
+          fileName: file,
+          localRelativePath: rel,
+          driveFolderCode: subject.folderCode,
+          driveTargetFolder: `EDUCARE_AI/02_HOC_LIEU/${subject.folder}/Lop_6/Tap_1`,
+          driveTargetPath: `EDUCARE_AI/02_HOC_LIEU/${subject.folder}/Lop_6/Tap_1/${file}`,
+        });
+      }
+    } catch {
+      // Directory may not exist in serverless runtime
+    }
+  }
+
+  return entries;
+}
+
+/**
+ * Quét thư mục SGK đã phân lớp trong máy (SGK/Lop_6/{Toan,Ngu_van}/Tap_1/*.pdf),
+ * đồng bộ cây thư mục 02_HOC_LIEU trong Supabase (DriveFolderNode) & đăng ký Asset CLEAN_PUBLISHED.
+ * Trung thực theo AGENTS.md: không bao giờ ghi SYNCED/SUCCESS khi chưa tải tệp nhị phân lên Google Drive API thật.
+ */
+export async function syncLocalSgkToDrive(
+  actorId: string,
+  actorRole: string = "TEACHER",
+  accountMode: GoogleAccountMode = "PERSONAL_GMAIL_HYBRID"
+) {
+  const integrationMode = await resolveGoogleIntegrationMode(actorId);
+
+  const requiredFolderCodes = new Set([
+    "ROOT_EDUCARE_AI",
+    "02_HOC_LIEU",
+    "02_HOC_LIEU_TOAN",
+    "02_HOC_LIEU_TOAN_LOP6",
+    "02_HOC_LIEU_TOAN_LOP6_TAP1",
+    "02_HOC_LIEU_NGU_VAN",
+    "02_HOC_LIEU_VAN_LOP6",
+    "02_HOC_LIEU_VAN_LOP6_TAP1",
+  ]);
+  const nodesToEnsure = EDUCARE_DRIVE_FOLDER_TREE.filter((n) =>
+    requiredFolderCodes.has(n.folderCode)
+  );
+
+  const ensuredNodesMap = new Map<string, any>();
+  for (const node of nodesToEnsure) {
+    const upserted = await prisma.driveFolderNode.upsert({
+      where: { folderCode: node.folderCode },
+      update: {
+        name: node.name,
+        parentCode: node.parentCode,
+        folderPath: node.folderPath,
+        permissionScope: node.permissionScope,
+        accountMode,
+        subjectCode: node.subjectCode,
+        lastVerifiedAt: new Date(),
+      },
+      create: {
+        folderCode: node.folderCode,
+        name: node.name,
+        parentCode: node.parentCode,
+        folderPath: node.folderPath,
+        googleFolderId: `UNCONNECTED_${node.folderCode}`,
+        permissionScope: node.permissionScope,
+        accountMode,
+        subjectCode: node.subjectCode,
+        fileCount: 0,
+      },
+    });
+    ensuredNodesMap.set(node.folderCode, upserted);
+  }
+
+  const expectedEntries = await loadExpectedSgkEntries();
+  const folderLocalCounts = new Map<string, number>();
+  const registeredAssets: any[] = [];
+  const items: LocalSgkSyncItemResult[] = [];
+
+  for (const entry of expectedEntries) {
+    const normalizedRel = entry.localRelativePath.replace(/^[/\\]+/, "");
+    const absPath = path.join(process.cwd(), ...normalizedRel.split("/"));
+    let foundOnDisk = false;
+    let sizeBytes: number | null = null;
+    let sha256: string | null = null;
+    let assetId: string | null = null;
+
+    try {
+      const stat = await fs.stat(absPath);
+      if (stat.isFile() && stat.size > 0) {
+        foundOnDisk = true;
+        sizeBytes = stat.size;
+        sha256 = await computeFileSha256(absPath);
+        folderLocalCounts.set(
+          entry.driveFolderCode,
+          (folderLocalCounts.get(entry.driveFolderCode) || 0) + 1
+        );
+
+        const storageKey = `sgk-kntt/${normalizedRel}`;
+        const asset = await prisma.asset.upsert({
+          where: { storageKey },
+          update: {
+            originalFilename: entry.fileName,
+            mimeType: "application/pdf",
+            extension: ".pdf",
+            sizeBytes,
+            sha256Checksum: sha256,
+            category: "DOCUMENT",
+            previewMode: "INLINE_PREVIEW",
+            quarantineStatus: "CLEAN_PUBLISHED",
+            scanNotes: `${entry.bookSeries} • ${entry.bookTitle} • Sẵn sàng đẩy lên ${entry.driveTargetFolder}`,
+            driveLinkOptional: entry.driveTargetPath,
+          },
+          create: {
+            storageKey,
+            originalFilename: entry.fileName,
+            mimeType: "application/pdf",
+            extension: ".pdf",
+            sizeBytes,
+            sha256Checksum: sha256,
+            category: "DOCUMENT",
+            previewMode: "INLINE_PREVIEW",
+            quarantineStatus: "CLEAN_PUBLISHED",
+            scanNotes: `${entry.bookSeries} • ${entry.bookTitle} • Sẵn sàng đẩy lên ${entry.driveTargetFolder}`,
+            ownerId: actorId,
+            ownerRole: actorRole,
+            academicYearId: "2026-2027",
+            driveLinkOptional: entry.driveTargetPath,
+          },
+        });
+        assetId = asset.id;
+        registeredAssets.push(asset);
+      }
+    } catch {
+      // File not present locally on this host
+    }
+
+    items.push({
+      id: entry.id,
+      subjectCode: entry.subjectCode,
+      subjectName: entry.subjectName,
+      bookTitle: entry.bookTitle,
+      bookSeries: entry.bookSeries,
+      fileName: entry.fileName,
+      localRelativePath: normalizedRel,
+      driveFolderCode: entry.driveFolderCode,
+      driveTargetFolder: entry.driveTargetFolder,
+      driveTargetPath: entry.driveTargetPath,
+      foundOnDisk,
+      sizeBytes,
+      sha256,
+      assetId,
+      status: foundOnDisk ? "LOCAL_READY" : "DISCONNECTED",
+    });
+  }
+
+  for (const [folderCode, count] of folderLocalCounts.entries()) {
+    const updatedNode = await prisma.driveFolderNode.update({
+      where: { folderCode },
+      data: {
+        fileCount: count,
+        lastVerifiedAt: new Date(),
+      },
+    });
+    ensuredNodesMap.set(folderCode, updatedNode);
+  }
+
+  const localReadyCount = items.filter((i) => i.foundOnDisk).length;
+  const syncState: "LOCAL_READY" | "DISCONNECTED" =
+    localReadyCount > 0 ? "LOCAL_READY" : "DISCONNECTED";
+
+  // Trung thực: chưa thực hiện tải tệp nhị phân trực tiếp lên Google Drive API trong luồng này -> logStatus = DISCONNECTED
+  const syncLog = await prisma.syncLog.create({
+    data: {
+      userId: actorId,
+      service: "DRIVE",
+      action: "SYNC_LOCAL_SGK_TO_DRIVE",
+      resourceId: "EDUCARE_AI/02_HOC_LIEU/Lop_6",
+      status: "DISCONNECTED",
+      errorMessage:
+        localReadyCount > 0
+          ? `Đã lập chỉ mục ${localReadyCount}/${items.length} tệp SGK KNTT lớp 6 vào kho Asset và cây thư mục 02_HOC_LIEU (trạng thái OAuth hiện tại: ${integrationMode.syncStatus}; chưa tải tệp nhị phân trực tiếp lên Google Drive API).`
+          : `Chưa tìm thấy tệp PDF vật lý trong SGK/Lop_6 trên máy chủ (${integrationMode.syncStatus}).`,
+    },
+  });
+
+  return {
+    accountMode,
+    connectionState: integrationMode.syncStatus,
+    syncState,
+    localReadyCount,
+    totalExpectedCount: items.length,
+    driveUploadedCount: 0,
+    folderNodes: Array.from(ensuredNodesMap.values()),
+    assets: registeredAssets,
+    items,
     syncLog,
   };
 }

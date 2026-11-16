@@ -21,4 +21,8 @@ DANH SÁCH HỌC SINH*.xlsx
 tsconfig.tsbuildinfo
 scratch/
 
+# Local textbook originals and extracted copyrighted pages
+SGK/**/*.pdf
+scratch/sgk-review/
+
 .neon

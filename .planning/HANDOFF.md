@@ -39,8 +39,14 @@
   - **Giáo viên (`/giao-vien/*`)**: Hàng đợi chấm bài theo Rubric 4 mức chuyển tiếp mượt mà, gợi ý nhận xét AI sư phạm giữ vai trò trợ lý; công cụ biên soạn bài giảng hỗ trợ tạo phiếu học tập Google Docs thật; ngân hàng câu hỏi hiển thị rõ mức độ nhận thức và nhãn dữ liệu trung thực.
   - **Phụ huynh (`/phu-huynh/*`)**: Báo cáo tiến bộ, điểm mạnh và nội dung gia đình có thể hỗ trợ bằng ngôn ngữ sư phạm tích cực, không xếp loại thi đua; cam kết bảo mật quyền riêng tư của học sinh.
   - **Quản trị (`/quan-tri/*` & `/admin/settings/integrations`)**: Cấp mã học sinh không email, nhập danh sách Excel/CSV, hiển thị mật khẩu tạm một lần an toàn; quản lý tích hợp Google Workspace, Gemini Server API và Gems phân tách rõ ràng, secret bảo vệ write-only.
-- **Kết quả Kiểm thử Baseline**:
+- **Kết quả Kiểm thử Baseline (`8ba7f7c`)**:
   - `pnpm exec prisma validate`: **PASS**
   - `pnpm exec tsc --noEmit`: **PASS (0 errors)**
   - `pnpm test`: **53/53 PASS** trên 8 test suites (`tests/*.test.ts`)
   - `pnpm build`: **PASS** — Toàn bộ 27 trang tĩnh/động biên dịch thành công, First Load JS chia sẻ giữ ở mức tối ưu 103 kB.
+
+## Bổ sung hợp nhất sau `git pull` (`8ba7f7c` + SGK KNTT Lớp 6 Tập 1, `2026-11-16`)
+- Đã kéo `origin/main` (`8ba7f7c`) và hợp nhất đầy đủ tính năng SGK **Kết nối tri thức với cuộc sống — Lớp 6 Tập 1** (Toán 6 `ISBN 978-604-0-25151-0`, Ngữ văn 6 `ISBN 978-604-0-25154-1`):
+  - Thư mục phân lớp cục bộ `SGK/Lop_6/{Toan,Ngu_van}/Tap_1/`, `SGK/sgk-kntt-manifest.json`, và bản sao `D:\UNIGO\SGK\Lớp_6\{Toan,Ngu_van}\Tap_1\`.
+  - Cây Drive `02_HOC_LIEU/{Toan,Ngu_van}/Lop_6/Tap_1` và action `SYNC_LOCAL_SGK_TO_DRIVE` trong `src/lib/google-workspace.ts` & `src/app/api/google/workspace/route.ts`.
+  - Studio `/giao-vien/on-tap`, `/hoc-sinh/on-tap`, `/api/review/generate`, `src/lib/grade6-demo.ts` (4 trò chơi HTML × 8 câu, học liệu, bài tập, ôn HK1, đề thử & đáp án), `src/lib/review-prompts.ts`, `output/grade6-demo/`, `tests/grade6-demo.test.ts`, và 2 liên kết điều hướng trong `src/components/layout/AppSidebar.tsx`.

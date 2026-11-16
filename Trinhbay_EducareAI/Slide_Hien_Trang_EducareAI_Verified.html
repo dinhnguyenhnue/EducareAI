@@ -3,472 +3,1456 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Slide Hiện trạng Sản phẩm EDUCARE AI (Đã kiểm chứng)</title>
+  <title>EDUCARE AI (UNIGO) — Bộ Slide Hiện trạng Đã Kiểm chứng & Ước tính Chi phí Triển khai (16 Slide)</title>
   <style>
     :root {
-      --bg: #0f172a;
-      --card: #ffffff;
+      --navy: #0f172a;
+      --ocean-dark: #1d4ed8;
       --ocean: #0284c7;
+      --sky-bg: #e0f2fe;
+      --sky-border: #7dd3fc;
       --emerald: #059669;
-      --text: #0f172a;
+      --emerald-bg: #ecfdf5;
+      --amber: #b45309;
+      --amber-bg: #fef3c7;
+      --violet: #6d28d9;
+      --violet-bg: #f5f3ff;
+      --canvas: #f8fafc;
+      --card: #ffffff;
+      --border: #cbd5e1;
       --muted: #475569;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-family: "Segoe UI", Inter, -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
       background: #0b1120;
       color: #f8fafc;
-      padding: 24px;
+      padding: 20px;
       line-height: 1.5;
     }
-    .header {
-      max-width: 1280px;
-      margin: 0 auto 24px;
-      padding: 20px 24px;
-      background: linear-gradient(135deg, #0f172a, #0369a1);
+    .top-toolbar {
+      max-width: 1360px;
+      margin: 0 auto 20px;
+      padding: 18px 24px;
+      background: linear-gradient(135deg, #0f172a, #1e3a8a);
       border-radius: 16px;
-      border: 1px solid rgba(56, 189, 248, 0.3);
+      border: 1px solid rgba(125, 211, 252, 0.35);
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
       gap: 16px;
+      position: sticky;
+      top: 12px;
+      z-index: 50;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
     }
-    .header h1 { font-size: 20px; font-weight: 800; color: #fff; }
-    .header p { font-size: 13px; color: #bae6fd; margin-top: 4px; }
+    .top-toolbar h1 { font-size: 19px; font-weight: 800; color: #fff; }
+    .top-toolbar p { font-size: 13px; color: #bae6fd; margin-top: 3px; }
+    .toolbar-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      background: #1d4ed8;
+      color: #fff;
+      border: 1px solid #60a5fa;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #2563eb; }
+    .btn.secondary { background: #1e293b; border-color: #475569; }
+    .btn.secondary:hover { background: #334155; }
+    .slide-counter {
+      font-size: 13px;
+      font-weight: 700;
+      color: #e0f2fe;
+      padding: 6px 12px;
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 8px;
+      border: 1px solid #334155;
+    }
     .slide-list {
-      max-width: 1280px;
+      max-width: 1360px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
-      gap: 28px;
+      gap: 32px;
     }
+    body.single-mode .slide-card { display: none; }
+    body.single-mode .slide-card.active-slide { display: block; }
+
     .slide-card {
-      background: #f8fafc;
-      color: #0f172a;
+      background: var(--canvas);
+      color: var(--navy);
       border-radius: 18px;
       overflow: hidden;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+      box-shadow: 0 22px 44px rgba(0, 0, 0, 0.5);
       border: 1px solid #334155;
     }
     .slide-top {
-      background: #0f172a;
+      background: var(--navy);
       color: #fff;
-      padding: 18px 24px;
+      padding: 18px 28px;
     }
-    .slide-badge {
-      display: inline-block;
-      background: #0284c7;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 3px 10px;
-      border-radius: 999px;
+    .slide-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
       margin-bottom: 6px;
     }
-    .slide-top h2 { font-size: 20px; font-weight: 800; }
-    .slide-sub {
-      background: #e0f2fe;
-      color: #0369a1;
-      padding: 10px 24px;
-      font-size: 13px;
+    .slide-num {
+      display: inline-block;
+      background: var(--ocean-dark);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 3px 11px;
+      border-radius: 999px;
+    }
+    .slide-num.emerald { background: var(--emerald); }
+    .slide-num.amber { background: var(--amber); }
+    .slide-num.violet { background: var(--violet); }
+    .slide-cat {
+      font-size: 12px;
       font-weight: 700;
-      border-bottom: 1px solid #bae6fd;
+      color: #7dd3fc;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .slide-top h2 {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.25;
+      color: #fff;
+    }
+    .slide-sub {
+      background: var(--sky-bg);
+      color: var(--ocean-dark);
+      padding: 11px 28px;
+      font-size: 14px;
+      font-weight: 700;
+      border-bottom: 1px solid var(--sky-border);
     }
     .slide-body {
       display: grid;
       grid-template-columns: 5fr 7fr;
-      gap: 20px;
-      padding: 24px;
+      gap: 22px;
+      padding: 24px 28px;
+      align-items: start;
     }
-    @media (max-width: 960px) {
+    .slide-body.full {
+      grid-template-columns: 1fr;
+    }
+    @media (max-width: 1024px) {
       .slide-body { grid-template-columns: 1fr; }
     }
-    .box {
-      background: #fff;
-      border: 1px solid #cbd5e1;
+    .idea-banner {
+      background: var(--sky-bg);
+      border: 1.5px solid var(--ocean);
       border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
+      padding: 12px 16px;
+      margin-bottom: 14px;
     }
-    .box.idea { border-left: 5px solid #0284c7; }
-    .box.built { border-left: 5px solid #059669; }
-    .box h3 {
-      font-size: 12px;
+    .idea-banner .label {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--ocean-dark);
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
-    .box.idea h3 { color: #0284c7; }
-    .box.built h3 { color: #059669; }
-    .box p, .box li { font-size: 13.5px; color: #1e293b; }
-    .box ul { padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+    .idea-banner p {
+      font-size: 14px;
+      color: var(--navy);
+    }
+    .feature-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .feature-block {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .feature-block.amber-bg { background: var(--amber-bg); border-color: #f59e0b; }
+    .feature-block.violet-bg { background: var(--violet-bg); border-color: #c4b5fd; }
+    .num-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: var(--ocean-dark);
+      color: #fff;
+      font-weight: 800;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .num-badge.emerald { background: var(--emerald); }
+    .num-badge.amber { background: var(--amber); }
+    .num-badge.violet { background: var(--violet); }
+    .num-badge.muted { background: var(--muted); }
+    .feature-content h3 {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--ocean-dark);
+      margin-bottom: 4px;
+    }
+    .feature-content h3.emerald { color: var(--emerald); }
+    .feature-content h3.amber { color: var(--amber); }
+    .feature-content h3.violet { color: var(--violet); }
+    .feature-content p {
+      font-size: 14px;
+      color: #1e293b;
+      line-height: 1.45;
+    }
+    .grid-2x4 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .mini-card {
+      background: #fff;
+      border: 1.5px solid var(--emerald);
+      border-radius: 12px;
+      padding: 12px 14px;
+    }
+    .mini-card h3 {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--emerald);
+      margin-bottom: 4px;
+    }
+    .mini-card p {
+      font-size: 13px;
+      color: var(--navy);
+      line-height: 1.4;
+    }
+
+    /* Cropped screenshot container preserving exact aspect ratio */
     .screenshot-panel {
       background: #fff;
-      border: 1px solid #94a3b8;
-      border-radius: 12px;
+      border: 1.5px solid #94a3b8;
+      border-radius: 14px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
     }
     .screenshot-bar {
-      background: #f1f5f9;
-      padding: 10px 14px;
-      font-size: 12px;
+      background: var(--navy);
+      padding: 10px 16px;
+      font-size: 13px;
       font-weight: 700;
-      color: #0f172a;
-      border-bottom: 1px solid #cbd5e1;
+      color: #fff;
     }
-    .screenshot-panel img {
+    .crop-viewport {
+      width: 100%;
+      overflow: hidden;
+      background: #f1f5f9;
+      border-bottom: 1px solid #e2e8f0;
+      position: relative;
+    }
+    .crop-viewport img {
+      display: block;
       width: 100%;
       height: auto;
-      display: block;
-      border-bottom: 1px solid #e2e8f0;
     }
-    .route-bar {
-      padding: 10px 14px;
-      font-size: 12px;
-      font-family: monospace;
-      color: #334155;
+    .dual-crop-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px;
       background: #f8fafc;
+    }
+    .dual-crop-stack .crop-viewport {
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+    }
+    .caption-box {
+      padding: 10px 16px;
+      background: #f1f5f9;
+      border-top: 1px solid #cbd5e1;
+      font-size: 13px;
+      color: var(--navy);
+    }
+    .caption-box strong { color: var(--ocean-dark); }
+    .route-bar {
+      padding: 8px 16px;
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--muted);
+      background: #e2e8f0;
+      font-weight: 600;
+    }
+
+    /* Tables for Cost Estimation Slides */
+    .cost-banner {
+      background: var(--amber-bg);
+      border: 1.5px solid var(--amber);
+      border-radius: 12px;
+      padding: 12px 18px;
+      margin-bottom: 16px;
+      font-size: 13.5px;
+      color: var(--navy);
+    }
+    .cost-banner strong { color: var(--amber); }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      font-size: 13.5px;
+    }
+    .data-table th {
+      background: var(--navy);
+      color: #fff;
+      font-weight: 700;
+      padding: 11px 14px;
+      text-align: left;
+      border-bottom: 2px solid #334155;
+    }
+    .data-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      color: var(--navy);
+      vertical-align: middle;
+    }
+    .data-table tr:nth-child(even) td { background: #f8fafc; }
+    .data-table tr.total-row td {
+      background: var(--sky-bg);
+      font-weight: 800;
+      color: var(--ocean-dark);
+      border-top: 2px solid var(--ocean);
+    }
+    .two-col-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 16px;
+    }
+    .info-card {
+      background: #fff;
+      border: 1.5px solid var(--ocean);
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+    .info-card.amber {
+      background: var(--amber-bg);
+      border-color: var(--amber);
+    }
+    .info-card h3 {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: var(--ocean-dark);
+      margin-bottom: 8px;
+    }
+    .info-card.amber h3 { color: var(--amber); }
+    .info-card ul {
+      padding-left: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13.5px;
+      color: var(--navy);
+    }
+    .slide-footer {
+      background: #e2e8f0;
+      color: var(--muted);
+      padding: 10px 28px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
     }
     .notes-bar {
       background: #1e293b;
       color: #e2e8f0;
-      padding: 14px 24px;
+      padding: 12px 28px;
       font-size: 12.5px;
-      white-space: pre-line;
       border-top: 1px solid #334155;
     }
+    .notes-bar a { color: #7dd3fc; }
   </style>
 </head>
 <body>
-  <div class="header">
+  <div class="top-toolbar">
     <div>
-      <h1>EDUCARE AI (UNIGO) — Slide Giới thiệu Chức năng Đã Kiểm chứng</h1>
-      <p>Mỗi slide đối chiếu trực tiếp: Ý tưởng ban đầu → Chức năng đã xây dựng → Bằng chứng thật trên website (Tệp PPTX: Slide_Hien_Trang_EducareAI_Verified.pptx)</p>
+      <h1>EDUCARE AI (UNIGO) — Bộ Slide Đã Kiểm chứng & Ước tính Chi phí Triển khai (16 Slide)</h1>
+      <p>Đã rút gọn câu dài, tách các slide nhiều ý, cắt cận cảnh vùng bằng chứng giao diện và bổ sung 4 slide phân tích chi phí 200 / 1.000 / 10.000 người dùng.</p>
+    </div>
+    <div class="toolbar-controls">
+      <button class="btn secondary" id="toggleModeBtn" onclick="toggleMode()">Chế độ: Xem tất cả 16 Slide</button>
+      <button class="btn" id="prevBtn" onclick="changeSlide(-1)" style="display:none;">← Slide trước</button>
+      <span class="slide-counter" id="slideIndicator">Tổng: 16 Slide</span>
+      <button class="btn" id="nextBtn" onclick="changeSlide(1)" style="display:none;">Slide tiếp →</button>
     </div>
   </div>
-  <div class="slide-list">
-    
-      <section class="slide-card">
-        <div class="slide-top">
-          <span class="slide-badge">SLIDE 01 • BÁO CÁO HIỆN TRẠNG SẢN PHẨM ĐÃ KIỂM CHỨNG • EDUCARE AI (UNIGO)</span>
-          <h2>Hệ sinh thái Học tập Số UNIGO: Từ Ý tưởng đến Sản phẩm Thực tế</h2>
-        </div>
-        <div class="slide-sub">Giới thiệu CHỈ những chức năng đã triển khai, đã kiểm tra hành vi thực tế và có bằng chứng trên website</div>
-        <div class="slide-body">
-          <div>
-            <div class="box idea">
-              <h3>1. Ý tưởng ban đầu trong đề cương</h3>
-              <p>Xây dựng cổng học tập số nhà trường tích hợp phân quyền đa vai trò, ngân hàng học liệu, kiểm tra trực tuyến, xưởng sáng tạo và trợ lý AI sư phạm.</p>
-            </div>
-            <div class="box built">
-              <h3>2. Chức năng đã xây dựng & xác minh</h3>
-              <ul>
-                <li>Kiến trúc Next.js 15 App Router + React 19 + PostgreSQL (Prisma ORM) với 47/47 bài kiểm thử tự động PASS.</li><li>4 không gian làm việc theo vai trò: Học sinh, Giáo viên, Phụ huynh và Quản trị viên (Ocean Blue UI chuẩn WCAG AA).</li><li>Mọi tính năng trình bày trong bộ slide này đều đi kèm đường dẫn trang, tệp mã nguồn và ảnh chụp màn hình thật.</li>
-              </ul>
-            </div>
-          </div>
-          <div class="screenshot-panel">
-            <div class="screenshot-bar">3. Bằng chứng thật trên website: Trang chủ UNIGO (/) — Giao diện thực tế 1440×810</div>
-            <img src="screenshots_verified/01_trang_chu_unigo_1440px.png" alt="Trang chủ UNIGO (/) — Giao diện thực tế 1440×810" />
-            <div class="route-bar">Đường dẫn & Mã nguồn: / • src/app/page.tsx • src/middleware.ts</div>
-          </div>
-        </div>
-        <div class="notes-bar"><strong>Ghi chú thuyết trình (Speaker Notes):</strong>
-SLIDE 1 — MỞ ĐẦU: TỪ Ý TƯỞNG ĐẾN SẢN PHẨM THỰC TẾ
-- Ý tưởng ban đầu: Xây dựng hệ thống AI và học tập số cho trường học (UNIGO) kết nối Quản trị - Giáo viên - Học sinh - Phụ huynh.
-- Chức năng đã xây dựng: Ứng dụng web Next.js 15 + PostgreSQL đã vận hành thực tế với 4 cổng vai trò tách biệt, xác thực phiên HMAC-SHA256 và bộ giao diện Ocean Blue đã qua kiểm định truy cập bàn phím & màn hình.
-- Bằng chứng thật trên website: Ảnh chụp trực tiếp trang chủ "/" (01_trang_chu_unigo_1440px.png) hiển thị tiêu đề "Hệ sinh thái Học tập Số UNIGO" và 4 cổng truy cập theo vai trò.</div>
-      </section>
 
-      <section class="slide-card">
-        <div class="slide-top">
-          <span class="slide-badge">SLIDE 02 • ĐỐI CHIẾU MINH BẠCH • PRODUCT REALITY AUDIT</span>
-          <h2>Bức tranh Thực tế: Nhóm Đã Xác Minh vs. Nhóm Chờ Cấu Hình Ngoài</h2>
-        </div>
-        <div class="slide-sub">Phân định rõ tính năng đã chạy đầu-cuối trên CSDL và phần mới có bản chụp cục bộ / chờ khóa API</div>
-        <div class="slide-body">
-          <div>
-            <div class="box idea">
-              <h3>1. Ý tưởng ban đầu trong đề cương</h3>
-              <p>Đối chiếu toàn bộ 9 nhóm ý tưởng trong đề cương với mã nguồn và hành vi thực tế trên trình duyệt.</p>
-            </div>
-            <div class="box built">
-              <h3>2. Chức năng đã xây dựng & xác minh</h3>
-              <ul>
-                <li>ĐÃ TRIỂN KHAI & XÁC MINH (Đưa vào slide): Phân quyền 6 vai trò RBAC, Nhập Excel học sinh, Bài giảng & kiểm duyệt tệp PDF/ZIP, Ngân hàng câu hỏi chốt phiên bản, Làm bài PRACTICE/EXAM có tự lưu tạm & chấm điểm máy chủ, Xưởng trò chơi HTML Sandbox, Chấm bài Rubric 4 tiêu chí, Prompt Lab 8 mẫu câu lệnh & Trợ lý AI Socratic, Bản chụp 6-Tab lớp học cục bộ.</li><li>CHỜ KHÓA CẤU HÌNH NGOÀI (Không tính là hoàn chỉnh): Đăng nhập Google OAuth 2.0 thật và gọi trực tuyến Gemini API cần GOOGLE_CLIENT_ID / GEMINI_API_KEY của trường.</li><li>MỚI Ở MỨC BẢN CHỤP CỤC BỘ: Tạo 24 thư mục Google Drive, đồng bộ tự động Google Sheets/Classroom/Docs/Calendar đám mây hiện ghi nhận trạng thái DISCONNECTED/DEMO trong CSDL nội bộ, chưa gọi REST API đám mây.</li>
-              </ul>
-            </div>
-          </div>
-          <div class="screenshot-panel">
-            <div class="screenshot-bar">3. Bằng chứng thật trên website: Hồ sơ Phiên xác thực & Phân quyền Super Admin (Role: SUPER_ADMIN)</div>
-            <img src="screenshots_verified/12_chuyen_vai_tro_rbac_1440px.png" alt="Hồ sơ Phiên xác thực & Phân quyền Super Admin (Role: SUPER_ADMIN)" />
-            <div class="route-bar">Đường dẫn & Mã nguồn: PRODUCT_REALITY_AUDIT.md • src/lib/session-token.ts</div>
-          </div>
-        </div>
-        <div class="notes-bar"><strong>Ghi chú thuyết trình (Speaker Notes):</strong>
-SLIDE 2 — TỔNG QUAN ĐỐI CHIẾU THỰC TẾ SẢN PHẨM
-- Ý tưởng ban đầu: Đề cương đặt mục tiêu bao phủ cả LMS nội bộ lẫn đồng bộ đám mây Google Workspace tự động.
-- Kết quả kiểm chứng: Hệ thống LMS lõi trên PostgreSQL đã hoàn thiện đầu-cuối. Ngược lại, các kết nối đám mây Google Drive/Sheets/Classroom/Docs/Calendar được thiết kế trung thực: khi chưa có OAuth & API đám mây, hàm resolveGoogleIntegrationMode() trả về DISCONNECTED và chỉ lưu bản chụp cục bộ.
-- Bằng chứng thật trên website: Báo cáo PRODUCT_REALITY_AUDIT.md và màn hình Quản trị dữ liệu mẫu cho phép tách bạch hoặc xóa riêng [DỮ LIỆU MẪU] chỉ bằng 1 cú nhấp.</div>
-      </section>
+  <div class="slide-list" id="slideContainer">
 
-      <section class="slide-card">
-        <div class="slide-top">
-          <span class="slide-badge">SLIDE 03 • CHỨC NĂNG 1 • TÀI KHOẢN, VAI TRÒ & BẢO MẬT PHIÊN</span>
-          <h2>Phân quyền 6 Vai trò (RBAC) & Chuyển đổi 4 Cổng Làm việc</h2>
+    <!-- SLIDE 01 -->
+    <section class="slide-card active-slide">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num">SLIDE 01 / 16</span>
+          <span class="slide-cat">BÁO CÁO HIỆN TRẠNG SẢN PHẨM ĐÃ KIỂM CHỨNG • EDUCARE AI (UNIGO)</span>
         </div>
-        <div class="slide-sub">Ý tưởng phân quyền trường học → Cookie phiên HMAC-SHA256, Middleware bảo vệ đường dẫn & RoleSwitcher</div>
-        <div class="slide-body">
-          <div>
-            <div class="box idea">
-              <h3>1. Ý tưởng ban đầu trong đề cương</h3>
-              <p>Tách biệt quyền hạn giữa Quản trị viên, Giáo viên, Học sinh và Phụ huynh; không cho phép học sinh truy cập trang chấm bài hay quản trị.</p>
+        <h2>Hệ sinh thái Học tập Số UNIGO: Từ Ý tưởng đến Sản phẩm Thực tế</h2>
+      </div>
+      <div class="slide-sub">Chỉ giới thiệu các chức năng đã triển khai, đã kiểm tra hành vi thực tế và có bằng chứng trên website</div>
+      <div class="slide-body">
+        <div>
+          <div class="idea-banner">
+            <div class="label">Mục tiêu đề cương ban đầu</div>
+            <p>Xây dựng cổng học tập số nhà trường tích hợp phân quyền đa vai trò, học liệu chuẩn GDPT 2018, kiểm tra trực tuyến, xưởng sáng tạo HTML và trợ lý AI sư phạm.</p>
+          </div>
+          <div class="feature-stack">
+            <div class="feature-block">
+              <div class="num-badge">1</div>
+              <div class="feature-content">
+                <h3>Nền tảng Kỹ thuật & Kiểm thử Tự động</h3>
+                <p>Next.js 15 App Router + React 19 + PostgreSQL (33 bảng Prisma). Đạt <strong>59/59 bài kiểm thử tự động PASS</strong> và <strong>24/24 khung nhìn trình duyệt</strong> chuẩn.</p>
+              </div>
             </div>
-            <div class="box built">
-              <h3>2. Chức năng đã xây dựng & xác minh</h3>
-              <ul>
-                <li>6 vai trò trong CSDL (SUPER_ADMIN, SCHOOL_ADMIN, TEACHER, STUDENT, PARENT, COMMUNITY_USER) lưu tại bảng User và các bảng hồ sơ chuyên biệt.</li><li>Đăng nhập Email/Mật khẩu (/api/auth/session) có giới hạn 5 lần thử sai/15 phút và ghi nhận vào bảng AuditLog.</li><li>Middleware (src/middleware.ts) tự động chặn truy cập chéo cổng; công cụ RoleSwitcher hỗ trợ Super Admin kiểm tra nhanh 4 góc nhìn.</li>
-              </ul>
+            <div class="feature-block">
+              <div class="num-badge emerald">2</div>
+              <div class="feature-content">
+                <h3 class="emerald">4 Cổng Làm việc Tách biệt theo Vai trò</h3>
+                <p>Ánh xạ 6 vai trò RBAC hệ thống vào 4 cổng: Học sinh (<code>/hoc-sinh</code>), Giáo viên (<code>/giao-vien</code>), Phụ huynh (<code>/phu-huynh</code>) và Quản trị (<code>/quan-tri</code>).</p>
+              </div>
+            </div>
+            <div class="feature-block">
+              <div class="num-badge violet">3</div>
+              <div class="feature-content">
+                <h3 class="violet">Nguyên tắc Bằng chứng Thực tế 100%</h3>
+                <p>Mọi tính năng trên slide đều gắn với đường dẫn route, tệp mã nguồn và ảnh chụp màn hình thật; không dùng số liệu giả lập.</p>
+              </div>
             </div>
           </div>
-          <div class="screenshot-panel">
-            <div class="screenshot-bar">3. Bằng chứng thật trên website: Trang Đăng ký & Cấp phát tài khoản theo vai trò (/dang-ky)</div>
-            <img src="screenshots_verified/02_dang_ky_tai_khoan_1440px.png" alt="Trang Đăng ký & Cấp phát tài khoản theo vai trò (/dang-ky)" />
-            <div class="route-bar">Đường dẫn & Mã nguồn: /dang-ky • /api/auth/session • /api/auth/view-switch</div>
-          </div>
         </div>
-        <div class="notes-bar"><strong>Ghi chú thuyết trình (Speaker Notes):</strong>
-SLIDE 3 — TÀI KHOẢN, VAI TRÒ VÀ BẢO MẬT PHIÊN
-- Ý tưởng ban đầu: Mỗi nhóm người dùng trong nhà trường có không gian làm việc riêng biệt và an toàn.
-- Chức năng đã xây dựng: Cookie phiên HttpOnly ký bằng HMAC-SHA256 (src/lib/session-token.ts), trang đăng ký (/dang-ky), đăng nhập mật khẩu có chống dò mật khẩu và RoleSwitcher cho Super Admin.
-- Bằng chứng thật trên website: Ảnh chụp màn hình trang /dang-ky và luồng đăng nhập thực tế trên trình duyệt.</div>
-      </section>
+        <div class="screenshot-panel">
+          <div class="screenshot-bar">Bằng chứng website thật: Trang chủ UNIGO (/) — Cổng truy cập theo vai trò</div>
+          <div class="crop-viewport">
+            <img src="screenshots_verified/01_trang_chu_unigo_1440px.png" alt="Trang chủ UNIGO (/)" style="margin-bottom:-2%;" />
+          </div>
+          <div class="caption-box"><strong>Chú thích:</strong> Cắt cận cảnh vùng Hero 6 trụ cột năng lực và 2 thẻ Cổng Học sinh / Cổng Giáo viên ở độ phân giải Retina.</div>
+          <div class="route-bar">Nguồn mã & tuyến: / • src/app/page.tsx • src/middleware.ts</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 01 / 16</span>
+      </div>
+    </section>
 
-      <section class="slide-card">
-        <div class="slide-top">
-          <span class="slide-badge">SLIDE 04 • CHỨC NĂNG 2 • QUẢN TRỊ HỌC SINH & NHẬP LIỆU HÀNG LOẠT</span>
-          <h2>Quản lý Người dùng & Nhập Danh sách Học sinh từ Excel/CSV</h2>
+    <!-- SLIDE 02 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num emerald">SLIDE 02 / 16</span>
+          <span class="slide-cat">ĐỐI CHIẾU MINH BẠCH (PHẦN 1/2) • PRODUCT REALITY AUDIT</span>
         </div>
-        <div class="slide-sub">Ý tưởng quản lý danh sách lớp → Công cụ đọc tệp .xlsx/.csv, xem trước hợp lệ và chống trùng mã HS</div>
-        <div class="slide-body">
-          <div>
-            <div class="box idea">
-              <h3>1. Ý tưởng ban đầu trong đề cương</h3>
-              <p>Giúp quản trị viên nhà trường khởi tạo nhanh danh sách học sinh theo lớp từ tệp bảng tính đầu năm học mà không phải nhập tay từng em.</p>
-            </div>
-            <div class="box built">
-              <h3>2. Chức năng đã xây dựng & xác minh</h3>
-              <ul>
-                <li>Bảng danh bạ người dùng (/quan-tri/nguoi-dung) hiển thị tài khoản thực từ PostgreSQL, hỗ trợ tìm kiếm theo Mã HS, email và lọc theo 6 vai trò.</li><li>Hộp thoại thêm/chỉnh sửa người dùng trực tiếp (/api/admin/users) cập nhật tức thời vào bảng User & StudentProfile.</li><li>Quy trình nhập Excel/CSV 2 bước (/api/admin/import-students): Bước 1 đọc tệp và hiển thị bảng Preview (tách dòng hợp lệ/lỗi, kiểm tra mã HS đã tồn tại); Bước 2 xác nhận ghi giao dịch vào CSDL.</li>
-              </ul>
-            </div>
+        <h2>8 Nhóm Chức năng Đã Triển khai & Xác minh Đầu-Cuối trên CSDL</h2>
+      </div>
+      <div class="slide-sub">Đã tách từ Slide 2 cũ: Mỗi nhóm chức năng đã kiểm chứng được trình bày trên một khối độc lập</div>
+      <div class="slide-body" style="grid-template-columns: 7fr 5fr;">
+        <div class="grid-2x4">
+          <div class="mini-card">
+            <h3>1. Tài khoản & Phân quyền 6 vai trò RBAC</h3>
+            <p>Đăng nhập Email hoặc Mã HS (không cần email), mật khẩu tạm 1 lần, ép đổi MK lần đầu, cookie HMAC-SHA256.</p>
           </div>
-          <div class="screenshot-panel">
-            <div class="screenshot-bar">3. Bằng chứng thật trên website: Màn hình Quản lý Người dùng & Thêm Tài khoản theo Vai trò (/quan-tri/nguoi-dung)</div>
-            <img src="screenshots_verified/04_modal_them_nguoi_dung_1440px.png" alt="Màn hình Quản lý Người dùng & Thêm Tài khoản theo Vai trò (/quan-tri/nguoi-dung)" />
-            <div class="route-bar">Đường dẫn & Mã nguồn: /quan-tri/nguoi-dung • src/lib/excel-student-import.ts</div>
+          <div class="mini-card">
+            <h3>2. Quản trị Người dùng & Nhập Excel/CSV</h3>
+            <p>Đọc tệp .xlsx/.csv thật, xem trước (Preview) dòng hợp lệ/lỗi, chống trùng mã HS trước khi ghi DB.</p>
+          </div>
+          <div class="mini-card">
+            <h3>3. Bài giảng, Học liệu & Kiểm định Tệp</h3>
+            <p>Tạo bài giảng, kiểm tra chữ ký byte PDF/ZIP (Magic-Bytes), chặn Zip-Slip/Zip-Bomb và tệp thực thi.</p>
+          </div>
+          <div class="mini-card">
+            <h3>4. Ngân hàng Câu hỏi & Sinh đề SGK KNTT</h3>
+            <p>Gắn mã câu hỏi ổn định, trích dẫn trang SGK (bộ Kết nối tri thức Lớp 6 Tập 1), giữ bản nháp AI chờ duyệt.</p>
+          </div>
+          <div class="mini-card">
+            <h3>5. Làm bài PRACTICE / EXAM & Tự lưu tạm</h3>
+            <p>Tách Luyện tập (nhiều lượt) và Kiểm tra (1 lượt, đếm ngược server, ẩn đáp án); tự lưu tạm khi F5.</p>
+          </div>
+          <div class="mini-card">
+            <h3>6. Xưởng Trò chơi HTML & Sandbox Cô lập</h3>
+            <p>Quét tĩnh mã HTML, chạy trong <code>&lt;iframe sandbox&gt;</code> + CSP khóa mạng, ghi nhận lượt chơi và ghim bản duyệt v1.</p>
+          </div>
+          <div class="mini-card">
+            <h3>7. Prompt Lab 8 Mẫu & Trợ lý AI Socratic</h3>
+            <p>8 mẫu câu lệnh theo biến số, tự động ẩn danh PII học sinh (Mã HS, Email, SĐT) và ghi nhật ký AIUsageLog.</p>
+          </div>
+          <div class="mini-card">
+            <h3>8. Chấm bài Rubric & Bản chụp 6-Tab Lớp</h3>
+            <p>Chấm điểm theo 4 tiêu chí Rubric, báo cáo từ dữ liệu thật và bảo vệ cột điểm gốc qua duyệt 2 bước.</p>
           </div>
         </div>
-        <div class="notes-bar"><strong>Ghi chú thuyết trình (Speaker Notes):</strong>
-SLIDE 4 — QUẢN TRỊ NGƯỜI DÙNG & NHẬP FILE EXCEL
-- Ý tưởng ban đầu: Đồng bộ danh sách học sinh và phân lớp từ bảng tính nhà trường.
-- Chức năng đã xây dựng: Trang /quan-tri/nguoi-dung kết hợp bộ phân tích tệp Excel/CSV (src/lib/excel-student-import.ts) cho phép xem trước các dòng hợp lệ, phát hiện mã học sinh trùng lặp trước khi bấm lưu chính thức vào PostgreSQL.
-- Bằng chứng thật trên website: Ảnh chụp màn hình bảng người dùng và hộp thoại xem trước danh sách nhập từ file Excel.</div>
-      </section>
+        <div class="screenshot-panel">
+          <div class="screenshot-bar">Bằng chứng: Hồ sơ Phiên xác thực SUPER_ADMIN</div>
+          <div class="crop-viewport">
+            <img src="screenshots_verified/12_chuyen_vai_tro_rbac_1440px.png" alt="Hồ sơ Phiên SUPER_ADMIN" style="width:200%; margin-left:-100%; margin-bottom:-55%;" />
+          </div>
+          <div class="caption-box"><strong>Chú thích:</strong> Cắt cận cảnh góc phải trên: xác nhận Role <code>SUPER_ADMIN</code>, trạng thái <code>Đã kích hoạt</code> và khuyến nghị bảo mật 2 lớp (MFA).</div>
+          <div class="route-bar">Nguồn mã & tuyến: PRODUCT_REALITY_AUDIT.md • src/lib/session-token.ts</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 02 / 16</span>
+      </div>
+    </section>
 
-      <section class="slide-card">
-        <div class="slide-top">
-          <span class="slide-badge">SLIDE 05 • CHỨC NĂNG 3 • HỌC LIỆU SỐ & NGÂN HÀNG CÂU HỎI</span>
-          <h2>Quản lý Bài giảng, Kiểm định Tệp & Ngân hàng Câu hỏi Chốt phiên bản</h2>
+    <!-- SLIDE 03 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num amber">SLIDE 03 / 16</span>
+          <span class="slide-cat">ĐỐI CHIẾU MINH BẠCH (PHẦN 2/2) • RANH GIỚI KIỂM CHỨNG</span>
         </div>
-        <div class="slide-sub">Ý tưởng chuẩn hóa học liệu → Kiểm tra Magic-Byte PDF/ZIP, trích dẫn trang SGK & giữ bản nháp AI chờ duyệt</div>
-        <div class="slide-body">
-          <div>
-            <div class="box idea">
-              <h3>1. Ý tưởng ban đầu trong đề cương</h3>
-              <p>Giáo viên xây dựng kho bài giảng và ngân hàng câu hỏi trắc nghiệm bám sát SGK, có sự hỗ trợ của AI nhưng giáo viên nắm quyền kiểm duyệt cuối.</p>
-            </div>
-            <div class="box built">
-              <h3>2. Chức năng đã xây dựng & xác minh</h3>
-              <ul>
-                <li>Quản lý bài giảng (/giao-vien/bai-giang): Tạo bài giảng mới lưu vào bảng Lesson; bộ kiểm tra tệp (/api/assets) xác thực chữ ký byte thực tế của PDF/ZIP và chặn lỗi Zip-Slip / Zip-Bomb.</li><li>Ngân hàng câu hỏi (/giao-vien/ngan-hang-cau-hoi): Mỗi câu hỏi lưu mã định danh ổn định, mức độ nhận thức, trích dẫn sách giáo khoa & số trang.</li><li>Kiểm soát chất lượng AI & Chốt phiên bản (Version Pinning): Câu hỏi do AI gợi ý luôn ở trạng thái PENDING_REVIEW chờ giáo viên duyệt; khi sửa câu hỏi đã duyệt, hệ thống tự động nâng số phiên bản; học sinh bị chặn 403 nếu truy cập API câu hỏi gốc.</li>
-              </ul>
+        <h2>Phân định Rõ: Phần Có Mã Chờ Khóa API vs. Bản Chụp Cục Bộ</h2>
+      </div>
+      <div class="slide-sub">Không trình bày tính năng chờ khóa đám mây như sản phẩm đã hoàn chỉnh; đánh dấu rõ điểm cần xác nhận</div>
+      <div class="slide-body">
+        <div class="feature-stack">
+          <div class="feature-block">
+            <div class="num-badge">1</div>
+            <div class="feature-content">
+              <h3>Có mã REST API & Trang cấu hình — Chờ khóa của Trường</h3>
+              <p>Đã xây dựng trang <code>/admin/settings/integrations</code> lưu khóa mã hóa AES-256-GCM. Cần cấp <code>GOOGLE_CLIENT_ID/SECRET</code> và <code>GEMINI_API_KEY</code> để chạy trực tuyến.</p>
             </div>
           </div>
-          <div class="screenshot-panel">
-            <div class="screenshot-bar">3. Bằng chứng thật trên website: Hộp thoại Soạn Bài giảng & Kiểm tra tệp Magic-Bytes/Zip-Slip (/giao-vien/bai-giang)</div>
-            <img src="screenshots_verified/06_modal_tao_bai_giang_1440px.png" alt="Hộp thoại Soạn Bài giảng & Kiểm tra tệp Magic-Bytes/Zip-Slip (/giao-vien/bai-giang)" />
-            <div class="route-bar">Đường dẫn & Mã nguồn: /giao-vien/bai-giang • /api/teacher/lessons • src/lib/asset-validation.ts</div>
+          <div class="feature-block amber-bg">
+            <div class="num-badge amber">2</div>
+            <div class="feature-content">
+              <h3 class="amber">Trạng thái Trung thực khi Chưa Nối Đám mây Google</h3>
+              <p>Khi chưa cấp quyền OAuth thật, các tác vụ Drive (25 nút thư mục), Sheets, Docs, Classroom, Calendar chỉ lưu bản chụp cục bộ và báo <code>DISCONNECTED / NOT_CONFIGURED</code>.</p>
+            </div>
+          </div>
+          <div class="feature-block">
+            <div class="num-badge muted">3</div>
+            <div class="feature-content">
+              <h3>Chưa Triển khai (Báo cáo Đúng Thực tế)</h3>
+              <p>Chưa có đồng bộ điểm 2 chiều tự động theo lịch ngầm (cron) từ Classroom về LMS; Gemini Gems dùng liên kết xác minh (do Google chưa mở API tạo Gem).</p>
+            </div>
+          </div>
+          <div class="feature-block violet-bg">
+            <div class="num-badge violet">4</div>
+            <div class="feature-content">
+              <h3 class="violet">Lưu ý Minh bạch về Ảnh chụp Giao diện trong Slide</h3>
+              <p>Các ảnh chụp phân hệ Giáo viên/Học sinh được trích xuất dưới phiên <code>Super Admin</code> nên thanh điều hướng bên trái hiển thị nhóm menu Quản trị hệ thống.</p>
+            </div>
           </div>
         </div>
-        <div class="notes-bar"><strong>Ghi chú thuyết trình (Speaker Notes):</strong>
-SLIDE 5 — QUẢN LÝ BÀI GIẢNG & NGÂN HÀNG CÂU HỎI
-- Ý tưởng ban đầu: Xây dựng ngân hàng câu hỏi theo ma trận nhận thức và kho học liệu an toàn cho giáo viên.
-- Chức năng đã xây dựng: Trang /giao-vien/ngan-hang-cau-hoi và /giao-vien/bai-giang. Câu hỏi gắn rõ nguồn SGK & trang sách, tự động tăng version khi sửa và đóng gói thành đề Luyện tập hoặc Kiểm tra với bản chụp câu hỏi bất biến (AssessmentItem).
-- Bằng chứng thật trên website: Ảnh chụp màn hình danh sách câu hỏi thực tế trên trình duyệt.</div>
-      </section>
+        <div class="screenshot-panel">
+          <div class="screenshot-bar">Bằng chứng: Giao diện Quản trị & Phiên Super Admin</div>
+          <div class="crop-viewport">
+            <img src="screenshots_verified/12_chuyen_vai_tro_rbac_1440px.png" alt="Giao diện Quản trị & Phiên Super Admin" style="margin-bottom:-28%;" />
+          </div>
+          <div class="caption-box"><strong>Chú thích:</strong> Hiển thị đồng thời thanh điều hướng Quản trị bên trái, tiêu đề phân hệ ở giữa và hộp thông tin phiên Super Admin bên phải.</div>
+          <div class="route-bar">Nguồn mã & tuyến: /admin/settings/integrations • src/lib/google-workspace.ts</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 03 / 16</span>
+      </div>
+    </section>
 
-      <section class="slide-card">
-        <div class="slide-top">
-          <span class="slide-badge">SLIDE 06 • CHỨC NĂNG 4 • HỌC SINH LÀM BÀI & LƯU ĐIỂM BỀN VỮNG</span>
-          <h2>Luyện tập & Kiểm tra Trực tuyến: Tự động Lưu tạm và Chấm điểm Máy chủ</h2>
+    <!-- SLIDE 04 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num">SLIDE 04 / 16</span>
+          <span class="slide-cat">CHỨC NĂNG ĐÃ KIỂM CHỨNG 01 • TÀI KHOẢN & BẢO MẬT PHIÊN</span>
         </div>
-        <div class="slide-sub">Ý tưởng làm bài trực tuyến → Tách chế độ PRACTICE/EXAM, khôi phục khi F5 và lưu lịch sử lượt làm trong CSDL</div>
-        <div class="slide-body">
-          <div>
-            <div class="box idea">
-              <h3>1. Ý tưởng ban đầu trong đề cương</h3>
-              <p>Học sinh có thể tự luyện tập nhiều lần để xem giải thích chi tiết, hoặc làm bài kiểm tra tính giờ nghiêm ngặt mà không sợ mất bài khi rớt mạng.</p>
+        <h2>Phân quyền 6 Vai trò (RBAC) & Bảo vệ Tuyến đường bằng Middleware</h2>
+      </div>
+      <div class="slide-sub">Tách biệt chặt chẽ quyền hạn Học sinh, Giáo viên, Phụ huynh và Quản trị viên ngay từ tầng máy chủ</div>
+      <div class="slide-body">
+        <div>
+          <div class="idea-banner">
+            <div class="label">Mục tiêu đề cương ban đầu</div>
+            <p>Đảm bảo mỗi nhóm người dùng trong trường có không gian riêng; học sinh không thể truy cập trang chấm bài, ngân hàng đáp án hay cấu hình quản trị.</p>
+          </div>
+          <div class="feature-stack">
+            <div class="feature-block">
+              <div class="num-badge">1</div>
+              <div class="feature-content">
+                <h3>6 Vai trò RBAC & Khóa Đăng ký Quản trị Công khai</h3>
+                <p>CSDL quản lý 6 vai trò (<code>SUPER_ADMIN</code>, <code>SCHOOL_ADMIN</code>, <code>TEACHER</code>, <code>STUDENT</code>, <code>PARENT</code>, <code>COMMUNITY_USER</code>). Trang <code>/dang-ky</code> chỉ mở cho 4 vai trò phổ thông.</p>
+              </div>
             </div>
-            <div class="box built">
-              <h3>2. Chức năng đã xây dựng & xác minh</h3>
-              <ul>
-                <li>Tách biệt 2 chế độ (/hoc-sinh/kiem-tra): Đề PRACTICE cho phép làm lại nhiều lượt và mở giải thích ngay sau khi nộp; đề EXAM giới hạn 1 lượt, đếm ngược thời gian từ máy chủ (expiresAt) và khóa đáp án khi đang thi.</li><li>Bảo mật đáp án tuyệt đối: API (/api/tin-hoc/assessments) loại bỏ hoàn toàn trường đáp án đúng khỏi gói tin trả về trình duyệt khi lượt làm đang ở trạng thái IN_PROGRESS.</li><li>Tự động lưu tạm (AUTOSAVE_ANSWERS) & Chấm điểm bất biến: Mỗi lựa chọn được lưu ngay lên bảng Answer; khi tải lại trang (F5), hệ thống khôi phục nguyên vẹn câu trả lời và giữ nguyên điểm số trong bảng Attempt.</li>
-              </ul>
+            <div class="feature-block">
+              <div class="num-badge emerald">2</div>
+              <div class="feature-content">
+                <h3 class="emerald">Xác thực Mật khẩu Scrypt & Chống Dò Mật khẩu</h3>
+                <p>Mật khẩu băm bằng <code>scrypt</code> kèm muối ngẫu nhiên; giới hạn tối đa 5 lần thử sai / 15 phút trên <code>/api/auth/session</code> và ghi vết vào bảng <code>AuditLog</code>.</p>
+              </div>
+            </div>
+            <div class="feature-block">
+              <div class="num-badge violet">3</div>
+              <div class="feature-content">
+                <h3 class="violet">Cookie HMAC-SHA256 & Middleware Chặn Chéo Cổng</h3>
+                <p>Phiên đăng nhập ký điện tử HttpOnly; <code>src/middleware.ts</code> kiểm tra quyền trước mọi request và hỗ trợ <code>RoleSwitcher</code> cho Super Admin.</p>
+              </div>
             </div>
           </div>
-          <div class="screenshot-panel">
-            <div class="screenshot-bar">3. Bằng chứng thật trên website: Quản lý Ngân hàng Câu hỏi & Đóng gói Đề PRACTICE / EXAM (/giao-vien/ngan-hang-cau-hoi)</div>
-            <img src="screenshots_verified/07_ngan_hang_cau_hoi_1440px.png" alt="Quản lý Ngân hàng Câu hỏi & Đóng gói Đề PRACTICE / EXAM (/giao-vien/ngan-hang-cau-hoi)" />
-            <div class="route-bar">Đường dẫn & Mã nguồn: /giao-vien/ngan-hang-cau-hoi • /hoc-sinh/kiem-tra • /api/tin-hoc/assessments</div>
-          </div>
         </div>
-        <div class="notes-bar"><strong>Ghi chú thuyết trình (Speaker Notes):</strong>
-SLIDE 6 — HỌC SINH LÀM BÀI, PHẢN HỒI VÀ LƯU ĐIỂM BỀN VỮNG
-- Ý tưởng ban đầu: Học sinh làm bài trắc nghiệm trực tuyến, nhận phản hồi tức thì và lưu lại điểm số, câu sai, số lần làm.
-- Chức năng đã xây dựng: Trang /hoc-sinh/kiem-tra hỗ trợ tự động lưu từng câu trả lời về máy chủ (AUTOSAVE_ANSWERS), chống nộp trùng bằng idempotencyKey, chấm điểm trên máy chủ và giữ nguyên kết quả sau khi tải lại trang (F5).
-- Bằng chứng thật trên website: Ảnh chụp màn hình phiên làm bài và kết quả điểm 10/10 kèm giải thích chi tiết được đọc lại từ bảng Attempt/Answer sau khi reload.</div>
-      </section>
+        <div class="screenshot-panel">
+          <div class="screenshot-bar">Bằng chứng website thật: Biểu mẫu Đăng ký phân tách theo vai trò (/dang-ky)</div>
+          <div class="crop-viewport">
+            <img src="screenshots_verified/02_dang_ky_tai_khoan_1440px.png" alt="Trang Đăng ký (/dang-ky)" style="width:118%; margin-left:-9%; margin-top:-6%;" />
+          </div>
+          <div class="caption-box"><strong>Chú thích:</strong> Cắt cận cảnh thẻ Split-Screen: cột trái nêu 3 nguyên tắc xác minh trường học, cột phải là 4 tab vai trò và chính sách khóa quyền Quản trị.</div>
+          <div class="route-bar">Nguồn mã & tuyến: /dang-ky • /dang-nhap • src/lib/session-token.ts</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 04 / 16</span>
+      </div>
+    </section>
 
-      <section class="slide-card">
-        <div class="slide-top">
-          <span class="slide-badge">SLIDE 07 • CHỨC NĂNG 5 • SÁNG TẠO SẢN PHẨM SỐ & AN TOÀN SANDBOX</span>
-          <h2>Xưởng Trò chơi HTML Học tập & Trung tâm Kiểm duyệt Sandbox Cô lập</h2>
+    <!-- SLIDE 05 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num">SLIDE 05 / 16</span>
+          <span class="slide-cat">CHỨC NĂNG ĐÃ KIỂM CHỨNG 02 • QUẢN TRỊ NGƯỜI DÙNG & NHẬP EXCEL</span>
         </div>
-        <div class="slide-sub">Ý tưởng học sinh lập trình trò chơi cùng AI → Quét tĩnh mã nguồn, khung chạy cô lập CSP & ghim phiên bản duyệt</div>
-        <div class="slide-body">
-          <div>
-            <div class="box idea">
-              <h3>1. Ý tưởng ban đầu trong đề cương</h3>
-              <p>Học sinh vận dụng kiến thức môn học và câu lệnh AI để tạo trò chơi HTML (trắc nghiệm 10 câu, mô phỏng thuật toán 3 nhiệm vụ) và chia sẻ an toàn cho cả lớp.</p>
+        <h2>Cấp Mã Học sinh Không Cần Email & Nhập Danh sách Lớp từ Excel/CSV</h2>
+      </div>
+      <div class="slide-sub">Giải quyết bài toán thực tế của học sinh khối 6–7 chưa có email cá nhân và tự động hóa nhập liệu đầu năm</div>
+      <div class="slide-body">
+        <div>
+          <div class="idea-banner">
+            <div class="label">Mục tiêu đề cương ban đầu</div>
+            <p>Khởi tạo nhanh danh sách học sinh toàn trường từ tệp Excel đầu năm học và cấp tài khoản cho học sinh THCS chưa có địa chỉ email.</p>
+          </div>
+          <div class="feature-stack">
+            <div class="feature-block">
+              <div class="num-badge">1</div>
+              <div class="feature-content">
+                <h3>Đăng nhập bằng Mã Học sinh (Không Bịa Email Giả)</h3>
+                <p>Tạo học sinh chỉ cần <code>Mã HS + Họ tên + Lớp</code>. Không tự gán <code>@unigo.edu.vn</code> giả; sinh mật khẩu tạm hiển thị 1 lần và buộc đổi ở lần đăng nhập đầu.</p>
+              </div>
             </div>
-            <div class="box built">
-              <h3>2. Chức năng đã xây dựng & xác minh</h3>
-              <ul>
-                <li>Bộ quét an toàn mã tĩnh (analyzeStudentHtmlCode): Tự động từ chối mã HTML chứa lệnh gọi mạng (fetch, XMLHttpRequest, WebSocket), truy cập cookie/localStorage hoặc nạp script ngoài.</li><li>Khung thực thi cô lập (SandboxedHtmlGamePlayer): Chạy sản phẩm học sinh trong thẻ <iframe sandbox='allow-scripts'> kèm chính sách CSP khóa hoàn toàn kết nối mạng (connect-src 'none').</li><li>Quản lý phiên bản kiểm duyệt (approvedVersionId): Khi học sinh gửi bản cập nhật v2 (PENDING_REVIEW), phiên bản v1 đã được giáo viên duyệt trước đó vẫn tiếp tục phục vụ ổn định trên thư viện lớp.</li>
-              </ul>
+            <div class="feature-block">
+              <div class="num-badge emerald">2</div>
+              <div class="feature-content">
+                <h3 class="emerald">Nhập Hàng loạt từ Excel/CSV Có Xem trước (Preview)</h3>
+                <p>Đọc tệp <code>.xlsx/.csv</code> thật, tách rõ dòng hợp lệ và dòng lỗi (thiếu mã HS, thiếu lớp, trùng mã HS) trước khi quản trị viên bấm xác nhận lưu.</p>
+              </div>
+            </div>
+            <div class="feature-block">
+              <div class="num-badge amber">3</div>
+              <div class="feature-content">
+                <h3 class="amber">Đặt lại Mật khẩu Tạm 1-Click & Thu hồi Phiên Cũ</h3>
+                <p>Khi học sinh quên mật khẩu, quản trị viên hoặc giáo viên cấp lại mật khẩu tạm mới tại <code>/quan-tri/nguoi-dung</code> và vô hiệu hóa phiên cũ.</p>
+              </div>
             </div>
           </div>
-          <div class="screenshot-panel">
-            <div class="screenshot-bar">3. Bằng chứng thật trên website: Xưởng Trò chơi HTML của học sinh chạy trong khung Sandbox cô lập (/hoc-sinh/xuong-tro-choi)</div>
-            <img src="screenshots_verified/08_xuong_tro_choi_html_sandbox_1440px.png" alt="Xưởng Trò chơi HTML của học sinh chạy trong khung Sandbox cô lập (/hoc-sinh/xuong-tro-choi)" />
-            <div class="route-bar">Đường dẫn & Mã nguồn: /hoc-sinh/xuong-tro-choi • /giao-vien/duyet-tro-choi • /embed/tro-choi/[slug]</div>
-          </div>
         </div>
-        <div class="notes-bar"><strong>Ghi chú thuyết trình (Speaker Notes):</strong>
-SLIDE 7 — XƯỞNG TRÒ CHƠI HTML & KIỂM DUYỆT SANDBOX
-- Ý tưởng ban đầu: Học sinh sáng tạo trò chơi học tập HTML với sự hỗ trợ của AI và nhúng vào cổng học tập của lớp.
-- Chức năng đã xây dựng: Xưởng trò chơi (/hoc-sinh/xuong-tro-choi), trang kiểm duyệt giáo viên (/giao-vien/duyet-tro-choi) và đường dẫn nhúng Google Sites (/embed/tro-choi/[slug]) bảo vệ bằng bộ quét mã tĩnh + iframe sandbox cô lập.
-- Bằng chứng thật trên website: Ảnh chụp trò chơi HTML chạy trực tiếp trong khung Sandbox cô lập trên trình duyệt.</div>
-      </section>
+        <div class="screenshot-panel">
+          <div class="screenshot-bar">Bằng chứng thật: Thanh công cụ Nhập Excel & Hộp thoại Thêm Tài khoản</div>
+          <div class="dual-crop-stack">
+            <div class="crop-viewport">
+              <img src="screenshots_verified/03_quan_tri_rbac_excel_1440px.png" alt="Quản lý người dùng & Nhập Excel" style="width:122%; margin-left:-20%; margin-top:-6%; margin-bottom:-26%;" />
+            </div>
+            <div class="crop-viewport">
+              <img src="screenshots_verified/04_modal_them_nguoi_dung_1440px.png" alt="Modal Thêm tài khoản mới" style="width:185%; margin-left:-42%; margin-top:-26%; margin-bottom:-22%;" />
+            </div>
+          </div>
+          <div class="caption-box"><strong>Chú thích:</strong> Ảnh trên: Nút <em>Thêm tài khoản</em> & <em>Nhập danh sách Học sinh UNIGO (.xlsx)</em>. Ảnh dưới: Cận cảnh hộp thoại tạo tài khoản.</div>
+          <div class="route-bar">Nguồn mã & tuyến: /quan-tri/nguoi-dung • /api/admin/users • /api/admin/import-students</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 05 / 16</span>
+      </div>
+    </section>
 
-      <section class="slide-card">
-        <div class="slide-top">
-          <span class="slide-badge">SLIDE 08 • CHỨC NĂNG 6 • CÔNG CỤ AI SƯ PHẠM & HƯỚNG DẪN TƯ DUY</span>
-          <h2>Prompt Lab (8 Mẫu Câu lệnh Sư phạm) & Trợ lý AI Socratic</h2>
+    <!-- SLIDE 06 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num">SLIDE 06 / 16</span>
+          <span class="slide-cat">CHỨC NĂNG ĐÃ KIỂM CHỨNG 03 • HỌC LIỆU SỐ & KIỂM ĐỊNH TỆP</span>
         </div>
-        <div class="slide-sub">Ý tưởng rèn kỹ năng làm việc với AI → Bộ lắp ghép câu lệnh theo biến số, phản hồi Socratic & nhật ký AIUsageLog</div>
-        <div class="slide-body">
-          <div>
-            <div class="box idea">
-              <h3>1. Ý tưởng ban đầu trong đề cương</h3>
-              <p>Thay vì để học sinh dùng AI chép lời giải có sẵn, hệ thống hướng dẫn các em cách đặt câu lệnh có cấu trúc và chỉ gợi mở từng bước theo phương pháp Socratic.</p>
+        <h2>Biên soạn Bài giảng Đa định dạng & Kiểm tra Tệp Tải lên An toàn</h2>
+      </div>
+      <div class="slide-sub">Bảo vệ máy chủ và học sinh bằng bộ kiểm tra chữ ký byte (Magic-Bytes), chống Zip-Slip và Zip-Bomb</div>
+      <div class="slide-body">
+        <div>
+          <div class="idea-banner">
+            <div class="label">Mục tiêu đề cương ban đầu</div>
+            <p>Giáo viên đăng tải bài giảng PDF, DOCX, PPTX, XLSX, ảnh, video hoặc gói ZIP học liệu dùng chung theo từng chủ đề môn học.</p>
+          </div>
+          <div class="feature-stack">
+            <div class="feature-block">
+              <div class="num-badge">1</div>
+              <div class="feature-content">
+                <h3>Xác thực Chữ ký Byte Thực tế (Magic-Bytes)</h3>
+                <p>Kiểm tra header nhị phân thật (<code>%PDF-</code> cho PDF, <code>PK</code> cho ZIP/Office); từ chối ngay tệp thực thi (<code>.exe</code>, <code>.bat</code>, <code>.ps1</code>, <code>.js</code>) đổi tên giả dạng PDF.</p>
+              </div>
             </div>
-            <div class="box built">
-              <h3>2. Chức năng đã xây dựng & xác minh</h3>
-              <ul>
-                <li>Prompt Lab (/hoc-sinh/sang-tao-cung-ai & /hoc-sinh/prompt-lab): Cung cấp 8 mẫu câu lệnh chuẩn sư phạm (tạo quiz 10 câu, mô phỏng 3 nhiệm vụ, sửa lỗi giao diện, tự đánh giá sản phẩm...) có ô điền biến số trực quan.</li><li>Trợ lý AI Socratic nổi toàn cục (FloatingAIAssistant & /api/ai/chat): Phân nhánh phản hồi theo 4 vai trò (Học sinh, Giáo viên, Phụ huynh, Quản trị), luôn đặt câu hỏi gợi mở tư duy và tự động chuyển sang chế độ Socratic cục bộ ổn định khi chưa gắn khóa API ngoài.</li><li>Kiểm toán sử dụng AI: Mọi lượt tương tác đều ghi nhận vai trò, phân hệ, số token và chi phí ước tính vào bảng AIUsageLog.</li>
-              </ul>
+            <div class="feature-block">
+              <div class="num-badge emerald">2</div>
+              <div class="feature-content">
+                <h3 class="emerald">Chống Tấn công Zip-Slip & Zip-Bomb</h3>
+                <p>Quét toàn bộ mục lục tệp nén ZIP: chặn đường dẫn thoát thư mục (<code>../</code>), chặn tệp thực thi ẩn bên trong và giới hạn tổng dung lượng giải nén &le; 100 MB.</p>
+              </div>
+            </div>
+            <div class="feature-block">
+              <div class="num-badge violet">3</div>
+              <div class="feature-content">
+                <h3 class="violet">Phân lớp Thư mục SGK Kết nối tri thức (Lớp 6 Tập 1)</h3>
+                <p>Đã chuẩn hóa kho SGK Toán 6 & Ngữ văn 6 KNTT Tập 1 kèm manifest SHA-256, mục lục chương/bài và quy tắc đối chiếu <code>trang PDF = trang in + 1</code>.</p>
+              </div>
             </div>
           </div>
-          <div class="screenshot-panel">
-            <div class="screenshot-bar">3. Bằng chứng thật trên website: Trợ lý AI Socratic phản hồi gợi mở theo vai trò (FloatingAIAssistant)</div>
-            <img src="screenshots_verified/10_tro_ly_ai_socratic_1440px.png" alt="Trợ lý AI Socratic phản hồi gợi mở theo vai trò (FloatingAIAssistant)" />
-            <div class="route-bar">Đường dẫn & Mã nguồn: /hoc-sinh/sang-tao-cung-ai • /api/ai/chat • src/lib/tin-hoc-prompts.ts</div>
-          </div>
         </div>
-        <div class="notes-bar"><strong>Ghi chú thuyết trình (Speaker Notes):</strong>
-SLIDE 8 — PROMPT LAB & TRỢ LÝ AI SOCRATIC
-- Ý tưởng ban đầu: Ứng dụng AI có kiểm soát sư phạm — học sinh biết đặt câu hỏi, biết tự làm và biết kiểm tra lại kết quả của AI.
-- Chức năng đã xây dựng: Trang /hoc-sinh/sang-tao-cung-ai với 8 mẫu câu lệnh có biến số tùy chỉnh và cửa sổ Trợ lý AI Socratic nổi trên mọi trang, lưu lịch sử kiểm toán vào bảng AIUsageLog.
-- Bằng chứng thật trên website: Ảnh chụp giao diện Prompt Lab và cửa sổ Trợ lý AI Socratic hoạt động thực tế.</div>
-      </section>
+        <div class="screenshot-panel">
+          <div class="screenshot-bar">Bằng chứng thật: Trang Bài giảng & Hộp thoại Tải Học liệu (/giao-vien/bai-giang)</div>
+          <div class="dual-crop-stack">
+            <div class="crop-viewport">
+              <img src="screenshots_verified/05_giao_vien_bai_giang_1440px.png" alt="Thanh tiêu đề Biên soạn Bài giảng" style="width:122%; margin-left:-20%; margin-top:-5%; margin-bottom:-48%;" />
+            </div>
+            <div class="crop-viewport">
+              <img src="screenshots_verified/06_modal_tao_bai_giang_1440px.png" alt="Hộp thoại Soạn bài giảng" style="width:170%; margin-left:-35%; margin-top:-4%; margin-bottom:-4%;" />
+            </div>
+          </div>
+          <div class="caption-box"><strong>Chú thích:</strong> Cắt cận cảnh hộp thoại Soạn bài giảng: vùng kéo-thả kiểm tra Magic-Bytes/Zip-Slip và tùy chọn khởi tạo Google Docs.</div>
+          <div class="route-bar">Nguồn mã & tuyến: /giao-vien/bai-giang • /api/assets • src/lib/asset-validation.ts</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 06 / 16</span>
+      </div>
+    </section>
 
-      <section class="slide-card">
-        <div class="slide-top">
-          <span class="slide-badge">SLIDE 09 • CHỨC NĂNG 7 • ĐÁNH GIÁ RUBRIC, PHÂN TÍCH & BẢNG THEO DÕI 6-TAB</span>
-          <h2>Chấm bài Rubric 4 Tiêu chí, Phân tích CSDL & Bản chụp 6-Tab Lớp học</h2>
+    <!-- SLIDE 07 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num">SLIDE 07 / 16</span>
+          <span class="slide-cat">CHỨC NĂNG ĐÃ KIỂM CHỨNG 04 • NGÂN HÀNG CÂU HỎI & KIỂM TRA TRỰC TUYẾN</span>
         </div>
-        <div class="slide-sub">Ý tưởng theo dõi tiến độ đa chiều → Chấm điểm Rubric chuẩn xác, báo cáo số liệu thật & bảo vệ cột điểm gốc</div>
-        <div class="slide-body">
-          <div>
-            <div class="box idea">
-              <h3>1. Ý tưởng ban đầu trong đề cương</h3>
-              <p>Giáo viên chấm bài minh bạch theo tiêu chí Rubric, xem thống kê năng lực thực tế của lớp và xuất bảng theo dõi 6-tab an toàn.</p>
+        <h2>Ngân hàng Câu hỏi Chốt phiên bản & Làm bài Tự động Lưu tạm</h2>
+      </div>
+      <div class="slide-sub">Tách biệt chế độ Luyện tập (PRACTICE) và Kiểm tra (EXAM); khôi phục nguyên vẹn bài làm khi tải lại trang (F5)</div>
+      <div class="slide-body">
+        <div>
+          <div class="idea-banner">
+            <div class="label">Mục tiêu đề cương ban đầu</div>
+            <p>Xây dựng ngân hàng câu hỏi theo cấp độ nhận thức; học sinh tự luyện nhiều lần hoặc thi tính giờ nghiêm ngặt không lo mất bài khi rớt mạng.</p>
+          </div>
+          <div class="feature-stack">
+            <div class="feature-block">
+              <div class="num-badge">1</div>
+              <div class="feature-content">
+                <h3>Chốt Phiên bản Câu hỏi (Version Pinning) & Duyệt AI</h3>
+                <p>Câu hỏi AI sinh luôn ở trạng thái <code>PENDING_REVIEW</code> chờ giáo viên duyệt. Khi đóng gói đề thi, nội dung câu hỏi được chụp bất biến vào <code>AssessmentItem</code>.</p>
+              </div>
             </div>
-            <div class="box built">
-              <h3>2. Chức năng đã xây dựng & xác minh</h3>
-              <ul>
-                <li>Chấm bài Rubric 4 tiêu chí (/giao-vien/cham-bai & /api/grading): Kiểm tra quyền phụ trách lớp của giáo viên, lưu điểm và nhận xét đồng bộ vào bảng Submission, Grade, LearningRecord và AuditLog.</li><li>Báo cáo Phân tích dữ liệu thực (/giao-vien/phan-tich): Tổng hợp trực tiếp từ CSDL; khi chưa có dữ liệu hiển thị trung thực 'Chưa có dữ liệu' (không bịa số liệu mẫu).</li><li>Bản chụp 6-Tab Lớp học cục bộ & Duyệt nhận xét 2 bước (/giao-vien/google-workspace): Kết xuất 6 tab từ PostgreSQL có khử độc công thức (sanitizeSheetCell) và chặn ghi đè cột điểm chính thức khi nhập nhận xét.</li>
-              </ul>
+            <div class="feature-block">
+              <div class="num-badge emerald">2</div>
+              <div class="feature-content">
+                <h3 class="emerald">Tách Chế độ PRACTICE / EXAM & Ẩn Đáp án Máy chủ</h3>
+                <p><code>PRACTICE</code> cho làm nhiều lượt và giải thích ngay; <code>EXAM</code> giới hạn 1 lượt, đếm ngược server. Gói tin <code>IN_PROGRESS</code> loại bỏ hoàn toàn trường đáp án đúng.</p>
+              </div>
+            </div>
+            <div class="feature-block">
+              <div class="num-badge violet">3</div>
+              <div class="feature-content">
+                <h3 class="violet">Tự Lưu tạm (AUTOSAVE) & Ghi Đồng bộ 4 Bảng CSDL</h3>
+                <p>Lưu từng câu chọn vào bảng <code>Answer</code> (tải lại F5 không mất bài). Khi nộp bài, hệ thống ghi đồng bộ <code>Attempt</code>, <code>Answer</code>, <code>Grade</code> và <code>LearningRecord</code>.</p>
+              </div>
             </div>
           </div>
-          <div class="screenshot-panel">
-            <div class="screenshot-bar">3. Bằng chứng thật trên website: Trung tâm Chấm bài & Đánh giá Rubric 4 tiêu chí (/giao-vien/cham-bai)</div>
-            <img src="screenshots_verified/09_cham_bai_rubric_4_tieu_chi_1440px.png" alt="Trung tâm Chấm bài & Đánh giá Rubric 4 tiêu chí (/giao-vien/cham-bai)" />
-            <div class="route-bar">Đường dẫn & Mã nguồn: /giao-vien/cham-bai • /giao-vien/phan-tich • /giao-vien/google-workspace</div>
-          </div>
         </div>
-        <div class="notes-bar"><strong>Ghi chú thuyết trình (Speaker Notes):</strong>
-SLIDE 9 — CHẤM BÀI RUBRIC, BÁO CÁO PHÂN TÍCH & BẢN CHỤP 6-TAB LỚP HỌC
-- Ý tưởng ban đầu: Giáo viên đánh giá theo Rubric và quản lý bảng theo dõi 6-tab của từng lớp mà không làm sai lệch điểm gốc.
-- Chức năng đã xây dựng: Luồng chấm bài /api/grading, trang phân tích /giao-vien/phan-tich và công cụ tạo bản chụp 6-tab cục bộ tại /giao-vien/google-workspace (hiển thị rõ trạng thái DISCONNECTED khi chưa nối Google Sheets API đám mây, đồng thời bảo vệ cột điểm gốc qua bước duyệt 2 pha).
-- Bằng chứng thật trên website: Ảnh chụp màn hình trang Phân tích học tập kết hợp Trợ lý AI Socratic và bảng 6-tab lớp 7A1.</div>
-      </section>
+        <div class="screenshot-panel">
+          <div class="screenshot-bar">Bằng chứng thật: Quản lý Ngân hàng Câu hỏi & Đóng gói Đề thi (/giao-vien/ngan-hang-cau-hoi)</div>
+          <div class="crop-viewport">
+            <img src="screenshots_verified/07_ngan_hang_cau_hoi_1440px.png" alt="Ngân hàng câu hỏi" style="width:122%; margin-left:-20%; margin-top:-5%; margin-bottom:-25%;" />
+          </div>
+          <div class="caption-box"><strong>Chú thích:</strong> Cắt bỏ phần nền trống bên dưới để phóng lớn thanh đóng gói Đề Luyện tập / Đề Kiểm tra và bộ lọc mức độ nhận thức.</div>
+          <div class="route-bar">Nguồn mã & tuyến: /giao-vien/ngan-hang-cau-hoi • /hoc-sinh/kiem-tra • /api/tin-hoc/assessments</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 07 / 16</span>
+      </div>
+    </section>
 
-      <section class="slide-card">
-        <div class="slide-top">
-          <span class="slide-badge">SLIDE 10 • TỔNG KẾT KIỂM CHỨNG • SẴN SÀNG VẬN HÀNH THỬ NGHIỆM</span>
-          <h2>Tổng kết Giá trị Thực tế & Các điểm Phối hợp Cùng Nhà trường</h2>
+    <!-- SLIDE 08 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num">SLIDE 08 / 16</span>
+          <span class="slide-cat">CHỨC NĂNG ĐÃ KIỂM CHỨNG 05 • SÁNG TẠO SẢN PHẨM SỐ & AN TOÀN SANDBOX</span>
         </div>
-        <div class="slide-sub">Hệ thống LMS lõi đã vận hành hoàn chỉnh trên CSDL • Minh bạch các cấu hình cần xác nhận với Quản trị viên</div>
-        <div class="slide-body">
-          <div>
-            <div class="box idea">
-              <h3>1. Ý tưởng ban đầu trong đề cương</h3>
-              <p>Đảm bảo nhà trường nắm rõ những gì có thể sử dụng ngay hôm nay và những thông số hạ tầng cần cấp phát khi mở rộng kết nối đám mây.</p>
+        <h2>Xưởng Trò chơi HTML Học tập & Trung tâm Kiểm duyệt Sandbox Cô lập</h2>
+      </div>
+      <div class="slide-sub">Học sinh lập trình trò chơi ôn tập cùng AI; hệ thống bảo vệ an toàn bằng quét mã tĩnh và khung CSP khóa mạng</div>
+      <div class="slide-body">
+        <div>
+          <div class="idea-banner">
+            <div class="label">Mục tiêu đề cương ban đầu</div>
+            <p>Học sinh vận dụng kiến thức bài học và câu lệnh AI để tạo trò chơi HTML tự chứa, gửi giáo viên duyệt và chia sẻ an toàn cho cả lớp.</p>
+          </div>
+          <div class="feature-stack">
+            <div class="feature-block">
+              <div class="num-badge">1</div>
+              <div class="feature-content">
+                <h3>Quét Tĩnh Mã Nguồn HTML (analyzeStudentHtmlCode)</h3>
+                <p>Tự động phát hiện và chặn mã HTML chứa lệnh gọi mạng (<code>fetch</code>, <code>XMLHttpRequest</code>, <code>WebSocket</code>), truy cập <code>cookie/localStorage</code>, thẻ <code>&lt;base&gt;</code> hoặc meta refresh.</p>
+              </div>
             </div>
-            <div class="box built">
-              <h3>2. Chức năng đã xây dựng & xác minh</h3>
+            <div class="feature-block">
+              <div class="num-badge emerald">2</div>
+              <div class="feature-content">
+                <h3 class="emerald">Cô lập &lt;iframe sandbox='allow-scripts'&gt; & CSP Đầu Tài liệu</h3>
+                <p>Đặt thẻ <code>&lt;meta Content-Security-Policy&gt;</code> (<code>default-src 'none'; connect-src 'none'</code>) ở đầu khung HTML và trả HTTP CSP header trên route <code>/api/game-frame</code>.</p>
+              </div>
+            </div>
+            <div class="feature-block">
+              <div class="num-badge violet">3</div>
+              <div class="feature-content">
+                <h3 class="violet">Ghim Phiên bản Duyệt & Ghi Nhận Lượt Chơi Thực tế</h3>
+                <p>Giữ bản <code>v1</code> đã duyệt hiển thị ổn định khi bản <code>v2</code> chờ duyệt; ghi nhận điểm tự luyện, thời gian và chủ đề sai vào bảng <code>LearningRecord</code> (<code>HTML_GAME_PLAY</code>).</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="screenshot-panel">
+          <div class="screenshot-bar">Bằng chứng thật: Thư viện & Xưởng Trò chơi HTML của Học sinh (/hoc-sinh/xuong-tro-choi)</div>
+          <div class="crop-viewport">
+            <img src="screenshots_verified/08_xuong_tro_choi_html_sandbox_1440px.png" alt="Xưởng trò chơi HTML" style="width:122%; margin-left:-20%; margin-top:-5%; margin-bottom:-14%;" />
+          </div>
+          <div class="caption-box"><strong>Chú thích:</strong> Cắt cận cảnh vùng tiêu đề, 2 nút mở Prompt/Nộp trò chơi HTML, thanh chuyển tab và khung chạy thử Sandbox cô lập.</div>
+          <div class="route-bar">Nguồn mã & tuyến: /hoc-sinh/xuong-tro-choi • /giao-vien/duyet-tro-choi • src/lib/html-game-sandbox.ts</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 08 / 16</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 09 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num">SLIDE 09 / 16</span>
+          <span class="slide-cat">CHỨC NĂNG ĐÃ KIỂM CHỨNG 06 • CÔNG CỤ AI SƯ PHẠM & HƯỚNG DẪN TƯ DUY</span>
+        </div>
+        <h2>Prompt Lab (8 Mẫu Câu lệnh), Sinh đề SGK KNTT & Trợ lý AI Socratic</h2>
+      </div>
+      <div class="slide-sub">Rèn kỹ năng đặt câu lệnh có cấu trúc, gợi mở từng bước theo phương pháp Socratic và bảo vệ dữ liệu cá nhân học sinh</div>
+      <div class="slide-body">
+        <div>
+          <div class="idea-banner">
+            <div class="label">Mục tiêu đề cương ban đầu</div>
+            <p>Hướng dẫn học sinh và giáo viên sử dụng AI đúng phương pháp sư phạm: không giải bài hộ, không lộ thông tin cá nhân và kiểm soát nguồn SGK.</p>
+          </div>
+          <div class="feature-stack">
+            <div class="feature-block">
+              <div class="num-badge">1</div>
+              <div class="feature-content">
+                <h3>Prompt Lab 8 Mẫu & Studio Sinh đề từ SGK KNTT Lớp 6</h3>
+                <p>Cung cấp 8 mẫu câu lệnh theo biến số và công cụ chọn chương/bài SGK Toán 6, Ngữ văn 6 (Kết nối tri thức Tập 1) để sinh bài ôn tập, đề thử và game HTML.</p>
+              </div>
+            </div>
+            <div class="feature-block">
+              <div class="num-badge violet">2</div>
+              <div class="feature-content">
+                <h3 class="violet">Trợ lý Socratic 4 Vai trò & Ẩn danh PII Học sinh</h3>
+                <p>Tự động che Mã HS (<code>[MA_HS_DA_AN]</code>), Email (<code>[EMAIL_DA_AN]</code>), SĐT (<code>[SDT_DA_AN]</code>) trước khi xử lý; có chế độ Socratic nội bộ khi chưa cấu hình <code>GEMINI_API_KEY</code>.</p>
+              </div>
+            </div>
+            <div class="feature-block">
+              <div class="num-badge emerald">3</div>
+              <div class="feature-content">
+                <h3 class="emerald">Phân biệt Rõ Gemini API vs. Gemini Gems & Nhật ký AI</h3>
+                <p>Tách bạch Gemini Server API với liên kết Gemini Gems ngoài; ghi nhận đầy đủ số token, độ trễ và chi phí ước tính vào bảng <code>AIUsageLog</code>.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="screenshot-panel">
+          <div class="screenshot-bar">Bằng chứng thật: Cửa sổ Trợ lý AI Socratic nổi toàn cục (FloatingAIAssistant)</div>
+          <div class="crop-viewport">
+            <img src="screenshots_verified/10_tro_ly_ai_socratic_1440px.png" alt="Trợ lý AI Socratic" style="width:165%; margin-left:-65%; margin-top:-8%;" />
+          </div>
+          <div class="caption-box"><strong>Chú thích:</strong> Cắt và phóng lớn góc phải dưới màn hình để nhìn rõ lời chào theo ngữ cảnh vai trò, các nút gợi ý nhanh và ô nhập câu hỏi.</div>
+          <div class="route-bar">Nguồn mã & tuyến: /hoc-sinh/sang-tao-cung-ai • /giao-vien/on-tap • /api/ai/chat</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 09 / 16</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 10 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num">SLIDE 10 / 16</span>
+          <span class="slide-cat">CHỨC NĂNG ĐÃ KIỂM CHỨNG 07 • ĐÁNH GIÁ RUBRIC & BÁO CÁO TIẾN ĐỘ</span>
+        </div>
+        <h2>Chấm bài Rubric 4 Tiêu chí, Phân tích CSDL & Bản chụp 6-Tab Lớp học</h2>
+      </div>
+      <div class="slide-sub">Đánh giá minh bạch theo tiêu chí; tuyệt đối không bịa điểm hay tiến độ mẫu khi lớp chưa có dữ liệu</div>
+      <div class="slide-body">
+        <div>
+          <div class="idea-banner">
+            <div class="label">Mục tiêu đề cương ban đầu</div>
+            <p>Giáo viên chấm bài tự luận/dự án theo Rubric 4 mức, theo dõi năng lực thực tế của từng học sinh và xuất bảng tổng hợp 6-tab an toàn.</p>
+          </div>
+          <div class="feature-stack">
+            <div class="feature-block">
+              <div class="num-badge">1</div>
+              <div class="feature-content">
+                <h3>Chấm bài theo 4 Tiêu chí Rubric & Kiểm tra Quyền Lớp</h3>
+                <p>Chỉ giáo viên phụ trách lớp mới được chấm bài (<code>/api/grading</code>); lưu điểm và nhận xét đồng bộ vào bảng <code>Submission</code>, <code>Grade</code>, <code>LearningRecord</code> và <code>AuditLog</code>.</p>
+              </div>
+            </div>
+            <div class="feature-block">
+              <div class="num-badge emerald">2</div>
+              <div class="feature-content">
+                <h3 class="emerald">Báo cáo Tiến bộ Minh bạch (Không Bịa Số liệu Mẫu)</h3>
+                <p>Tính điểm đầu/cuối/cao nhất/trung bình từ lượt làm thực tế; chỉ tính độ tiến bộ khi có từ 2 lượt làm hợp lệ trở lên; thiếu dữ liệu báo rõ <em>“Chưa có dữ liệu”</em>.</p>
+              </div>
+            </div>
+            <div class="feature-block">
+              <div class="num-badge amber">3</div>
+              <div class="feature-content">
+                <h3 class="amber">Khử Độc Công thức Bảng tính & Bảo vệ Cột Điểm Gốc</h3>
+                <p>Hàm <code>sanitizeSheetCell</code> tự thêm dấu nháy đơn (<code>'</code>) trước chuỗi bắt đầu bằng <code>=, +, -, @</code>; quy trình duyệt 2 bước chặn mọi thao tác sửa điểm từ file ngoài.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="screenshot-panel">
+          <div class="screenshot-bar">Bằng chứng thật: Trung tâm Chấm bài & Đánh giá Rubric (/giao-vien/cham-bai)</div>
+          <div class="crop-viewport">
+            <img src="screenshots_verified/09_cham_bai_rubric_4_tieu_chi_1440px.png" alt="Trung tâm Chấm bài Rubric" style="width:122%; margin-left:-20%; margin-top:-5%; margin-bottom:-28%;" />
+          </div>
+          <div class="caption-box"><strong>Chú thích:</strong> Cắt cận cảnh vùng chính của Trung tâm Chấm bài; hiển thị trạng thái trung thực khi lớp chưa phát sinh bài nộp chờ chấm.</div>
+          <div class="route-bar">Nguồn mã & tuyến: /giao-vien/cham-bai • /giao-vien/phan-tich • src/lib/sheets-import-pipeline.ts</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 10 / 16</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 11: COST ANALYSIS PART 1 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num">SLIDE 11 / 16</span>
+          <span class="slide-cat">ƯỚC TÍNH CHI PHÍ TRIỂN KHAI (PHẦN 1/4) • ĐỊNH NGHĨA QUY MÔ & GIẢ ĐỊNH</span>
+        </div>
+        <h2>Phân định Tổng Tài khoản vs. Truy cập Đồng thời & Bộ Giả định Kỹ thuật</h2>
+      </div>
+      <div class="slide-sub">Xác định rõ khái niệm “Người dùng” và thông số tải thực tế trước khi tính chi phí cho 200 / 1.000 / 10.000 người dùng</div>
+      <div class="slide-body full">
+        <div>
+          <div class="cost-banner">
+            <strong>ĐỊNH NGHĨA “NGƯỜI DÙNG” & GIẢ ĐỊNH ĐỒNG THỜI:</strong> Các mốc <strong>200 / 1.000 / 10.000 người dùng</strong> là <strong>TỔNG SỐ TÀI KHOẢN ĐĂNG KÝ (N<sub>total</sub>)</strong> gồm Học sinh (80%), Phụ huynh (15%) và Giáo viên/Quản trị (5%). Do chưa có số liệu đo tải thực tế toàn trường, ước tính áp dụng giả định trường học: <strong>Người dùng hoạt động tháng (MAU) = 85% &times; N<sub>total</sub></strong>; <strong>Hoạt động ngày (DAU) = 35% &times; N<sub>total</sub></strong>; <strong>Truy cập đồng thời đỉnh (CCU<sub>peak</sub> giờ kiểm tra) = 10% &times; N<sub>total</sub></strong>.
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Thông số giả định kỹ thuật</th>
+                <th>Cơ sở tính toán từ kiến trúc EDUCARE AI</th>
+                <th>Quy mô 200 người dùng<br/><small>(~4–5 lớp / 1 khối)</small></th>
+                <th>Quy mô 1.000 người dùng<br/><small>(1 trường THCS ~22 lớp)</small></th>
+                <th>Quy mô 10.000 người dùng<br/><small>(Cụm 8–10 trường)</small></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>1. Tổng tài khoản (N<sub>total</sub>)</strong></td>
+                <td>80% Học sinh + 15% Phụ huynh + 5% Giáo viên/Quản trị</td>
+                <td>200 tài khoản</td>
+                <td>1.000 tài khoản</td>
+                <td>10.000 tài khoản</td>
+              </tr>
+              <tr>
+                <td><strong>2. Hoạt động tháng (MAU - 85%) &amp; ngày (DAU - 35%)</strong></td>
+                <td>Học sinh học hàng tuần, phụ huynh xem báo cáo định kỳ</td>
+                <td>170 MAU | 70 DAU</td>
+                <td>850 MAU | 350 DAU</td>
+                <td>8.500 MAU | 3.500 DAU</td>
+              </tr>
+              <tr>
+                <td><strong>3. Truy cập đồng thời đỉnh (CCU<sub>peak</sub> = 10%)</strong></td>
+                <td>1–2 khối cùng làm bài kiểm tra trực tuyến hoặc tiết Tin học</td>
+                <td>20 CCU đỉnh</td>
+                <td>100 CCU đỉnh</td>
+                <td>1.000 CCU đỉnh</td>
+              </tr>
+              <tr>
+                <td><strong>4. Dung lượng CSDL PostgreSQL (Lưu 3 năm học)</strong></td>
+                <td>33 bảng Prisma: ~2 KB/lượt thi &amp; log + chỉ mục (~1,5 MB/người/3 năm)</td>
+                <td>~0,3 GB DB</td>
+                <td>~1,5 GB DB</td>
+                <td>~15,0 GB DB</td>
+              </tr>
+              <tr>
+                <td><strong>5. Lưu trữ tệp, ảnh, slide, học liệu (Asset/HTML)</strong></td>
+                <td>SGK PDF, bài giảng, ảnh minh chứng, bài nộp (~25 MB/người)</td>
+                <td>~5 GB tệp</td>
+                <td>~25 GB tệp</td>
+                <td>~250 GB tệp</td>
+              </tr>
+              <tr>
+                <td><strong>6. Băng thông mạng (Egress / CDN hàng tháng)</strong></td>
+                <td>Trung bình ~120 MB lưu lượng/người dùng đăng ký/tháng</td>
+                <td>~25 GB / tháng</td>
+                <td>~120 GB / tháng</td>
+                <td>~1.200 GB (1,2 TB) / tháng</td>
+              </tr>
+              <tr>
+                <td><strong>7. Lượt gọi AI trực tuyến/tháng (Kịch bản cơ sở)</strong></td>
+                <td>20 lượt/MAU/tháng &times; ~850 tokens/lượt (500 in + 350 out)</td>
+                <td>3.400 lượt / tháng<br/>(~2,89 triệu tokens)</td>
+                <td>17.000 lượt / tháng<br/>(~14,45 triệu tokens)</td>
+                <td>170.000 lượt / tháng<br/>(~144,5 triệu tokens)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 11 / 16</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 12: COST ANALYSIS PART 2 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num">SLIDE 12 / 16</span>
+          <span class="slide-cat">ƯỚC TÍNH CHI PHÍ TRIỂN KHAI (PHẦN 2/4) • ĐƠN GIÁ & NGUỒN THAM KHẢO</span>
+        </div>
+        <h2>Bảng Đơn giá Công bố Chính thức & Phân loại 3 Nhóm Chi phí</h2>
+      </div>
+      <div class="slide-sub">Chỉ sử dụng bảng giá công khai có nguồn kiểm chứng (tham khảo ngày 16/11/2026); tách rõ Cố định / Biến đổi / Một lần</div>
+      <div class="slide-body full">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Hạng mục hạ tầng / dịch vụ</th>
+              <th>Phân loại chi phí</th>
+              <th>Nhà cung cấp &amp; Gói tham chiếu</th>
+              <th>Đơn giá công bố &amp; Định mức bao gồm (USD)</th>
+              <th>Nguồn kiểm chứng (16/11/2026)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. Máy chủ Web &amp; CDN</strong><br/>(Next.js 15 App Router)</td>
+              <td>Cố định hàng tháng<br/>+ Biến đổi khi vượt 1 TB</td>
+              <td><strong>Vercel</strong> (Gói Pro - 1 seat quản trị triển khai)</td>
+              <td><strong>$20 / tháng</strong> (bao gồm 1 TB Fast Data Transfer CDN, 10 GB Origin Transfer). Cước vượt 1 TB: <strong>$0,15 / GB</strong>.</td>
+              <td><a href="https://vercel.com/pricing" target="_blank" rel="noopener">vercel.com/pricing</a></td>
+            </tr>
+            <tr>
+              <td><strong>2. CSDL PostgreSQL, Lưu trữ tệp &amp; Backup 7 ngày</strong></td>
+              <td>Cố định hàng tháng<br/>+ Biến đổi theo GB vượt</td>
+              <td><strong>Supabase</strong> (Gói Pro - kèm $10 compute credit)</td>
+              <td><strong>$25 / tháng</strong> (bao gồm 8 GB DB, 100 GB File Storage, 250 GB Uncached + 250 GB Cached Egress, Backup tự động 7 ngày).</td>
+              <td><a href="https://supabase.com/pricing" target="_blank" rel="noopener">supabase.com/pricing</a></td>
+            </tr>
+            <tr>
+              <td><strong>3. Cước vượt định mức CSDL, Storage &amp; Compute</strong></td>
+              <td>Biến đổi theo mức sử dụng<br/>(Metered Over-usage)</td>
+              <td><strong>Supabase Pro</strong> Over-usage &amp; Compute Add-on</td>
+              <td>DB vượt 8 GB: <strong>$0,125/GB/th</strong> &bull; Storage vượt 100 GB: <strong>$0,0213/GB/th</strong> &bull; Egress vượt: <strong>$0,09/GB</strong> (uncached) / <strong>$0,03/GB</strong> (cached) &bull; Nâng Compute 1.000 CCU: <strong>+$50/th</strong>.</td>
+              <td><a href="https://supabase.com/pricing" target="_blank" rel="noopener">supabase.com/pricing</a></td>
+            </tr>
+            <tr>
+              <td><strong>4. Dịch vụ AI Sư phạm</strong><br/>(Gemini Server API)</td>
+              <td>Biến đổi theo số token<br/>(Pay-as-you-go)</td>
+              <td><strong>Google AI Studio</strong><br/>(Model <code>gemini-2.5-flash</code>)</td>
+              <td>Input: <strong>$0,30 / 1M tokens</strong> &bull; Output: <strong>$2,50 / 1M tokens</strong> (~<strong>$0,001025 / lượt</strong> 850 tokens). <em>(Trong <code>route.ts:86</code> có thêm bộ ước tính nội bộ $0,30/1M tổng tokens).</em></td>
+              <td><a href="https://ai.google.dev/gemini-api/docs/pricing" target="_blank" rel="noopener">ai.google.dev/gemini-api/docs/pricing</a></td>
+            </tr>
+            <tr>
+              <td><strong>5. Google Workspace / Drive &amp; Đồng bộ Lớp học</strong></td>
+              <td>Miễn phí (nếu đủ ĐK Edu)<br/>hoặc cố định theo gói</td>
+              <td><strong>Google Workspace for Education Fundamentals</strong></td>
+              <td><strong>$0 / tháng</strong> cho trường học được công nhận (gồm 100 TB lưu trữ chung toàn tổ chức). Nếu chưa đủ điều kiện: cần xác nhận.</td>
+              <td><a href="https://edu.google.com/intl/ALL_vn/workspace-for-education/editions/overview/" target="_blank" rel="noopener">edu.google.com/workspace</a></td>
+            </tr>
+            <tr>
+              <td><strong>6. Tên miền (.edu.vn), Nhân sự bảo trì &amp; Đào tạo</strong></td>
+              <td>Phát sinh 1 lần &amp;<br/>Định kỳ hàng năm</td>
+              <td>Nhà đăng ký tên miền VN &amp; Nhân sự CNTT trường</td>
+              <td><strong>Chưa có dữ liệu để xác định</strong> (Phụ thuộc trường đã có sẵn tên miền <code>.edu.vn</code> và nhân sự CNTT nội bộ hay thuê ngoài).</td>
+              <td>Cần nhà trường xác nhận<br/>(Xem Slide 14 &amp; 16)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 12 / 16</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 13: COST ANALYSIS PART 3 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num emerald">SLIDE 13 / 16</span>
+          <span class="slide-cat">ƯỚC TÍNH CHI PHÍ TRIỂN KHAI (PHẦN 3/4) • BẢNG TÍNH CHI TIẾT KỊCH BẢN CƠ SỞ</span>
+        </div>
+        <h2>Chi phí Ước tính Theo Tháng & Theo Năm cho 200 / 1.000 / 10.000 Người dùng</h2>
+      </div>
+      <div class="slide-sub">Đơn vị: USD (quy đổi tham khảo 1 USD = 25.500 VNĐ) • Áp dụng công thức trực tiếp trên đơn giá Slide 12 và giả định Slide 11</div>
+      <div class="slide-body full">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Hạng mục chi phí (Kịch bản Cơ sở)</th>
+              <th>Loại</th>
+              <th>200 Người dùng<br/>(Tháng | Năm)</th>
+              <th>1.000 Người dùng<br/>(Tháng | Năm)</th>
+              <th>10.000 Người dùng<br/>(Tháng | Năm)</th>
+              <th>Công thức &amp; Thuyết minh cách tính</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>1. Hosting &amp; CDN (Vercel Pro)</strong></td>
+              <td>Cố định + Biến đổi</td>
+              <td>$20,00 / tháng<br/>$240,00 / năm</td>
+              <td>$20,00 / tháng<br/>$240,00 / năm</td>
+              <td>$50,00 / tháng<br/>$600,00 / năm</td>
+              <td>Gói cơ sở $20/tháng (gồm 1 TB). Ở mức 10.000 người dùng (~1,2 TB): vượt 200 GB &times; $0,15/GB = +$30/tháng.</td>
+            </tr>
+            <tr>
+              <td><strong>2. CSDL PostgreSQL &amp; Backup 7 ngày (Supabase Pro)</strong></td>
+              <td>Cố định + Biến đổi</td>
+              <td>$25,00 / tháng<br/>$300,00 / năm</td>
+              <td>$25,00 / tháng<br/>$300,00 / năm</td>
+              <td>$75,88 / tháng<br/>$910,56 / năm</td>
+              <td>Gói Pro $25/tháng (gồm 8 GB DB). Mức 10.000 người dùng: +$50 Compute (1.000 CCU) + 7 GB DB vượt &times; $0,125 = $75,88.</td>
+            </tr>
+            <tr>
+              <td><strong>3. Lưu trữ tệp &amp; Băng thông Storage vượt gói</strong></td>
+              <td>Biến đổi</td>
+              <td>$0,00 / tháng<br/>$0,00 / năm</td>
+              <td>$0,00 / tháng<br/>$0,00 / năm</td>
+              <td>$30,20 / tháng<br/>$362,40 / năm</td>
+              <td>200 &amp; 1.000 người nằm trong hạn mức 100 GB tệp &amp; 500 GB Egress. Mức 10.000: 150 GB tệp vượt &times; $0,0213 ($3,20) + 450 GB Egress TB &times; $0,06 ($27,00).</td>
+            </tr>
+            <tr>
+              <td><strong>4. Dịch vụ AI (Gemini 2.5 Flash - 20 lượt/MAU)</strong></td>
+              <td>Biến đổi</td>
+              <td>$3,49 / tháng<br/>$41,88 / năm</td>
+              <td>$17,43 / tháng<br/>$209,16 / năm</td>
+              <td>$174,25 / tháng<br/>$2.091,00 / năm</td>
+              <td>1 lượt (500 in &times; $0,30/1M + 350 out &times; $2,50/1M) = $0,001025/lượt. Nhân với 3.400 / 17.000 / 170.000 lượt/tháng.</td>
+            </tr>
+            <tr>
+              <td><strong>5. Google Workspace for Education</strong></td>
+              <td>Cố định</td>
+              <td>$0,00 / tháng<br/>(Đủ ĐK Edu)</td>
+              <td>$0,00 / tháng<br/>(Đủ ĐK Edu)</td>
+              <td>$0,00 / tháng<br/>(Đủ ĐK Edu)</td>
+              <td>Miễn phí với trường phổ thông được Google công nhận (100 TB lưu trữ chung).</td>
+            </tr>
+            <tr>
+              <td><strong>6. Tên miền, Bảo trì &amp; Khởi tạo 1 lần</strong></td>
+              <td>1 lần / Năm</td>
+              <td>Chưa có dữ liệu</td>
+              <td>Chưa có dữ liệu</td>
+              <td>Chưa có dữ liệu</td>
+              <td>Chưa có dữ liệu để xác định (phụ thuộc tên miền sẵn có của trường và phương án nhân sự CNTT nội bộ).</td>
+            </tr>
+            <tr class="total-row">
+              <td>TỔNG CỘNG (USD - Kịch bản Cơ sở)<br/>Quy đổi VNĐ (1 USD &approx; 25.500 VNĐ)</td>
+              <td>Tổng hợp<br/>(1 &rarr; 5)</td>
+              <td>$48,49 / tháng<br/>$581,88 / năm<br/>(~1,24 tr/th | 14,84 tr/năm)</td>
+              <td>$62,43 / tháng<br/>$749,16 / năm<br/>(~1,59 tr/th | 19,10 tr/năm)</td>
+              <td>$330,33 / tháng<br/>$3.963,96 / năm<br/>(~8,42 tr/th | 101,08 tr/năm)</td>
+              <td>Chi phí bình quân trên mỗi tài khoản/tháng: <strong>$0,24</strong> (200 người) &rarr; <strong>$0,06</strong> (1.000 người) &rarr; <strong>$0,033</strong> (10.000 người).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 13 / 16</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 14: COST ANALYSIS PART 4 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num violet">SLIDE 14 / 16</span>
+          <span class="slide-cat">ƯỚC TÍNH CHI PHÍ TRIỂN KHAI (PHẦN 4/4) • ĐỘ NHẠY 3 KỊCH BẢN & RỦI RO BIẾN ĐỘNG</span>
+        </div>
+        <h2>So sánh 3 Kịch bản (Tiết kiệm / Cơ sở / Tải cao) & Thông tin Cần Bổ sung</h2>
+      </div>
+      <div class="slide-sub">Làm rõ biên độ dao động chi phí thực tế và các hạng mục chưa đủ dữ liệu cần nhà trường xác nhận</div>
+      <div class="slide-body full">
+        <div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Kịch bản vận hành</th>
+                <th>Cấu hình &amp; Giả định sử dụng</th>
+                <th>200 Người dùng<br/>(Tháng | Năm)</th>
+                <th>1.000 Người dùng<br/>(Tháng | Năm)</th>
+                <th>10.000 Người dùng<br/>(Tháng | Năm)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>1. Kịch bản Tiết kiệm</strong><br/>(Eco / Thử nghiệm)</td>
+                <td>Ưu tiên Socratic nội bộ + Prompt Lab (5 lượt API/MAU/tháng); lưu SGK/video trên Google Drive trường. Với 200 người có thể dùng Free Tier thử nghiệm.</td>
+                <td>$0,87 – $45,87 / tháng<br/>$10,44 – $550,44 / năm</td>
+                <td>$49,36 / tháng<br/>$592,32 / năm<br/>(~15,10 triệu VNĐ/năm)</td>
+                <td>$199,66 / tháng<br/>$2.395,92 / năm<br/>(~61,10 triệu VNĐ/năm)</td>
+              </tr>
+              <tr>
+                <td><strong>2. Kịch bản Cơ sở</strong><br/>(Baseline Khuyên dùng)</td>
+                <td>Vercel Pro + Supabase Pro (Backup 7 ngày) + 20 lượt gọi Gemini 2.5 Flash/MAU/tháng (~850 tokens/lượt); lưu học liệu chuẩn trong kho Asset &amp; Drive.</td>
+                <td>$48,49 / tháng<br/>$581,88 / năm<br/>(~14,84 triệu VNĐ/năm)</td>
+                <td>$62,43 / tháng<br/>$749,16 / năm<br/>(~19,10 triệu VNĐ/năm)</td>
+                <td>$330,33 / tháng<br/>$3.963,96 / năm<br/>(~101,08 triệu VNĐ/năm)</td>
+              </tr>
+              <tr>
+                <td><strong>3. Kịch bản Tải cao</strong><br/>(High-Load / Kỳ thi)</td>
+                <td>60 lượt gọi AI/MAU/tháng + giáo viên sinh đề từ trích đoạn PDF SGK; băng thông gấp 1,5 lần; bật Point-in-Time Recovery (PITR +$100/tháng) ở quy mô 10.000.</td>
+                <td>$55,46 / tháng<br/>$665,52 / năm<br/>(~16,97 triệu VNĐ/năm)</td>
+                <td>$97,28 / tháng<br/>$1.167,36 / năm<br/>(~29,77 triệu VNĐ/năm)</td>
+                <td>$803,83 / tháng<br/>$9.645,96 / năm<br/>(~245,97 triệu VNĐ/năm)</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="two-col-cards">
+            <div class="info-card">
+              <h3>4 YẾU TỐ KHIẾN CHI PHÍ THỰC TẾ THAY ĐỔI ĐÁNG KỂ</h3>
               <ul>
-                <li>SẴN SÀNG SỬ DỤNG NGAY TRÊN CSDL NỘI BỘ: (1) Quản lý tài khoản 6 vai trò & nhập Excel; (2) Soạn bài giảng, ngân hàng câu hỏi & phát hành đề PRACTICE/EXAM; (3) Học sinh làm bài có tự lưu tạm & chấm điểm máy chủ; (4) Xưởng trò chơi HTML Sandbox; (5) Prompt Lab 8 mẫu câu lệnh & Trợ lý AI Socratic; (6) Chấm bài Rubric & xuất bản chụp 6-tab lớp học.</li><li>4 CÂU HỎI CẦN XÁC NHẬN VỚI NHÀ TRƯỜNG: (1) Sử dụng tên miền Workspace trường hay Gmail cá nhân để cấp GOOGLE_CLIENT_ID / SECRET? (2) Cấp GEMINI_API_KEY tập trung hay dùng Prompt Lab + link Gemini Gems? (3) Quy ước mã đăng nhập cho HS khối 6–7 chưa có email? (4) Phương án lưu trữ bộ slide ý tưởng cũ.</li>
+                <li><strong>Tỷ lệ học liệu Video / PDF nặng:</strong> Lưu trực tiếp trên Supabase làm tăng phí Egress; lưu trên Google Drive trường giúp tiết kiệm băng thông.</li>
+                <li><strong>Tần suất gọi Gemini API trực tuyến</strong> so với việc dùng chế độ Socratic nội bộ kết hợp Prompt Lab.</li>
+                <li><strong>Số học sinh làm bài kiểm tra đồng thời</strong> trong cùng 1 phút (CCU<sub>peak</sub>).</li>
+                <li><strong>Lựa chọn model AI:</strong> Nếu chuyển từ <code>gemini-2.5-flash</code> sang dòng Pro hoặc đính kèm nhiều tệp PDF dài, chi phí token AI có thể tăng 3–5 lần.</li>
+              </ul>
+            </div>
+            <div class="info-card amber">
+              <h3>HẠNG MỤC “CHƯA CÓ DỮ LIỆU ĐỂ XÁC ĐỊNH” (CẦN BỔ SUNG)</h3>
+              <ul>
+                <li><strong>Phí tên miền &amp; SSL tổ chức:</strong> Trường đã có sẵn tên miền <code>.edu.vn</code> hay đăng ký mới?</li>
+                <li><strong>Trạng thái Google Workspace for Education:</strong> Trường đã được duyệt gói Fundamentals miễn phí ($0) hay cần mua gói trả phí?</li>
+                <li><strong>Chi phí nhân sự vận hành, bảo trì &amp; hỗ trợ kỹ thuật:</strong> Do tổ CNTT nhà trường đảm nhiệm hay thuê đơn vị vận hành bên ngoài?</li>
+                <li><strong>Yêu cầu pháp lý về vị trí đặt máy chủ</strong> (On-premise nội bộ hay Cloud quốc tế).</li>
               </ul>
             </div>
           </div>
-          <div class="screenshot-panel">
-            <div class="screenshot-bar">3. Bằng chứng thật trên website: Cộng đồng Học tập mở UNIGO & Trưng bày Sản phẩm Số (/hoc-sinh/cong-dong)</div>
-            <img src="screenshots_verified/11_cong_dong_sang_tao_1440px.png" alt="Cộng đồng Học tập mở UNIGO & Trưng bày Sản phẩm Số (/hoc-sinh/cong-dong)" />
-            <div class="route-bar">Đường dẫn & Mã nguồn: PRODUCT_REALITY_AUDIT.md • Trinhbay_EducareAI/screenshots_verified/</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 14 / 16</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 15 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num emerald">SLIDE 15 / 16</span>
+          <span class="slide-cat">TỔNG KẾT KIỂM CHỨNG (PHẦN 1/2) • SẴN SÀNG VẬN HÀNH THỬ NGHIỆM</span>
+        </div>
+        <h2>Cộng đồng Học tập Mở & 6 Nhóm Chức năng Sử dụng Được Ngay</h2>
+      </div>
+      <div class="slide-sub">Đã tách từ Slide 10 cũ: Trình bày từng nhóm chức năng sẵn sàng vận hành trên một khối riêng biệt</div>
+      <div class="slide-body">
+        <div class="grid-2x4" style="grid-template-columns: 1fr 1fr;">
+          <div class="mini-card">
+            <h3>1. Tài khoản 6 Vai trò & Mã HS Không Email</h3>
+            <p>Đăng nhập bằng Mã HS + mật khẩu tạm 1 lần, nhập danh sách lớp từ Excel/CSV có bước xem trước.</p>
+          </div>
+          <div class="mini-card">
+            <h3>2. Bài giảng, Kho Tệp & SGK KNTT Lớp 6</h3>
+            <p>Kiểm định tệp tải lên (Magic-Bytes/Zip-Slip), phân lớp SGK Toán 6 & Ngữ văn 6 KNTT Tập 1.</p>
+          </div>
+          <div class="mini-card">
+            <h3>3. Ngân hàng Câu hỏi & Thi PRACTICE / EXAM</h3>
+            <p>Chốt phiên bản câu hỏi, tự lưu tạm khi F5, chấm điểm máy chủ và ẩn đáp án khi đang thi.</p>
+          </div>
+          <div class="mini-card">
+            <h3>4. Xưởng Trò chơi HTML & Sandbox Cô lập</h3>
+            <p>Quét mã tĩnh, chạy trong iframe CSP khóa mạng, có sẵn 6 trò chơi mẫu (Tin học 7, Toán 6, Văn 6).</p>
+          </div>
+          <div class="mini-card">
+            <h3>5. Prompt Lab, Sinh đề AI & Gia sư Socratic</h3>
+            <p>8 mẫu câu lệnh theo biến số, công cụ sinh đề/trò chơi từ SGK và ẩn danh PII học sinh.</p>
+          </div>
+          <div class="mini-card">
+            <h3>6. Chấm bài Rubric 4 Mức & Bảng 6-Tab Lớp</h3>
+            <p>Chấm điểm đồng bộ 4 bảng CSDL, báo cáo trung thực và bảo vệ cột điểm gốc qua duyệt 2 pha.</p>
           </div>
         </div>
-        <div class="notes-bar"><strong>Ghi chú thuyết trình (Speaker Notes):</strong>
-SLIDE 10 — TỔNG KẾT HIỆN TRẠNG & CÂU HỎI XÁC NHẬN VỚI NHÀ TRƯỜNG
-- Tóm tắt trung thực: Toàn bộ 8 nhóm chức năng học tập, kiểm tra, sáng tạo trò chơi HTML Sandbox, chấm bài Rubric và quản trị phân quyền đã hoạt động thực tế trên CSDL PostgreSQL và có ảnh chụp chứng minh.
-- Các kết nối Google đám mây (OAuth, Drive, Sheets, Classroom, Docs, Calendar) và khóa Gemini API trực tuyến được báo cáo đúng thực tế là đang ở chế độ cục bộ/chờ cấp khóa cấu hình của trường.</div>
-      </section>
+        <div class="screenshot-panel">
+          <div class="screenshot-bar">Bằng chứng thật: Cộng đồng Học tập mở UNIGO (/hoc-sinh/cong-dong)</div>
+          <div class="crop-viewport">
+            <img src="screenshots_verified/11_cong_dong_sang_tao_1440px.png" alt="Cộng đồng học tập mở UNIGO" style="width:122%; margin-left:-20%; margin-top:-5%; margin-bottom:-10%;" />
+          </div>
+          <div class="caption-box"><strong>Chú thích:</strong> Cắt cận cảnh 3 thẻ trưng bày sản phẩm số của học sinh và học liệu giáo viên kèm quy trình thực hiện.</div>
+          <div class="route-bar">Nguồn mã & tuyến: /hoc-sinh/cong-dong • PRODUCT_REALITY_AUDIT.md</div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 15 / 16</span>
+      </div>
+    </section>
+
+    <!-- SLIDE 16 -->
+    <section class="slide-card">
+      <div class="slide-top">
+        <div class="slide-meta">
+          <span class="slide-num">SLIDE 16 / 16</span>
+          <span class="slide-cat">TỔNG KẾT KIỂM CHỨNG (PHẦN 2/2) • DANH MỤC CẦN XÁC NHẬN VỚI NHÀ TRƯỜNG</span>
+        </div>
+        <h2>5 Quyết định Cấu hình & Vận hành Cần Thống nhất Trước Khi Triển khai</h2>
+      </div>
+      <div class="slide-sub">Đã tách từ Slide 10 cũ: Mỗi điểm cần xác nhận được trình bày trên một hàng riêng để Ban Giám hiệu dễ chốt phương án</div>
+      <div class="slide-body full">
+        <div class="feature-stack">
+          <div class="feature-block">
+            <div class="num-badge">1</div>
+            <div class="feature-content">
+              <h3>Phương án Tài khoản Google Cloud &amp; OAuth của Nhà trường</h3>
+              <p>Nhà trường sử dụng tên miền Google Workspace for Education riêng (<code>@unigo.edu.vn</code>) hay tài khoản Gmail quản trị để cấp <code>GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET</code> và bật các API Drive, Sheets, Docs, Classroom, Calendar?</p>
+            </div>
+          </div>
+          <div class="feature-block">
+            <div class="num-badge violet">2</div>
+            <div class="feature-content">
+              <h3 class="violet">Chính sách Cấp Khóa Gemini API Tập trung hay Dùng Prompt Lab + Gemini Gems</h3>
+              <p>Nhà trường cấp <code>GEMINI_API_KEY</code> trả phí theo token trên máy chủ (ước tính ~$3,5 – $17,4/tháng cho 200 – 1.000 người dùng) hay ưu tiên dùng chế độ Socratic nội bộ kết hợp đường dẫn Gemini Gems miễn phí?</p>
+            </div>
+          </div>
+          <div class="feature-block">
+            <div class="num-badge emerald">3</div>
+            <div class="feature-content">
+              <h3 class="emerald">Quy trình Cấp &amp; Phát Mật khẩu Tạm Lần đầu cho Học sinh Khối 6–9</h3>
+              <p>Xác nhận quy trình giáo viên chủ nhiệm nhận file CSV mật khẩu tạm một lần từ Quản trị viên để phát cho học sinh đăng nhập bằng Mã học sinh và tự đổi mật khẩu tại phòng máy.</p>
+            </div>
+          </div>
+          <div class="feature-block">
+            <div class="num-badge amber">4</div>
+            <div class="feature-content">
+              <h3 class="amber">Chiến lược Lưu trữ Học liệu Dung lượng Lớn (SGK PDF, Video Bài giảng)</h3>
+              <p>Thống nhất lưu các tệp PDF SGK/video nặng trên Google Drive trường (gắn link vào bài giảng) để tối ưu băng thông Supabase dưới ngưỡng 100 GB tệp / 250 GB Egress.</p>
+            </div>
+          </div>
+          <div class="feature-block">
+            <div class="num-badge">5</div>
+            <div class="feature-content">
+              <h3>Xác nhận Quy mô Triển khai Giai đoạn 1 &amp; Đầu mối Quản trị Kỹ thuật</h3>
+              <p>Chốt quy mô áp dụng đầu tiên (200 người dùng thí điểm 1 khối hay 1.000 người dùng toàn trường), tên miền chính thức và nhân sự CNTT phụ trách quản lý khóa <code>APP_ENCRYPTION_KEY</code>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>EDUCARE AI (UNIGO) • Báo cáo Hiện trạng Đã Kiểm chứng & Phân tích Chi phí Triển khai</span>
+        <span>Trang 16 / 16</span>
+      </div>
+    </section>
+
   </div>
+
+  <script>
+    let singleMode = false;
+    let currentIndex = 0;
+    const slides = Array.from(document.querySelectorAll('.slide-card'));
+    const toggleBtn = document.getElementById('toggleModeBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const indicator = document.getElementById('slideIndicator');
+
+    function updateSlideView() {
+      slides.forEach((s, idx) => {
+        s.classList.toggle('active-slide', idx === currentIndex);
+      });
+      if (singleMode) {
+        indicator.textContent = `Slide ${String(currentIndex + 1).padStart(2, '0')} / ${slides.length}`;
+        prevBtn.style.display = 'inline-block';
+        nextBtn.style.display = 'inline-block';
+        toggleBtn.textContent = 'Chế độ: Trình chiếu từng trang (Nhấn để xem tất cả)';
+      } else {
+        indicator.textContent = `Tổng: ${slides.length} Slide`;
+        prevBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+        toggleBtn.textContent = 'Chế độ: Xem tất cả 16 Slide (Nhấn để trình chiếu)';
+      }
+    }
+
+    function toggleMode() {
+      singleMode = !singleMode;
+      document.body.classList.toggle('single-mode', singleMode);
+      updateSlideView();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function changeSlide(delta) {
+      if (!singleMode) return;
+      currentIndex = (currentIndex + delta + slides.length) % slides.length;
+      updateSlideView();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (!singleMode) return;
+      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+        e.preventDefault();
+        changeSlide(1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        changeSlide(-1);
+      }
+    });
+  </script>
 </body>
 </html>
