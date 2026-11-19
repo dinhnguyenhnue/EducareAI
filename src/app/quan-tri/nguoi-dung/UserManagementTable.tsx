@@ -12,6 +12,7 @@ import {
   Edit3,
   KeyRound,
   Copy,
+  ArrowRightLeft,
 } from "lucide-react";
 import { Modal } from "@/components/ui";
 
@@ -22,7 +23,19 @@ interface IssuedCredentialItem {
   temporaryPassword: string;
 }
 
-export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
+interface SchoolClassOption {
+  id: string;
+  name: string;
+  gradeLevel: number;
+}
+
+export function UserManagementTable({
+  initialUsers,
+  schoolClasses = [],
+}: {
+  initialUsers: any[];
+  schoolClasses?: SchoolClassOption[];
+}) {
   const [users, setUsers] = useState(initialUsers);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
@@ -47,6 +60,16 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
   const [newStudentCode, setNewStudentCode] = useState("");
   const [newStudentClass, setNewStudentClass] = useState("7A1");
   const [userActionError, setUserActionError] = useState<string | null>(null);
+
+  // Assign / Transfer Student Class Modal State
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferStudentCode, setTransferStudentCode] = useState("");
+  const [transferTargetClass, setTransferTargetClass] = useState(
+    schoolClasses[0]?.name || ""
+  );
+  const [transferBusy, setTransferBusy] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
+  const [transferSuccess, setTransferSuccess] = useState<string | null>(null);
 
   // One-time Issued Credentials State (shown only once after create/import/reset)
   const [oneTimeCredentials, setOneTimeCredentials] = useState<
@@ -294,6 +317,43 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
     }
   };
 
+  const handleTransferStudentClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTransferError(null);
+    setTransferSuccess(null);
+    setTransferBusy(true);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "UPDATE_STUDENT_CLASS",
+          studentCode: transferStudentCode.trim(),
+          targetClassName: transferTargetClass.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setTransferError(data.error || "Không thể cập nhật lớp cho học sinh.");
+        return;
+      }
+      if (data.user) {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === data.user.id ? data.user : u))
+        );
+      }
+      const fromLabel = data.transfer?.fromClassName || "Chưa có lớp";
+      const toLabel = data.transfer?.toClassName || transferTargetClass;
+      setTransferSuccess(
+        `Đã cập nhật lớp cho ${data.transfer?.fullName || transferStudentCode} (${data.transfer?.studentCode}): ${fromLabel} → ${toLabel}. Giữ nguyên thông tin đăng nhập và kết quả cũ.`
+      );
+    } catch {
+      setTransferError("Lỗi kết nối máy chủ khi cập nhật lớp.");
+    } finally {
+      setTransferBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Search & Actions Bar */}
@@ -325,7 +385,22 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
           </select>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setTransferError(null);
+              setTransferSuccess(null);
+              setTransferStudentCode("");
+              setTransferTargetClass(schoolClasses[0]?.name || "");
+              setShowTransferModal(true);
+            }}
+            className="px-3.5 py-2 rounded-xl bg-ocean-50 hover:bg-ocean-100 border border-ocean-200 text-ocean-800 text-xs font-semibold transition-colors flex items-center gap-1.5"
+          >
+            <ArrowRightLeft className="w-3.5 h-3.5 text-ocean-600" />
+            <span>Gán / Chuyển lớp</span>
+          </button>
+
           <button
             type="button"
             onClick={() => {
@@ -456,6 +531,26 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                           <KeyRound className="w-3 h-3" />
                           <span>Đặt lại MK tạm</span>
                         </button>
+                        {u.role === "STUDENT" && u.studentProfile?.studentCode && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTransferError(null);
+                              setTransferSuccess(null);
+                              setTransferStudentCode(u.studentProfile.studentCode);
+                              setTransferTargetClass(
+                                u.studentProfile?.schoolClass?.name ||
+                                  schoolClasses[0]?.name ||
+                                  ""
+                              );
+                              setShowTransferModal(true);
+                            }}
+                            className="text-xs font-semibold text-teal-700 hover:text-teal-800 hover:underline inline-flex items-center gap-1"
+                          >
+                            <ArrowRightLeft className="w-3 h-3" />
+                            <span>Chuyển lớp</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => {
@@ -1137,6 +1232,116 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Modal: Gán hoặc Chuyển lớp cho học sinh theo mã HS */}
+      <Modal
+        open={showTransferModal}
+        onClose={() => setShowTransferModal(false)}
+        title={
+          <span className="flex items-center gap-2">
+            <ArrowRightLeft className="w-5 h-5 text-ocean-600 shrink-0" />
+            <span>Gán / Chuyển lớp cho tài khoản học sinh</span>
+          </span>
+        }
+        description="Tìm tài khoản học sinh theo Mã học sinh và chuyển sang lớp đích hợp lệ. Giữ nguyên tài khoản đăng nhập, bài đã nộp và điểm lịch sử ở lớp cũ."
+        maxWidth="max-w-lg"
+      >
+        <form onSubmit={handleTransferStudentClass} className="space-y-4 text-sm">
+          {transferError && (
+            <div
+              role="alert"
+              className="p-3 rounded-xl bg-status-danger-soft text-status-danger text-xs flex items-start gap-2"
+            >
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{transferError}</span>
+            </div>
+          )}
+
+          {transferSuccess && (
+            <div
+              role="status"
+              className="p-3 rounded-xl bg-status-success-soft text-status-success text-xs flex items-start gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{transferSuccess}</span>
+            </div>
+          )}
+
+          <div>
+            <label
+              htmlFor="transfer-student-code"
+              className="block text-xs font-semibold text-ink mb-1"
+            >
+              Mã học sinh (studentCode)
+            </label>
+            <input
+              id="transfer-student-code"
+              type="text"
+              required
+              value={transferStudentCode}
+              onChange={(e) => setTransferStudentCode(e.target.value)}
+              placeholder="Ví dụ: HS26-7A1-01"
+              className="w-full px-3.5 py-2.5 bg-canvas border border-border rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ocean-500/20 focus:border-ocean-500"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor={
+                schoolClasses.length > 0
+                  ? "transfer-target-class-select"
+                  : "transfer-target-class-input"
+              }
+              className="block text-xs font-semibold text-ink mb-1"
+            >
+              Lớp đích trong năm học hiện tại
+            </label>
+            {schoolClasses.length > 0 ? (
+              <select
+                id="transfer-target-class-select"
+                required
+                value={transferTargetClass}
+                onChange={(e) => setTransferTargetClass(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-canvas border border-border rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ocean-500/20 focus:border-ocean-500"
+              >
+                <option value="">-- Chọn lớp đích --</option>
+                {schoolClasses.map((cls) => (
+                  <option key={cls.id} value={cls.name}>
+                    Lớp {cls.name} (Khối {cls.gradeLevel})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id="transfer-target-class-input"
+                type="text"
+                required
+                value={transferTargetClass}
+                onChange={(e) => setTransferTargetClass(e.target.value)}
+                placeholder="Ví dụ: 7B"
+                className="w-full px-3.5 py-2.5 bg-canvas border border-border rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ocean-500/20 focus:border-ocean-500"
+              />
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowTransferModal(false)}
+              className="px-4 py-2 rounded-xl bg-canvas hover:bg-surface-muted border border-border text-xs font-semibold text-ink"
+            >
+              Đóng
+            </button>
+            <button
+              type="submit"
+              disabled={transferBusy}
+              className="px-4 py-2 rounded-xl bg-ocean-600 hover:bg-ocean-700 disabled:opacity-60 text-white text-xs font-semibold"
+            >
+              {transferBusy ? "Đang cập nhật..." : "Xác nhận cập nhật lớp"}
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

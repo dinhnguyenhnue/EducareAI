@@ -19,7 +19,36 @@ export default async function StudentAssignmentsPage() {
   const isStudentSession =
     session?.user.role === "STUDENT" && !session.isSuperAdmin;
 
+  let studentActiveClassIds: string[] = [];
+  if (isStudentSession) {
+    const profile = await prisma.studentProfile.findUnique({
+      where: { userId: session.user.id },
+      include: {
+        enrollments: { where: { status: "ACTIVE" } },
+      },
+    });
+    if (profile) {
+      studentActiveClassIds = Array.from(
+        new Set(
+          [
+            profile.classId,
+            ...profile.enrollments.map((e) => e.classId),
+          ].filter((v): v is string => Boolean(v))
+        )
+      );
+    }
+  }
+
   const assignments = await prisma.assignment.findMany({
+    where:
+      isStudentSession && studentActiveClassIds.length > 0
+        ? {
+            OR: [
+              { classId: { in: studentActiveClassIds } },
+              { submissions: { some: { student: { userId: session.user.id } } } },
+            ],
+          }
+        : undefined,
     include: {
       subject: true,
       schoolClass: true,
@@ -29,6 +58,7 @@ export default async function StudentAssignmentsPage() {
             ? { userId: session.user.id }
             : { user: { email: "minhanh.nguyen@unigo.edu.vn" } },
         },
+        orderBy: { attemptNumber: "desc" },
       },
     },
     orderBy: { dueAt: "asc" },

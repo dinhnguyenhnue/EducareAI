@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth";
 import { verifyTeacherClassScope } from "@/lib/submission-guard";
+import { autoSyncClassTrackingSheetNonBlocking } from "@/lib/google-workspace";
 
 export async function POST(req: Request) {
   try {
@@ -168,7 +169,21 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, submission: updated });
+    // Tự động cập nhật Google Sheet của đúng lớp sau khi giáo viên chấm hoặc sửa điểm (kể cả điểm 0)
+    const sheetSync = assignment?.classId
+      ? await autoSyncClassTrackingSheetNonBlocking(
+          session.user.id,
+          assignment.classId,
+          { academicYearId: assignment.schoolClass?.academicYearId }
+        )
+      : { syncStatus: "PENDING_SYNC" as const, spreadsheetId: null, errorMessage: null };
+
+    return NextResponse.json({
+      success: true,
+      submission: updated,
+      sheetSyncState: sheetSync.syncStatus,
+      sheetSyncError: sheetSync.errorMessage,
+    });
   } catch (err: any) {
     console.error("Grading API Error:", err);
     return NextResponse.json(

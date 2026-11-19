@@ -247,8 +247,48 @@ export async function submitAssignmentTransactional(params: {
         orderBy: { attemptNumber: "desc" },
       });
 
-      // Check idempotent replay if identical content was just submitted within 30s or matching idempotency marker
-      const latest = existingSubmissions[0];
+      const completedSubmissions = existingSubmissions.filter(
+        (s) => s.status !== "DRAFT"
+      );
+
+      const normalizedIdemKey = params.idempotencyKey
+        ? String(params.idempotencyKey).trim()
+        : null;
+
+      // 1) Explicit idempotencyKey replay check (safe across retries and time gaps)
+      if (normalizedIdemKey) {
+        const matchedByKey = completedSubmissions.find((s) => {
+          if (!s.attachments) return false;
+          try {
+            const parsed = JSON.parse(s.attachments);
+            if (Array.isArray(parsed)) {
+              return parsed.some(
+                (item) =>
+                  item &&
+                  typeof item === "object" &&
+                  item.type === "IDEMPOTENCY_KEY" &&
+                  item.key === normalizedIdemKey
+              );
+            }
+          } catch {
+            // ignore non-JSON attachments
+          }
+          return false;
+        });
+        if (matchedByKey) {
+          return {
+            ok: true as const,
+            statusCode: 200,
+            idempotentReplay: true,
+            submission: matchedByKey,
+            assignmentClassId: assignment.classId,
+            academicYearId: assignment.schoolClass?.academicYearId || null,
+          };
+        }
+      }
+
+      // 2) Short-window identical content double-click guard (15s)
+      const latest = completedSubmissions[0];
       if (
         latest &&
         latest.content === params.content &&
@@ -259,6 +299,8 @@ export async function submitAssignmentTransactional(params: {
           statusCode: 200,
           idempotentReplay: true,
           submission: latest,
+          assignmentClassId: assignment.classId,
+          academicYearId: assignment.schoolClass?.academicYearId || null,
         };
       }
 
@@ -275,7 +317,7 @@ export async function submitAssignmentTransactional(params: {
           dueAt: assignment.dueAt,
           maxSubmissions: assignment.maxSubmissions,
         },
-        existingSubmissionCount: existingSubmissions.length,
+        existingSubmissionCount: completedSubmissions.length,
       });
 
       if (!validation.allowed) {
@@ -287,12 +329,28 @@ export async function submitAssignmentTransactional(params: {
         };
       }
 
+      // Attach normalizedIdemKey metadata inside attachments JSON so retries are idempotent without schema breakage
+      let finalAttachmentsJson = params.attachmentsJson;
+      if (normalizedIdemKey) {
+        let items: Array<Record<string, unknown>> = [];
+        if (params.attachmentsJson) {
+          try {
+            const parsed = JSON.parse(params.attachmentsJson);
+            if (Array.isArray(parsed)) items = parsed;
+          } catch {
+            items = [];
+          }
+        }
+        items.push({ type: "IDEMPOTENCY_KEY", key: normalizedIdemKey });
+        finalAttachmentsJson = JSON.stringify(items);
+      }
+
       const created = await tx.submission.create({
         data: {
           assignmentId: assignment.id,
           studentId: params.studentProfileId,
           content: params.content,
-          attachments: params.attachmentsJson,
+          attachments: finalAttachmentsJson,
           status: validation.submissionStatus,
           attemptNumber: validation.nextAttemptNumber,
         },
@@ -320,11 +378,12 @@ export async function submitAssignmentTransactional(params: {
           status: "SUCCESS",
           details: JSON.stringify({
             assignmentId: assignment.id,
+            classId: assignment.classId,
             studentCode: params.studentCode,
             attemptNumber: validation.nextAttemptNumber,
             submissionStatus: validation.submissionStatus,
             idempotencyKey:
-              params.idempotencyKey ||
+              normalizedIdemKey ||
               crypto
                 .createHash("sha256")
                 .update(`${params.studentProfileId}:${assignment.id}:${validation.nextAttemptNumber}`)
@@ -339,6 +398,8 @@ export async function submitAssignmentTransactional(params: {
         statusCode: 200,
         idempotentReplay: false,
         submission: created,
+        assignmentClassId: assignment.classId,
+        academicYearId: assignment.schoolClass?.academicYearId || null,
       };
     });
   });

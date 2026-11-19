@@ -560,7 +560,10 @@ export async function getEffectiveGeminiServerConfig(): Promise<{
   };
 }
 
-export async function getValidGoogleAccessToken(userId?: string): Promise<{
+export async function getValidGoogleAccessToken(
+  userId?: string,
+  options?: { forceRefresh?: boolean }
+): Promise<{
   ok: boolean;
   status: IntegrationServiceStatusCode;
   accessToken: string | null;
@@ -578,11 +581,19 @@ export async function getValidGoogleAccessToken(userId?: string): Promise<{
     };
   }
 
-  const conn = userId
+  let conn = userId
     ? await prisma.googleConnection.findUnique({ where: { userId } }).catch(() => null)
-    : await prisma.googleConnection
-        .findFirst({ where: { status: "CONNECTED" }, orderBy: { createdAt: "desc" } })
-        .catch(() => null);
+    : null;
+
+  // Nếu người thao tác (VD: Học sinh nộp bài) không tự gắn Google OAuth, dùng kết nối Google Workspace hợp lệ của GV/Quản trị hệ thống
+  if (!conn || conn.status !== "CONNECTED" || !conn.accessTokenHash) {
+    conn = await prisma.googleConnection
+      .findFirst({
+        where: { status: "CONNECTED" },
+        orderBy: { lastSyncAt: "desc" },
+      })
+      .catch(() => null);
+  }
 
   const scopes = new Set<string>(
     (conn?.scopesGranted || "")
@@ -614,15 +625,23 @@ export async function getValidGoogleAccessToken(userId?: string): Promise<{
     };
   }
 
-  const decryptedAccess = decryptSecret(conn.accessTokenHash);
-  if (decryptedAccess) {
-    return {
-      ok: true,
-      status: "CONNECTED",
-      accessToken: decryptedAccess,
-      scopes,
-      reason: null,
-    };
+  // Chủ động làm mới access_token nếu đã quá 50 phút kể từ lần sync gần nhất hoặc được yêu cầu forceRefresh
+  const tokenAgeMs = conn.lastSyncAt
+    ? Date.now() - new Date(conn.lastSyncAt).getTime()
+    : Number.POSITIVE_INFINITY;
+  const shouldRefresh = Boolean(options?.forceRefresh) || tokenAgeMs > 50 * 60 * 1000;
+
+  if (!shouldRefresh) {
+    const decryptedAccess = decryptSecret(conn.accessTokenHash);
+    if (decryptedAccess) {
+      return {
+        ok: true,
+        status: "CONNECTED",
+        accessToken: decryptedAccess,
+        scopes,
+        reason: null,
+      };
+    }
   }
 
   // Try refreshing if refresh token exists
@@ -659,8 +678,20 @@ export async function getValidGoogleAccessToken(userId?: string): Promise<{
         }
       }
     } catch {
-      // Fall through to error
+      // Fall through to cached token or error
     }
+  }
+
+  // Fallback to existing decrypted access token if refresh failed
+  const fallbackAccess = decryptSecret(conn.accessTokenHash);
+  if (fallbackAccess) {
+    return {
+      ok: true,
+      status: "CONNECTED",
+      accessToken: fallbackAccess,
+      scopes,
+      reason: null,
+    };
   }
 
   return {
@@ -1199,15 +1230,39 @@ export interface AttemptForSheetExport {
   isDemoData?: boolean;
   assessment: {
     code: string;
+    title?: string | null;
     subjectName?: string | null;
     mode: string;
   };
 }
 
+export interface SubmissionForSheetExport {
+  id: string;
+  studentId: string; // StudentProfile.id
+  attemptNumber: number;
+  status: string;
+  submittedAt: Date | null;
+  score: number | null;
+  teacherComment?: string | null;
+  student: {
+    id?: string;
+    userId?: string;
+    studentCode: string;
+    user: { fullName: string };
+  };
+  assignment: {
+    id: string;
+    title: string;
+    type: string;
+    maxScore: number;
+    subject?: { name: string } | null;
+  };
+}
+
 /**
- * Pure builder for Tab 7 (Chi tiết lượt nộp: 1 row per valid submitted attempt)
+ * Pure builder for Tab 7 (Chi tiết lượt nộp: 1 row per valid submitted attempt/submission)
  * and Tab 8 (Tổng hợp HS - Bài - Chế độ: submitted_count, latest_score, best_score, practice_game_plays),
- * preserving existing teacher notes and deduplicating by stable attempt.id.
+ * preserving existing teacher notes and deduplicating by stable record_id.
  */
 export function buildClassTrackingAttemptSheets(params: {
   className: string;
@@ -1218,9 +1273,18 @@ export function buildClassTrackingAttemptSheets(params: {
     studentCode: string;
     user: { fullName: string };
   }>;
+  extraStudents?: Array<{
+    id: string;
+    userId: string;
+    studentCode: string;
+    user: { fullName: string };
+  }>;
   attempts: AttemptForSheetExport[];
+  submissions?: SubmissionForSheetExport[];
   gamePlayRecords: Array<{ studentId: string }>;
   previousTabsJson?: string | null;
+  liveSheetDetailNotes?: Map<string, string>;
+  liveSheetSummaryNotes?: Map<string, string>;
 }) {
   const preservedDetailNoteByRecordId = new Map<string, string>();
   const preservedSummaryNoteByKey = new Map<string, string>();
@@ -1246,15 +1310,33 @@ export function buildClassTrackingAttemptSheets(params: {
       // ignore malformed previous JSON
     }
   }
+  if (params.liveSheetDetailNotes) {
+    for (const [k, v] of params.liveSheetDetailNotes.entries()) {
+      if (v && v !== "Chưa có dữ liệu") {
+        preservedDetailNoteByRecordId.set(k, v);
+      }
+    }
+  }
+  if (params.liveSheetSummaryNotes) {
+    for (const [k, v] of params.liveSheetSummaryNotes.entries()) {
+      if (v && v !== "Chưa có dữ liệu") {
+        preservedSummaryNoteByKey.set(k, v);
+      }
+    }
+  }
 
+  const allKnownStudents = [
+    ...params.students,
+    ...(params.extraStudents || []),
+  ];
   const userIdToStudentCode = new Map<string, string>(
-    params.students.map((s) => [s.userId, s.studentCode])
+    allKnownStudents.map((s) => [s.userId, s.studentCode])
   );
   const userIdToProfileId = new Map<string, string>(
-    params.students.map((s) => [s.userId, s.id])
+    allKnownStudents.map((s) => [s.userId, s.id])
   );
   const userIdToFullName = new Map<string, string>(
-    params.students.map((s) => [s.userId, s.user.fullName])
+    allKnownStudents.map((s) => [s.userId, s.user.fullName])
   );
 
   const gamePlayCountByProfileId = new Map<string, number>();
@@ -1272,54 +1354,126 @@ export function buildClassTrackingAttemptSheets(params: {
     return vnDate.toISOString().replace(/\.\d{3}Z$/, "+07:00");
   };
 
-  // Only completed valid attempts (exclude IN_PROGRESS drafts and demo records), deduplicated by stable attempt.id
-  const seenAttemptIds = new Set<string>();
-  const uniqueCompletedAttempts = params.attempts
-    .filter(
-      (att) =>
-        (att.status === "SUBMITTED" ||
-          att.status === "EXPIRED_AUTO_SUBMITTED") &&
-        !att.isDemoData
-    )
-    .filter((att) => {
-      if (seenAttemptIds.has(att.id)) return false;
-      seenAttemptIds.add(att.id);
-      return true;
-    })
-    .sort((a, b) => {
-      const tA = a.submittedAt ? a.submittedAt.getTime() : 0;
-      const tB = b.submittedAt ? b.submittedAt.getTime() : 0;
-      if (tA !== tB) return tA - tB;
-      return a.id.localeCompare(b.id);
-    });
+  interface UnifiedSubmittedEntry {
+    recordId: string;
+    studentCode: string;
+    fullName: string;
+    studentProfileId: string | null;
+    subjectName: string;
+    assessmentCode: string;
+    assessmentTitle: string;
+    mode: string;
+    attemptNumber: number;
+    submittedAt: Date | null;
+    score: number | null;
+    maxScore: number;
+    source: "LMS_NATIVE_ATTEMPT" | "LMS_ASSIGNMENT_SUBMISSION";
+    gradingStatus: "Chấm tự động" | "Đã chấm" | "Chờ chấm";
+    fallbackNote: string;
+  }
 
-  const detailRowsRaw = uniqueCompletedAttempts.map((att) => {
+  const seenRecordIds = new Set<string>();
+  const unifiedEntries: UnifiedSubmittedEntry[] = [];
+
+  for (const att of params.attempts) {
+    if (
+      (att.status !== "SUBMITTED" && att.status !== "EXPIRED_AUTO_SUBMITTED") ||
+      att.isDemoData
+    ) {
+      continue;
+    }
+    if (seenRecordIds.has(att.id)) continue;
+    seenRecordIds.add(att.id);
+
     const studentCode =
       userIdToStudentCode.get(att.studentId) ||
       att.studentEmail ||
       att.studentId;
-    const subjectName = att.assessment.subjectName || "Tin học";
+    const fullName = userIdToFullName.get(att.studentId) || att.studentName;
+    const hasScore = att.totalScore !== null && att.totalScore !== undefined;
+
+    unifiedEntries.push({
+      recordId: att.id,
+      studentCode,
+      fullName,
+      studentProfileId: userIdToProfileId.get(att.studentId) || null,
+      subjectName: att.assessment.subjectName || "Tin học",
+      assessmentCode: att.assessment.code,
+      assessmentTitle: att.assessment.title || att.assessment.code,
+      mode: att.assessment.mode,
+      attemptNumber: att.attemptNumber,
+      submittedAt: att.submittedAt,
+      score: hasScore ? att.totalScore : null,
+      maxScore: att.maxScore && att.maxScore > 0 ? att.maxScore : 10,
+      source: "LMS_NATIVE_ATTEMPT",
+      gradingStatus: hasScore ? "Chấm tự động" : "Chờ chấm",
+      fallbackNote: "",
+    });
+  }
+
+  for (const sub of params.submissions || []) {
+    if (sub.status === "DRAFT") continue;
+    if (seenRecordIds.has(sub.id)) continue;
+    seenRecordIds.add(sub.id);
+
+    const hasScore = sub.score !== null && sub.score !== undefined;
+    unifiedEntries.push({
+      recordId: sub.id,
+      studentCode: sub.student.studentCode,
+      fullName: sub.student.user.fullName,
+      studentProfileId: sub.student.id || sub.studentId,
+      subjectName: sub.assignment.subject?.name || "Tin học",
+      assessmentCode: sub.assignment.id,
+      assessmentTitle: sub.assignment.title,
+      mode: sub.assignment.type || "ASSIGNMENT",
+      attemptNumber: sub.attemptNumber || 1,
+      submittedAt: sub.submittedAt,
+      score: hasScore ? sub.score : null,
+      maxScore:
+        sub.assignment.maxScore && sub.assignment.maxScore > 0
+          ? sub.assignment.maxScore
+          : 10,
+      source: "LMS_ASSIGNMENT_SUBMISSION",
+      gradingStatus: hasScore ? "Đã chấm" : "Chờ chấm",
+      fallbackNote: sub.teacherComment || "",
+    });
+  }
+
+  unifiedEntries.sort((a, b) => {
+    const tA = a.submittedAt ? a.submittedAt.getTime() : 0;
+    const tB = b.submittedAt ? b.submittedAt.getTime() : 0;
+    if (tA !== tB) return tA - tB;
+    return a.recordId.localeCompare(b.recordId);
+  });
+
+  const detailRowsRaw = unifiedEntries.map((entry) => {
     const scoreStr =
-      att.totalScore !== null && att.totalScore !== undefined
-        ? String(att.totalScore)
+      entry.score !== null && entry.score !== undefined
+        ? String(entry.score)
         : "";
-    const maxScoreStr = String(att.maxScore || 10);
-    const preservedNote = preservedDetailNoteByRecordId.get(att.id) || "";
+    const maxScoreStr = String(entry.maxScore);
+    const preservedNote =
+      preservedDetailNoteByRecordId.get(entry.recordId) ||
+      entry.fallbackNote ||
+      "";
 
     return [
-      att.id,
-      studentCode,
+      entry.recordId,
+      entry.studentCode,
       params.className,
       params.academicYearName,
-      subjectName,
-      att.assessment.code,
-      att.assessment.mode,
-      String(att.attemptNumber),
-      formatVietnamIso(att.submittedAt),
+      entry.subjectName,
+      entry.assessmentCode,
+      entry.mode,
+      String(entry.attemptNumber),
+      formatVietnamIso(entry.submittedAt),
       scoreStr,
       maxScoreStr,
-      "LMS_NATIVE_ATTEMPT",
+      entry.source,
       preservedNote,
+      entry.fullName,
+      entry.assessmentTitle,
+      entry.gradingStatus,
     ];
   });
 
@@ -1328,55 +1482,62 @@ export function buildClassTrackingAttemptSheets(params: {
     {
       studentCode: string;
       fullName: string;
-      studentUserId: string;
+      studentProfileId: string | null;
       subjectName: string;
       assessmentCode: string;
+      assessmentTitle: string;
       mode: string;
-      attempts: AttemptForSheetExport[];
+      entries: UnifiedSubmittedEntry[];
     }
   >();
 
-  for (const att of uniqueCompletedAttempts) {
-    const studentCode =
-      userIdToStudentCode.get(att.studentId) ||
-      att.studentEmail ||
-      att.studentId;
-    const fullName = userIdToFullName.get(att.studentId) || att.studentName;
-    const subjectName = att.assessment.subjectName || "Tin học";
-    const key = `${studentCode}::${att.assessment.code}::${att.assessment.mode}`;
+  for (const entry of unifiedEntries) {
+    const key = `${entry.studentCode}::${entry.assessmentCode}::${entry.mode}`;
     const existing = summaryGroups.get(key);
     if (existing) {
-      existing.attempts.push(att);
+      existing.entries.push(entry);
     } else {
       summaryGroups.set(key, {
-        studentCode,
-        fullName,
-        studentUserId: att.studentId,
-        subjectName,
-        assessmentCode: att.assessment.code,
-        mode: att.assessment.mode,
-        attempts: [att],
+        studentCode: entry.studentCode,
+        fullName: entry.fullName,
+        studentProfileId: entry.studentProfileId,
+        subjectName: entry.subjectName,
+        assessmentCode: entry.assessmentCode,
+        assessmentTitle: entry.assessmentTitle,
+        mode: entry.mode,
+        entries: [entry],
       });
     }
   }
 
   const summaryRowsRaw = Array.from(summaryGroups.entries()).map(
     ([key, grp]) => {
-      const submittedCount = grp.attempts.length;
-      const scoredList = grp.attempts
-        .filter((a) => a.totalScore !== null && a.totalScore !== undefined)
-        .map((a) => {
-          const max = a.maxScore && a.maxScore > 0 ? a.maxScore : 10;
+      const submittedCount = grp.entries.length;
+      const latestEntry = grp.entries[grp.entries.length - 1];
+      const scoredList = grp.entries
+        .filter((e) => e.score !== null && e.score !== undefined)
+        .map((e) => {
+          const max = e.maxScore && e.maxScore > 0 ? e.maxScore : 10;
           const norm10 =
-            Math.round(((a.totalScore! / max) * 10 + Number.EPSILON) * 100) /
-            100;
-          return { raw: a.totalScore!, max, norm10 };
+            Math.round(((e.score! / max) * 10 + Number.EPSILON) * 100) / 100;
+          return { raw: e.score!, max, norm10 };
         });
 
-      const latestScoreStr =
-        scoredList.length > 0
-          ? String(scoredList[scoredList.length - 1].norm10)
-          : "";
+      const latestHasScore =
+        latestEntry &&
+        latestEntry.score !== null &&
+        latestEntry.score !== undefined;
+      const latestScoreStr = latestHasScore
+        ? String(
+            Math.round(
+              ((latestEntry.score! /
+                (latestEntry.maxScore > 0 ? latestEntry.maxScore : 10)) *
+                10 +
+                Number.EPSILON) *
+                100
+            ) / 100
+          )
+        : "";
       const bestScoreStr =
         scoredList.length > 0
           ? String(Math.max(...scoredList.map((s) => s.norm10)))
@@ -1386,11 +1547,13 @@ export function buildClassTrackingAttemptSheets(params: {
         ? "Đã quy đổi chuẩn hóa về thang 10 (10 * score / max_score)"
         : "Thang 10 chuẩn";
 
-      const profileId = userIdToProfileId.get(grp.studentUserId);
-      const practiceGamePlays = profileId
-        ? gamePlayCountByProfileId.get(profileId) || 0
+      const practiceGamePlays = grp.studentProfileId
+        ? gamePlayCountByProfileId.get(grp.studentProfileId) || 0
         : 0;
       const preservedNote = preservedSummaryNoteByKey.get(key) || "";
+      const summaryGradingStatus = latestEntry
+        ? latestEntry.gradingStatus
+        : "Chờ chấm";
 
       return [
         grp.studentCode,
@@ -1406,6 +1569,9 @@ export function buildClassTrackingAttemptSheets(params: {
         scaleNote,
         String(practiceGamePlays),
         preservedNote,
+        grp.assessmentTitle,
+        `${submittedCount} lần`,
+        summaryGradingStatus,
       ];
     }
   );
@@ -1427,6 +1593,9 @@ export function buildClassTrackingAttemptSheets(params: {
         "max_score",
         "source",
         "teacher_note",
+        "full_name",
+        "assessment_title",
+        "grading_status",
       ],
       rows: sanitizeSheetRows(detailRowsRaw),
     },
@@ -1446,6 +1615,9 @@ export function buildClassTrackingAttemptSheets(params: {
         "scale_note",
         "practice_game_plays",
         "teacher_note",
+        "assessment_title",
+        "submitted_count_label",
+        "grading_status",
       ],
       rows: sanitizeSheetRows(summaryRowsRaw),
     },
@@ -1462,16 +1634,26 @@ export function buildClassTrackingAttemptSheets(params: {
 export async function syncClassTrackingSheet(
   userId: string,
   classNameOrId: string = "7A1",
-  options?: { academicYearId?: string; purpose?: string; enforceTeacherScope?: boolean }
+  options?: {
+    academicYearId?: string;
+    purpose?: string;
+    enforceTeacherScope?: boolean;
+    skipActorScopeCheck?: boolean;
+    db?: typeof prisma;
+    fetchImpl?: typeof fetch;
+    accessTokenOverride?: string | null;
+  }
 ) {
+  const db = options?.db || prisma;
+  const fetchFn = options?.fetchImpl || fetch;
   const purpose = options?.purpose || "CLASS_TRACKING";
   const currentYear = options?.academicYearId
-    ? await prisma.academicYear.findFirst({
+    ? await db.academicYear.findFirst({
         where: { OR: [{ id: options.academicYearId }, { name: options.academicYearId }] },
       })
-    : await prisma.academicYear.findFirst({ where: { isCurrent: true } });
+    : await db.academicYear.findFirst({ where: { isCurrent: true } });
 
-  const schoolClass = await prisma.schoolClass.findFirst({
+  const schoolClass = await db.schoolClass.findFirst({
     where: {
       OR: [
         { id: classNameOrId },
@@ -1487,33 +1669,35 @@ export async function syncClassTrackingSheet(
     },
   });
 
-  // Kiểm tra quyền truy cập lớp của Giáo viên nếu actor là TEACHER
-  const actorUser = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      teacherProfile: {
-        include: {
-          homeroomClasses: true,
-          assignments: { select: { classId: true } },
+  // Kiểm tra quyền truy cập lớp của Giáo viên nếu actor là TEACHER (trừ luồng hệ thống tự đồng bộ sau khi đã kiểm quyền)
+  if (!options?.skipActorScopeCheck) {
+    const actorUser = await db.user.findUnique({
+      where: { id: userId },
+      include: {
+        teacherProfile: {
+          include: {
+            homeroomClasses: true,
+            assignments: { select: { classId: true } },
+          },
         },
       },
-    },
-  });
+    });
 
-  if (actorUser && actorUser.role === "TEACHER" && schoolClass) {
-    const tProfile = actorUser.teacherProfile;
-    const allowedClassIds = new Set<string>([
-      ...(tProfile?.homeroomClasses.map((c) => c.id) || []),
-      ...(tProfile?.assignments.map((a) => a.classId) || []),
-    ]);
-    // Nếu giáo viên đã được phân công ít nhất 1 lớp (hoặc yêu cầu enforceTeacherScope) mà truy cập lớp khác -> chặn
-    if (
-      (options?.enforceTeacherScope || allowedClassIds.size > 0) &&
-      !allowedClassIds.has(schoolClass.id)
-    ) {
-      throw new Error(
-        `FORBIDDEN_CLASS_SCOPE: Giáo viên không được phân công phụ trách lớp ${schoolClass.name} trong năm học này.`
-      );
+    if (actorUser && actorUser.role === "TEACHER" && schoolClass) {
+      const tProfile = actorUser.teacherProfile;
+      const allowedClassIds = new Set<string>([
+        ...(tProfile?.homeroomClasses.map((c) => c.id) || []),
+        ...(tProfile?.assignments.map((a) => a.classId) || []),
+      ]);
+      // Nếu giáo viên đã được phân công ít nhất 1 lớp (hoặc yêu cầu enforceTeacherScope) mà truy cập lớp khác -> chặn
+      if (
+        (options?.enforceTeacherScope || allowedClassIds.size > 0) &&
+        !allowedClassIds.has(schoolClass.id)
+      ) {
+        throw new Error(
+          `FORBIDDEN_CLASS_SCOPE: Giáo viên không được phân công phụ trách lớp ${schoolClass.name} trong năm học này.`
+        );
+      }
     }
   }
 
@@ -1522,9 +1706,9 @@ export async function syncClassTrackingSheet(
   const resolvedAcademicYearId =
     schoolClass?.academicYearId || currentYear?.id || options?.academicYearId || "2026-2027";
 
-  // Lấy danh sách học sinh thuộc đúng lớp và năm học (qua Enrollment hoặc classId của lớp đó)
+  // Lấy danh sách học sinh hiện tại thuộc đúng lớp và năm học (qua Enrollment ACTIVE hoặc classId của lớp đó)
   const students = schoolClass
-    ? await prisma.studentProfile.findMany({
+    ? await db.studentProfile.findMany({
         where: {
           OR: [
             { classId: schoolClass.id },
@@ -1552,27 +1736,28 @@ export async function syncClassTrackingSheet(
       })
     : [];
 
-  // Ánh xạ StudentProfile.id -> User.id (vì Attempt.studentId lưu User.id còn Enrollment.studentId lưu StudentProfile.id)
+  // Ánh xạ StudentProfile.id -> User.id
   const studentProfileIds = students.map((s) => s.id);
   const studentUserIds = students.map((s) => s.userId);
-  const userIdToStudentCode = new Map<string, string>(
-    students.map((s) => [s.userId, s.studentCode])
-  );
+  const currentStudentUserIdSet = new Set<string>(studentUserIds);
 
+  // QUAN TRỌNG: Kết quả bài nộp & lượt thi phải gắn theo LỚP TẠI THỜI ĐIỂM NỘP (assignment.classId và attempt.classId).
+  // Không lọc submissions theo studentProfileIds hiện tại (để giữ nguyên kết quả cũ của HS đã chuyển lớp),
+  // và không gộp attempts theo studentUserIds hiện tại (để không kéo nhầm kết quả lớp cũ sang Sheet lớp mới).
   const [submissions, projects, attempts, aiLogs, gamePlayRecords, existingSheetRecord] = schoolClass
     ? await Promise.all([
-        prisma.submission.findMany({
+        db.submission.findMany({
           where: {
             assignment: { classId: schoolClass.id },
-            ...(studentProfileIds.length > 0 ? { studentId: { in: studentProfileIds } } : {}),
+            status: { not: "DRAFT" },
           },
           include: {
             student: { include: { user: true } },
             assignment: { include: { subject: true } },
           },
-          orderBy: { submittedAt: "desc" },
+          orderBy: [{ submittedAt: "asc" }, { id: "asc" }],
         }),
-        prisma.project.findMany({
+        db.project.findMany({
           where: {
             isDemoData: false,
             OR: [
@@ -1584,23 +1769,19 @@ export async function syncClassTrackingSheet(
           },
           orderBy: { updatedAt: "desc" },
         }),
-        prisma.attempt.findMany({
+        db.attempt.findMany({
           where: {
             status: { in: ["SUBMITTED", "EXPIRED_AUTO_SUBMITTED"] },
             isDemoData: false,
-            ...(studentUserIds.length > 0
-              ? {
-                  OR: [
-                    { classId: schoolClass.id },
-                    { studentId: { in: studentUserIds } },
-                  ],
-                }
-              : { classId: schoolClass.id }),
+            OR: [
+              { classId: schoolClass.id },
+              { classId: resolvedClassName },
+            ],
           },
           include: { assessment: true },
           orderBy: [{ submittedAt: "asc" }, { id: "asc" }],
         }),
-        prisma.aIUsageLog.findMany({
+        db.aIUsageLog.findMany({
           where: {
             OR: [
               { classId: schoolClass.id, academicYearId: resolvedAcademicYearId },
@@ -1611,7 +1792,7 @@ export async function syncClassTrackingSheet(
           take: 50,
         }),
         studentProfileIds.length > 0
-          ? prisma.learningRecord.findMany({
+          ? db.learningRecord.findMany({
               where: {
                 studentId: { in: studentProfileIds },
                 activityType: "HTML_GAME_PLAY",
@@ -1619,7 +1800,7 @@ export async function syncClassTrackingSheet(
               orderBy: { recordedAt: "desc" },
             })
           : Promise.resolve([]),
-        prisma.classTrackingSheet.findUnique({
+        db.classTrackingSheet.findUnique({
           where: {
             classId_academicYearId_purpose: {
               classId: resolvedClassId,
@@ -1630,6 +1811,27 @@ export async function syncClassTrackingSheet(
         }),
       ])
     : [[], [], [], [], [], null];
+
+  // Tra cứu hồ sơ cho học sinh đã chuyển lớp nhưng vẫn có lượt thi lịch sử thuộc lớp này
+  const missingAttemptUserIds = Array.from(
+    new Set(
+      attempts
+        .map((a) => a.studentId)
+        .filter((uid) => !currentStudentUserIdSet.has(uid))
+    )
+  );
+  const extraStudents =
+    missingAttemptUserIds.length > 0
+      ? await db.studentProfile.findMany({
+          where: { userId: { in: missingAttemptUserIds } },
+          include: { user: true },
+        })
+      : [];
+
+  const userIdToStudentCode = new Map<string, string>([
+    ...students.map((s): [string, string] => [s.userId, s.studentCode]),
+    ...extraStudents.map((s): [string, string] => [s.userId, s.studentCode]),
+  ]);
 
   const totalStudents = students.length;
   // Tính điểm trung bình thực tế: giữ 0 khác null, tuyệt đối không trả "8.45" khi thiếu dữ liệu
@@ -1654,19 +1856,74 @@ export async function syncClassTrackingSheet(
   const avgScoreDisplay =
     avgScoreValue !== null ? `${avgScoreValue.toFixed(2)} / 10` : "Chưa có dữ liệu";
 
-  const integrationMode = await resolveGoogleIntegrationMode(userId);
+  const integrationMode =
+    options?.accessTokenOverride !== undefined
+      ? {
+          accessToken: options.accessTokenOverride,
+          syncStatus: options.accessTokenOverride ? "SYNCED" : "DISCONNECTED",
+          logStatus: options.accessTokenOverride ? "SUCCESS" : "FAILED",
+        }
+      : await resolveGoogleIntegrationMode(userId);
+
   const spreadsheetTitle = `EDUCARE_AI_Tracking_${resolvedClassName}_${schoolClass?.academicYear?.name || resolvedAcademicYearId}`;
+  let spreadsheetId: string | null = existingSheetRecord?.spreadsheetId || null;
+  let spreadsheetUrl: string | null = existingSheetRecord?.spreadsheetUrl || null;
+
+  // Đọc trước cột ghi chú giáo viên trực tiếp từ Google Sheet hiện có (nếu đã liên kết) để bảo toàn khi ghi lại
+  const liveSheetDetailNotes = new Map<string, string>();
+  const liveSheetSummaryNotes = new Map<string, string>();
+  if (integrationMode.accessToken && spreadsheetId) {
+    try {
+      const rangesQuery = [
+        encodeURIComponent("'Chi tiết lượt nộp'!A2:M5000"),
+        encodeURIComponent("'Tổng hợp HS - Bài - Chế độ'!A2:M5000"),
+      ]
+        .map((r) => `ranges=${r}`)
+        .join("&");
+      const getRes = await fetchFn(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values:batchGet?${rangesQuery}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${integrationMode.accessToken}`,
+          },
+        }
+      );
+      if (getRes.ok) {
+        const payload = (await getRes.json()) as {
+          valueRanges?: Array<{ values?: string[][] }>;
+        };
+        const detailVals = payload.valueRanges?.[0]?.values || [];
+        for (const r of detailVals) {
+          if (r[0] && r[12] && r[12] !== "Chưa có dữ liệu") {
+            liveSheetDetailNotes.set(String(r[0]), String(r[12]));
+          }
+        }
+        const summaryVals = payload.valueRanges?.[1]?.values || [];
+        for (const r of summaryVals) {
+          if (r[0] && r[4] && r[5] && r[12] && r[12] !== "Chưa có dữ liệu") {
+            liveSheetSummaryNotes.set(`${r[0]}::${r[4]}::${r[5]}`, String(r[12]));
+          }
+        }
+      }
+    } catch {
+      // Best-effort: fallback to previousTabsJson notes if read fails
+    }
+  }
+
   const attemptSheets = buildClassTrackingAttemptSheets({
     className: resolvedClassName,
     academicYearName:
       schoolClass?.academicYear?.name || String(resolvedAcademicYearId),
     students,
+    extraStudents,
     attempts,
+    submissions,
     gamePlayRecords,
     previousTabsJson: existingSheetRecord?.tabsJson,
+    liveSheetDetailNotes,
+    liveSheetSummaryNotes,
   });
-  let spreadsheetId: string | null = null;
-  let spreadsheetUrl: string | null = null;
 
   const tabsData = {
     tab1_TongQuan: {
@@ -1772,9 +2029,9 @@ export async function syncClassTrackingSheet(
           sub.student.user.fullName,
           sub.assignment.subject.name,
           sub.assignment.title,
-          sub.score !== null && sub.score !== undefined ? String(sub.score) : "Chưa có dữ liệu",
-          sub.status,
-          sub.teacherComment || "Chưa có dữ liệu",
+          sub.score !== null && sub.score !== undefined ? String(sub.score) : "",
+          sub.score !== null && sub.score !== undefined ? "Đã chấm" : "Chờ chấm",
+          sub.teacherComment || "",
         ]),
         ...attempts.map((att) => [
           userIdToStudentCode.get(att.studentId) || "Chưa có dữ liệu",
@@ -1783,7 +2040,7 @@ export async function syncClassTrackingSheet(
           `[${att.assessment.mode}] ${att.assessment.title}`,
           att.totalScore !== null && att.totalScore !== undefined
             ? `${att.totalScore}/${att.maxScore}`
-            : "Chưa có dữ liệu",
+            : "",
           att.status,
           "Chấm tự động trên máy chủ",
         ]),
@@ -1857,23 +2114,9 @@ export async function syncClassTrackingSheet(
 
   if (integrationMode.accessToken) {
     try {
-      const existingSheet = await prisma.classTrackingSheet.findUnique({
-        where: {
-          classId_academicYearId_purpose: {
-            classId: resolvedClassId,
-            academicYearId: resolvedAcademicYearId,
-            purpose,
-          },
-        },
-        select: { spreadsheetId: true, spreadsheetUrl: true },
-      });
-
-      spreadsheetId = existingSheet?.spreadsheetId || null;
-      spreadsheetUrl = existingSheet?.spreadsheetUrl || null;
-
       const tabEntries = Object.values(tabsData);
       if (!spreadsheetId) {
-        const createRes = await fetch("https://sheets.googleapis.com/v4/spreadsheets", {
+        const createRes = await fetchFn("https://sheets.googleapis.com/v4/spreadsheets", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${integrationMode.accessToken}`,
@@ -1897,7 +2140,52 @@ export async function syncClassTrackingSheet(
       }
 
       if (spreadsheetId && !sheetsErrorMessage) {
-        const batchRes = await fetch(
+        // Đảm bảo tất cả 8 tab (gồm 2 tab mới 'Chi tiết lượt nộp' và 'Tổng hợp HS - Bài - Chế độ') đã tồn tại trên Spreadsheet cũ
+        try {
+          const metaRes = await fetchFn(
+            `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?fields=sheets.properties.title`,
+            {
+              method: "GET",
+              headers: {
+                Authorization: `Bearer ${integrationMode.accessToken}`,
+              },
+            }
+          );
+          if (metaRes.ok) {
+            const metaJson = (await metaRes.json()) as {
+              sheets?: Array<{ properties?: { title?: string } }>;
+            };
+            const existingTitles = new Set(
+              (metaJson.sheets || [])
+                .map((s) => s.properties?.title)
+                .filter((t): t is string => Boolean(t))
+            );
+            const missingTabs = tabEntries.filter(
+              (t) => !existingTitles.has(t.tabName)
+            );
+            if (missingTabs.length > 0) {
+              await fetchFn(
+                `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}:batchUpdate`,
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${integrationMode.accessToken}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    requests: missingTabs.map((t) => ({
+                      addSheet: { properties: { title: t.tabName } },
+                    })),
+                  }),
+                }
+              );
+            }
+          }
+        } catch {
+          // Best-effort: proceed to values:batchUpdate
+        }
+
+        const batchRes = await fetchFn(
           `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values:batchUpdate`,
           {
             method: "POST",
@@ -1931,7 +2219,7 @@ export async function syncClassTrackingSheet(
     effectiveLogStatus = "FAILED";
   }
 
-  const savedSheet = await prisma.classTrackingSheet.upsert({
+  const savedSheet = await db.classTrackingSheet.upsert({
     where: {
       classId_academicYearId_purpose: {
         classId: resolvedClassId,
@@ -1966,11 +2254,11 @@ export async function syncClassTrackingSheet(
     },
   });
 
-  const syncLog = await prisma.syncLog.create({
+  const syncLog = await db.syncLog.create({
     data: {
       userId,
       service: "SHEETS",
-      action: `SYNC_CLASS_TRACKING_6_TABS_${resolvedClassName}`,
+      action: `SYNC_CLASS_TRACKING_8_TABS_${resolvedClassName}`,
       resourceId: spreadsheetId || `LOCAL_SNAPSHOT_${resolvedClassName}_${resolvedAcademicYearId}`,
       status: effectiveLogStatus,
       errorMessage:
@@ -1985,12 +2273,67 @@ export async function syncClassTrackingSheet(
     trackingSheet: savedSheet,
     connectionState: effectiveSyncStatus,
     avgScore: avgScoreValue,
-    tabsCount: 6,
+    tabsCount: 8,
     totalRowsSynced: totalRows,
     studentCount: totalStudents,
     tabsData,
     syncLog,
   };
+}
+
+/**
+ * Helper tự động đồng bộ Sheet theo lớp theo chế độ non-blocking sau khi đã lưu CSDL.
+ * Nếu Google Sheets tạm mất kết nối hoặc chưa có OAuth token, KHÔNG ném lỗi ra luồng nộp bài/chấm điểm.
+ */
+export async function autoSyncClassTrackingSheetNonBlocking(
+  actorUserId: string,
+  classNameOrId: string,
+  options?: {
+    academicYearId?: string;
+    db?: typeof prisma;
+    fetchImpl?: typeof fetch;
+    accessTokenOverride?: string | null;
+  }
+): Promise<{
+  syncStatus: "SYNCED" | "PENDING_SYNC" | "ERROR" | "DISCONNECTED";
+  spreadsheetId: string | null;
+  errorMessage: string | null;
+}> {
+  try {
+    const res = await syncClassTrackingSheet(actorUserId, classNameOrId, {
+      academicYearId: options?.academicYearId,
+      skipActorScopeCheck: true,
+      db: options?.db,
+      fetchImpl: options?.fetchImpl,
+      accessTokenOverride: options?.accessTokenOverride,
+    });
+    const status = res.trackingSheet?.syncStatus;
+    if (status === "SYNCED") {
+      return {
+        syncStatus: "SYNCED",
+        spreadsheetId: res.trackingSheet.spreadsheetId || null,
+        errorMessage: null,
+      };
+    }
+    if (status === "ERROR") {
+      return {
+        syncStatus: "ERROR",
+        spreadsheetId: res.trackingSheet?.spreadsheetId || null,
+        errorMessage: res.syncLog?.errorMessage || "Lỗi kết nối Google Sheets",
+      };
+    }
+    return {
+      syncStatus: status === "DISCONNECTED" ? "DISCONNECTED" : "PENDING_SYNC",
+      spreadsheetId: res.trackingSheet?.spreadsheetId || null,
+      errorMessage: res.syncLog?.errorMessage || null,
+    };
+  } catch (err: any) {
+    return {
+      syncStatus: "PENDING_SYNC",
+      spreadsheetId: null,
+      errorMessage: err?.message || "Đồng bộ Google Sheets tạm chờ thử lại",
+    };
+  }
 }
 
 /**

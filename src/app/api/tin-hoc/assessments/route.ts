@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth";
 import { verifyTeacherClassScope, withKeyLock } from "@/lib/submission-guard";
-import { syncClassTrackingSheet } from "@/lib/google-workspace";
+import { autoSyncClassTrackingSheetNonBlocking } from "@/lib/google-workspace";
 import crypto from "crypto";
 
 function isTeacherOrAdmin(role: string): boolean {
@@ -54,8 +54,40 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Lọc danh sách đề cho học sinh theo đúng lớp hiện tại (và giữ các đề học sinh đã từng nộp bài)
+  let studentAssessmentFilter: Record<string, unknown> = { status: "PUBLISHED" };
+  if (!teacherView) {
+    const profile = await prisma.studentProfile.findUnique({
+      where: { userId: session.user.id },
+      include: {
+        schoolClass: true,
+        enrollments: { where: { status: "ACTIVE" }, include: { schoolClass: true } },
+      },
+    });
+    if (profile) {
+      const classKeys = Array.from(
+        new Set(
+          [
+            profile.classId,
+            profile.schoolClass?.name,
+            ...profile.enrollments.flatMap((e) => [e.classId, e.schoolClass?.name]),
+          ].filter((v): v is string => Boolean(v))
+        )
+      );
+      if (classKeys.length > 0) {
+        studentAssessmentFilter = {
+          status: "PUBLISHED",
+          OR: [
+            { classId: { in: classKeys } },
+            { attempts: { some: { studentId: session.user.id } } },
+          ],
+        };
+      }
+    }
+  }
+
   const assessments = await prisma.assessment.findMany({
-    where: teacherView ? {} : { status: "PUBLISHED" },
+    where: teacherView ? {} : studentAssessmentFilter,
     include: {
       items: {
         orderBy: { orderIndex: "asc" },
@@ -313,10 +345,15 @@ export async function POST(request: NextRequest) {
         if (activeAttempt.expiresAt && currentNow > activeAttempt.expiresAt) {
           // Auto-expire and grade saved answers
           const graded = await finalizeAndGradeAttempt(activeAttempt.id, {}, true);
+          const sheetSync = await autoSyncClassTrackingSheetNonBlocking(
+            session.user.id,
+            graded.attempt.classId || assessment.classId || "7A1"
+          );
           return NextResponse.json({
             attempt: graded.attempt,
             resumed: false,
             expired: true,
+            sheetSyncState: sheetSync.syncStatus,
             message: "Thời gian làm bài đã hết. Hệ thống đã tự động thu bài theo các câu đã lưu.",
           });
         }
@@ -399,10 +436,15 @@ export async function POST(request: NextRequest) {
     const now = new Date();
     if (attempt.expiresAt && now > new Date(attempt.expiresAt.getTime() + 15000)) {
       const graded = await finalizeAndGradeAttempt(attempt.id, {}, true);
+      const sheetSync = await autoSyncClassTrackingSheetNonBlocking(
+        session.user.id,
+        graded.attempt.classId || "7A1"
+      );
       return NextResponse.json(
         {
           error: "ATTEMPT_EXPIRED: Đã hết thời gian làm bài trên máy chủ.",
           attempt: graded.attempt,
+          sheetSyncState: sheetSync.syncStatus,
         },
         { status: 400 }
       );
@@ -492,24 +534,17 @@ export async function POST(request: NextRequest) {
       );
 
       // Non-blocking sync to ClassTrackingSheet: Google failure never blocks "Đã nộp" confirmation
-      let sheetSyncState: "SYNCED" | "PENDING_SYNC" = "PENDING_SYNC";
-      try {
-        const syncRes = await syncClassTrackingSheet(
-          session.user.id,
-          graded.attempt.classId || "7A1"
-        );
-        if (syncRes.trackingSheet?.syncStatus === "SYNCED") {
-          sheetSyncState = "SYNCED";
-        }
-      } catch {
-        sheetSyncState = "PENDING_SYNC";
-      }
+      const sheetSync = await autoSyncClassTrackingSheetNonBlocking(
+        session.user.id,
+        graded.attempt.classId || "7A1"
+      );
 
       return NextResponse.json({
         attempt: sanitizeAttemptResult(graded.attempt, graded.assessment),
         idempotentReplay: graded.idempotentReplay,
         ignoredClientScoreSpoof: clientTriedToSpoofScore,
-        sheetSyncState,
+        sheetSyncState: sheetSync.syncStatus,
+        sheetSyncError: sheetSync.errorMessage,
         serverGradedAt: now.toISOString(),
       });
     });

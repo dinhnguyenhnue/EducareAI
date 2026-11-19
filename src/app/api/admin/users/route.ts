@@ -7,18 +7,13 @@ import {
   normalizeStudentCodeUsername,
 } from "@/lib/password";
 import { detectGradeLevel } from "@/lib/excel-parser";
+import { updateStudentClassTransactional } from "@/lib/student-class-transfer";
 
 export async function POST(req: Request) {
   try {
     const session = await getServerSession();
     if (!session) {
       return NextResponse.json({ error: "UNAUTHENTICATED" }, { status: 401 });
-    }
-    if (session.role !== "SUPER_ADMIN" && session.role !== "SCHOOL_ADMIN") {
-      return NextResponse.json(
-        { error: "FORBIDDEN: Bạn không có quyền quản lý người dùng." },
-        { status: 403 }
-      );
     }
 
     const body = await req.json();
@@ -31,10 +26,46 @@ export async function POST(req: Request) {
       isActive,
       studentCode,
       className,
+      targetClassId,
+      targetClassName,
+      academicYearId,
       gradeLevel,
       dateOfBirth,
       gender,
     } = body;
+
+    // Luồng gán lớp hoặc chuyển lớp cho học sinh đã cấp tài khoản (hỗ trợ Admin và Giáo viên có phân công cả lớp nguồn & đích)
+    if (action === "UPDATE_STUDENT_CLASS") {
+      const result = await updateStudentClassTransactional({
+        actorUserId: session.user.id,
+        actorEmail: session.user.email,
+        actorRole: session.role,
+        studentCode: String(studentCode || ""),
+        targetClassIdOrName: String(targetClassId || targetClassName || className || ""),
+        academicYearId: academicYearId ? String(academicYearId) : undefined,
+      });
+
+      if (!result.ok) {
+        return NextResponse.json(
+          { error: result.error, errorCode: result.errorCode },
+          { status: result.statusCode }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        transfer: result.transfer,
+        user: result.user,
+        sheetSync: result.sheetSync,
+      });
+    }
+
+    if (session.role !== "SUPER_ADMIN" && session.role !== "SCHOOL_ADMIN") {
+      return NextResponse.json(
+        { error: "FORBIDDEN: Bạn không có quyền quản lý người dùng." },
+        { status: 403 }
+      );
+    }
 
     if (action === "UPDATE_USER") {
       const targetUser = await prisma.user.findUnique({ where: { id: userId } });

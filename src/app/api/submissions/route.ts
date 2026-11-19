@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth";
 import { submitAssignmentTransactional } from "@/lib/submission-guard";
+import { autoSyncClassTrackingSheetNonBlocking } from "@/lib/google-workspace";
 
 export async function POST(req: Request) {
   try {
@@ -115,10 +116,23 @@ export async function POST(req: Request) {
       );
     }
 
+    // Tự động đồng bộ Google Sheet của đúng lớp giao bài tập (non-blocking: không bao giờ chặn xác nhận đã nộp)
+    const targetClassId =
+      result.assignmentClassId || studentUser.studentProfile.classId;
+    const sheetSync = targetClassId
+      ? await autoSyncClassTrackingSheetNonBlocking(
+          session.user.id,
+          targetClassId,
+          { academicYearId: result.academicYearId || undefined }
+        )
+      : { syncStatus: "PENDING_SYNC" as const, spreadsheetId: null, errorMessage: null };
+
     return NextResponse.json({
       success: true,
       idempotentReplay: result.idempotentReplay,
       submission: result.submission,
+      sheetSyncState: sheetSync.syncStatus,
+      sheetSyncError: sheetSync.errorMessage,
     });
   } catch (err: any) {
     console.error("Submission API Error:", err);
