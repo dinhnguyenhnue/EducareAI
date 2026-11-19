@@ -72,6 +72,13 @@ export function AppSidebar({
       groupLabel: "Học tập",
       items: [
         {
+          label: "Học tập thí điểm (6–8)",
+          href: "/hoc-sinh/thi-diem",
+          icon: <Sparkles className="w-4 h-4" />,
+          tone: "materials",
+          badge: "Thí điểm",
+        },
+        {
           label: "Lớp học & Bài giảng",
           href: "/hoc-sinh/mon-hoc",
           icon: <BookOpen className="w-4 h-4" />,

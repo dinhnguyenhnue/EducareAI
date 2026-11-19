@@ -23,7 +23,9 @@ import {
   AlertCircle,
   Sparkles,
   MessageSquare,
+  FileCheck2,
 } from "lucide-react";
+import { PILOT_CURRICULUM } from "@/lib/pilot-curriculum";
 
 export const dynamic = "force-dynamic";
 
@@ -67,11 +69,30 @@ export default async function StudentDashboardPage() {
   ]);
 
   const schoolClass = student?.studentProfile?.schoolClass;
+  const studentGrade: 6 | 7 | 8 =
+    student?.studentProfile?.gradeLevel === 6 ||
+    student?.studentProfile?.gradeLevel === 7 ||
+    student?.studentProfile?.gradeLevel === 8
+      ? student.studentProfile.gradeLevel
+      : 6;
+  const pilotModule = PILOT_CURRICULUM[studentGrade];
   const progressRecords = student?.studentProfile?.progressRecords || [];
   const submissions = student?.studentProfile?.submissions || [];
   const gradedSubmissions = submissions.filter((s) => s.status === "GRADED");
   const latestGraded = gradedSubmissions[0];
-  const nextLesson = lessons[0];
+  const nextLesson =
+    lessons.find((l) => l.topic.subject.gradeLevel === studentGrade) ||
+    lessons[0];
+
+  const examAssessments = await prisma.assessment.findMany({
+    where: {
+      status: "PUBLISHED",
+      mode: "EXAM",
+      gradeLevel: studentGrade,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+  });
 
   return (
     <AppShell>
@@ -87,20 +108,32 @@ export default async function StudentDashboardPage() {
           actions={
             <div className="flex flex-wrap items-center gap-2.5">
               <OceanButtonLink
-                href="/hoc-sinh/bai-tap"
+                href="/hoc-sinh/kiem-tra?mode=EXAM"
                 variant="primary"
+                size="md"
+                icon={<FileCheck2 className="w-4 h-4" />}
+              >
+                Kiểm tra
+              </OceanButtonLink>
+              <OceanButtonLink
+                href={
+                  nextLesson
+                    ? `/hoc-sinh/mon-hoc/${nextLesson.id}`
+                    : `/hoc-sinh/thi-diem?grade=${studentGrade}`
+                }
+                variant="secondary"
+                size="md"
+                icon={<BookOpen className="w-4 h-4" />}
+              >
+                Học tiếp
+              </OceanButtonLink>
+              <OceanButtonLink
+                href="/hoc-sinh/bai-tap"
+                variant="secondary"
                 size="md"
                 icon={<ClipboardList className="w-4 h-4" />}
               >
-                Bài tập cần làm
-              </OceanButtonLink>
-              <OceanButtonLink
-                href="/hoc-sinh/xuong-tro-choi"
-                variant="secondary"
-                size="md"
-                icon={<Gamepad2 className="w-4 h-4" />}
-              >
-                Xưởng trò chơi
+                Bài tập & Nộp bài
               </OceanButtonLink>
             </div>
           }
@@ -145,7 +178,7 @@ export default async function StudentDashboardPage() {
               <div className="space-y-2">
                 <span className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-700 bg-sky-100/70 px-2.5 py-0.5 rounded-full border border-sky-200">
                   <BookOpen className="w-3.5 h-3.5" />
-                  Bài học tiếp theo
+                  Bài học của Khối {studentGrade}
                 </span>
                 {nextLesson ? (
                   <>
@@ -157,30 +190,39 @@ export default async function StudentDashboardPage() {
                     </p>
                   </>
                 ) : (
-                  <p className="text-sm text-ink-muted">
-                    Hiện chưa có bài học mới được phát hành.
-                  </p>
+                  <>
+                    <h3 className="text-base sm:text-lg font-bold text-ink">
+                      {pilotModule.lessonTitle}
+                    </h3>
+                    <p className="text-sm text-ink-muted">
+                      Môn {pilotModule.subject} ({pilotModule.bookSeries}) • {pilotModule.chapterTitle}
+                    </p>
+                  </>
                 )}
               </div>
 
-              {nextLesson ? (
+              <div className="flex flex-wrap gap-2">
                 <OceanButtonLink
-                  href={`/hoc-sinh/mon-hoc/${nextLesson.id}`}
+                  href={
+                    nextLesson
+                      ? `/hoc-sinh/mon-hoc/${nextLesson.id}`
+                      : `/hoc-sinh/thi-diem?grade=${studentGrade}`
+                  }
                   variant="primary"
                   size="md"
                   icon={<ArrowRight className="w-4 h-4" />}
                 >
                   Học tiếp bài này
                 </OceanButtonLink>
-              ) : (
                 <OceanButtonLink
-                  href="/hoc-sinh/mon-hoc"
+                  href={`/hoc-sinh/thi-diem?grade=${studentGrade}`}
                   variant="secondary"
                   size="md"
+                  icon={<Gamepad2 className="w-4 h-4" />}
                 >
-                  Khám phá môn học
+                  Học liệu & Trò chơi Khối {studentGrade}
                 </OceanButtonLink>
-              )}
+              </div>
             </div>
 
             {/* Spotlight 2: Danh sách nhiệm vụ cần nộp (7 cols) */}
@@ -255,6 +297,47 @@ export default async function StudentDashboardPage() {
                   })}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Spotlight 3: Đề kiểm tra được giao (Tách biệt rõ với Luyện tập & Bài tập tự luận) */}
+          <div className="p-5 rounded-panel bg-surface border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
+                  <FileCheck2 className="w-3.5 h-3.5" />
+                  Đề kiểm tra được giao (Kiểm tra tính giờ)
+                </span>
+                <span className="text-xs text-ink-muted">
+                  Khác với Luyện tập (làm nhiều lần) và Bài tập (nộp tệp sản phẩm)
+                </span>
+              </div>
+              {examAssessments.length > 0 ? (
+                <p className="text-sm font-bold text-ink">
+                  Đang mở: {examAssessments.map((e) => e.title).join(" • ")}
+                </p>
+              ) : (
+                <p className="text-sm font-medium text-ink-muted">
+                  Lớp em chưa có bài kiểm tra được giao.
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <OceanButtonLink
+                href="/hoc-sinh/kiem-tra?mode=EXAM"
+                variant="primary"
+                size="sm"
+                icon={<FileCheck2 className="w-4 h-4" />}
+              >
+                Vào danh sách Kiểm tra
+              </OceanButtonLink>
+              <OceanButtonLink
+                href="/hoc-sinh/kiem-tra?mode=PRACTICE"
+                variant="secondary"
+                size="sm"
+              >
+                Bài tự luyện
+              </OceanButtonLink>
             </div>
           </div>
 

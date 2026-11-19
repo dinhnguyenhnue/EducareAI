@@ -35,6 +35,8 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
   const [isCommitting, setIsCommitting] = useState(false);
   const [importReport, setImportReport] = useState<any | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [passwordMode, setPasswordMode] = useState<"CUSTOM_INITIAL" | "RANDOM">("RANDOM");
+  const [customInitialPassword, setCustomInitialPassword] = useState("");
 
   // Edit / Create User Modal State
   const [editingUser, setEditingUser] = useState<any | null>(null);
@@ -191,6 +193,15 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
 
   const handleCommitImport = async () => {
     if (!previewData?.validRows?.length) return;
+    if (
+      passwordMode === "CUSTOM_INITIAL" &&
+      customInitialPassword.trim().length < 8
+    ) {
+      setImportError(
+        "Mật khẩu khởi tạo chung phải có tối thiểu 8 ký tự (nên gồm chữ hoa, chữ thường, số và ký tự đặc biệt)."
+      );
+      return;
+    }
     setIsCommitting(true);
     setImportError(null);
     try {
@@ -200,6 +211,11 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
         body: JSON.stringify({
           action: "COMMIT_IMPORT",
           rowsToCommit: previewData.validRows,
+          passwordMode,
+          customInitialPassword:
+            passwordMode === "CUSTOM_INITIAL"
+              ? customInitialPassword.trim()
+              : undefined,
         }),
       });
       const data = await res.json();
@@ -503,10 +519,10 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                 </div>
                 <div className="p-3 rounded bg-surface border border-border">
                   <span className="text-ink-muted block">
-                    Cập nhật (Không trùng):
+                    Đã tồn tại (Giữ nguyên):
                   </span>
                   <span className="text-lg font-bold text-ocean-600">
-                    {importReport.updatedIdempotentCount} học sinh
+                    {importReport.skippedDuplicateCount ?? importReport.updatedIdempotentCount} học sinh
                   </span>
                 </div>
                 <div className="p-3 rounded bg-surface border border-border">
@@ -658,22 +674,78 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
           ) : (
             <div className="space-y-4 text-xs">
               {/* Summary Banner */}
-              <div className="p-3.5 rounded-2xl bg-sky-50 border border-ocean-200 flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <span className="font-bold text-ink">
-                    File: {previewData.fileName}
-                  </span>
-                  <span className="text-ink-muted ml-2">
-                    (Sheets: {previewData.sheetsDetected.join(", ")})
-                  </span>
+              <div className="p-3.5 rounded-2xl bg-sky-50 border border-ocean-200 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="font-bold text-ink">
+                      File: {previewData.fileName}
+                    </span>
+                    <span className="text-ink-muted ml-2">
+                      (Sheets: {previewData.sheetsDetected.join(", ")})
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 font-semibold text-ocean-700">
+                    <span>Khối 6: {previewData.gradeBreakdown.grade6} HS</span>
+                    <span>•</span>
+                    <span>Khối 7: {previewData.gradeBreakdown.grade7} HS</span>
+                    <span>•</span>
+                    <span>Khối 8: {previewData.gradeBreakdown.grade8} HS</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 font-semibold text-ocean-700">
-                  <span>Khối 6: {previewData.gradeBreakdown.grade6} HS</span>
-                  <span>•</span>
-                  <span>Khối 7: {previewData.gradeBreakdown.grade7} HS</span>
-                  <span>•</span>
-                  <span>Khối 8: {previewData.gradeBreakdown.grade8} HS</span>
+                {previewData.classBreakdown && (
+                  <div className="text-[11px] text-ink-muted">
+                    Chi tiết theo lớp:{" "}
+                    <span className="font-semibold text-ink">
+                      {Object.entries(previewData.classBreakdown)
+                        .map(([cls, cnt]) => `${cls}: ${cnt} HS`)
+                        .join(" • ")}
+                    </span>
+                  </div>
+                )}
+                {previewData.skippedNonTargetSheets?.length > 0 && (
+                  <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                    Đã tự động bỏ qua {previewData.skippedNonTargetSheets.length} sheet không thuộc khối 6–8 (
+                    {previewData.skippedNonTargetSheets.join(", ")}) — {previewData.skippedNonTargetCount || 0} dòng.
+                  </div>
+                )}
+              </div>
+
+              {/* Password Mode Selection */}
+              <div className="p-3.5 rounded-xl bg-canvas border border-border space-y-2.5">
+                <div className="font-bold text-ink">
+                  Cơ chế cấp mật khẩu khởi tạo (Bắt buộc đổi ở lần đăng nhập đầu tiên):
                 </div>
+                <div className="flex flex-wrap items-center gap-4">
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="importPasswordMode"
+                      checked={passwordMode === "RANDOM"}
+                      onChange={() => setPasswordMode("RANDOM")}
+                    />
+                    <span>Sinh mật khẩu tạm ngẫu nhiên từng học sinh</span>
+                  </label>
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="importPasswordMode"
+                      checked={passwordMode === "CUSTOM_INITIAL"}
+                      onChange={() => setPasswordMode("CUSTOM_INITIAL")}
+                    />
+                    <span>Nhập mật khẩu khởi tạo chung cho đợt thí điểm</span>
+                  </label>
+                </div>
+                {passwordMode === "CUSTOM_INITIAL" && (
+                  <div className="pt-1">
+                    <input
+                      type="password"
+                      value={customInitialPassword}
+                      onChange={(e) => setCustomInitialPassword(e.target.value)}
+                      placeholder="Nhập mật khẩu khởi tạo (tối thiểu 8 ký tự, băm scrypt an toàn)..."
+                      className="w-full sm:w-96 px-3 py-2 rounded-lg border border-border bg-surface text-xs text-ink"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Preview Table */}
@@ -719,12 +791,12 @@ export function UserManagementTable({ initialUsers }: { initialUsers: any[] }) {
                           </td>
                           <td className="py-2 px-3">
                             {exists ? (
-                              <span className="text-[10px] font-semibold bg-canvas border border-border text-ink-muted px-2 py-0.5 rounded">
-                                Đã có (Cập nhật Idempotent)
+                              <span className="text-[10px] font-semibold bg-amber-50 border border-amber-200 text-amber-800 px-2 py-0.5 rounded">
+                                Đã có (Giữ nguyên, không ghi đè)
                               </span>
                             ) : (
                               <span className="text-[10px] font-semibold bg-status-success-soft text-status-success px-2 py-0.5 rounded">
-                                Mới hoàn toàn
+                                Tạo mới
                               </span>
                             )}
                           </td>

@@ -42,9 +42,10 @@ export function BottomNav() {
       icon: <BookOpen className="w-4 h-4" />,
     },
     {
-      label: "Bài tập",
-      href: "/hoc-sinh/bai-tap",
-      icon: <ClipboardList className="w-4 h-4" />,
+      label: "Kiểm tra",
+      href: "/hoc-sinh/kiem-tra?mode=EXAM",
+      matchPrefix: "/hoc-sinh/kiem-tra",
+      icon: <CheckSquare className="w-4 h-4" />,
     },
     {
       label: "Trò chơi",

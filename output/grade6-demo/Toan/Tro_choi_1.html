@@ -1,10 +1,37 @@
-<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Trò chơi ôn tập</title>
-<style>body{font:18px system-ui;background:#eff6ff;color:#172554;margin:0;padding:24px}main{max-width:700px;margin:auto}button{font:inherit;padding:14px;margin:6px 0;border:2px solid #2563eb;border-radius:12px;background:white;color:#172554;cursor:pointer;display:block;width:100%;text-align:left}button:focus-visible{outline:4px solid #f59e0b}button:disabled{opacity:.6;cursor:default}#feedback{min-height:60px;line-height:1.6}#next{background:#2563eb;color:white}h1{font-size:28px}progress{width:100%}</style>
-<main><h1 id="title"></h1><p>Chọn một đáp án mỗi câu. Mỗi câu đúng được 1 điểm. Đọc giải thích rồi sang câu tiếp theo.</p><p>Demo luyện tập — không ghi vào điểm chính thức.</p><progress id="progress"></progress><h2 id="question"></h2><div id="options"></div><p id="feedback" role="status" aria-live="polite"></p><button id="next">Bắt đầu</button></main>
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Trò chơi ôn tập EDUCARE AI</title>
+<style>
+  :root{--ocean-50:#f0f9ff;--ocean-100:#e0f2fe;--ocean-600:#0284c7;--ocean-700:#0369a1;--ink:#0f172a;--muted:#475569;--surface:#ffffff;--border:#cbd5e1}
+  *{box-sizing:border-box}
+  body{font:16px/1.6 system-ui,-apple-system,sans-serif;background:var(--ocean-50);color:var(--ink);margin:0;padding:16px}
+  main{max-width:760px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:20px 24px;box-shadow:0 10px 25px -5px rgba(15,23,42,.06)}
+  .badge{display:inline-block;font-size:12px;font-weight:700;background:var(--ocean-100);color:var(--ocean-700);padding:4px 12px;border-radius:999px;margin-bottom:8px}
+  h1{font-size:clamp(20px,3vw,26px);margin:4px 0 8px;color:var(--ink)}
+  h2{font-size:clamp(17px,2.4vw,21px);margin:14px 0;color:var(--ink);line-height:1.45}
+  .meta{font-size:14px;color:var(--muted);margin:0 0 12px}
+  progress{width:100%;height:10px;border-radius:999px;margin:8px 0}
+  button{font:inherit;min-height:48px;padding:12px 16px;margin:8px 0;border:2px solid var(--border);border-radius:14px;background:var(--surface);color:var(--ink);cursor:pointer;display:block;width:100%;text-align:left;font-weight:600;transition:background-color .15s,border-color .15s}
+  button:hover:not(:disabled){border-color:var(--ocean-600);background:var(--ocean-50)}
+  button:focus-visible{outline:3px solid #f59e0b;outline-offset:2px}
+  button:disabled{opacity:.75;cursor:default}
+  #feedback{min-height:56px;padding:12px 14px;border-radius:12px;background:#f8fafc;border:1px solid var(--border);font-size:15px;margin:12px 0}
+  #next{background:var(--ocean-600);border-color:var(--ocean-600);color:#fff;text-align:center;font-weight:700}
+  #next:hover:not(:disabled){background:var(--ocean-700)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<main>
+  <span class="badge">Tự luyện tương tác • Chuẩn Ocean Blue</span>
+  <h1 id="title"></h1>
+  <p class="meta">Mục tiêu: Chọn đáp án đúng cho từng câu hỏi và đọc giải thích kiến thức SGK. Điểm tự luyện không thay thế điểm kiểm tra chính thức.</p>
+  <progress id="progress"></progress>
+  <h2 id="question">Nhấn "Bắt đầu" bên dưới để mở câu hỏi đầu tiên.</h2>
+  <div id="options"></div>
+  <p id="feedback" role="status" aria-live="polite"></p>
+  <button id="next">Bắt đầu</button>
+</main>
 <script>const data={"title":"Kho báu Ước & Bội — Chương I & II (SGK Toán 6 KNTT Tập 1)","questions":[{"question":"Theo Bài 1 (tr. 6), cho tập hợp M = {2; 4; 6; 8}. Khẳng định nào sau đây là ĐÚNG?","options":["5 ∈ M","4 ∉ M","8 ∈ M","0 ∈ M"],"answer":2,"explanation":"Số 8 là phần tử nằm trong tập hợp M nên viết 8 ∈ M."},{"question":"Theo Bài 6 (tr. 23), viết tích 5² · 5⁴ dưới dạng một lũy thừa là:","options":["5⁶","5⁸","25⁶","10⁶"],"answer":0,"explanation":"Nhân hai lũy thừa cùng cơ số: aᵐ · aⁿ = aᵐ⁺ⁿ ⇒ 5² · 5⁴ = 5²⁺⁴ = 5⁶."},{"question":"Theo Bài 7 (tr. 25), giá trị của biểu thức 36 : 3² + 2³ · 5 bằng bao nhiêu?","options":["24","44","52","84"],"answer":1,"explanation":"Thực hiện lũy thừa trước: 36 : 9 + 8 · 5 = 4 + 40 = 44."},{"question":"Theo Bài 9 (tr. 35), số nào sau đây chia hết cho cả 2, 3, 5 và 9?","options":["1 250","2 340","3 425","4 104"],"answer":1,"explanation":"2 340 tận cùng là 0 (chia hết cho 2 và 5) và có tổng chữ số 2+3+4+0 = 9 (chia hết cho cả 3 và 9)."},{"question":"Theo Bài 10 (tr. 38), khẳng định nào đúng về số 0 và số 1?","options":["Cả 0 và 1 đều là số nguyên tố","1 là số nguyên tố nhỏ nhất","0 và 1 không là số nguyên tố cũng không là hợp số","1 là hợp số vì chỉ có 1 ước"],"answer":2,"explanation":"Số nguyên tố phải lớn hơn 1 và chỉ có hai ước là 1 và chính nó; hợp số lớn hơn 1 và có nhiều hơn hai ước."},{"question":"Theo Bài 10 (tr. 41), phân tích số 60 ra thừa số nguyên tố được kết quả nào?","options":["2 · 3 · 10","2² · 3 · 5","4 · 3 · 5","2 · 5 · 6"],"answer":1,"explanation":"60 = 4 · 15 = 2² · 3 · 5 (các thừa số 2, 3, 5 đều là số nguyên tố)."},{"question":"Theo Bài 11 (tr. 46), cô giáo chia 24 bút và 36 quyển vở thành nhiều nhất bao nhiêu phần quà giống nhau?","options":["6 phần","8 phần","12 phần","72 phần"],"answer":2,"explanation":"Số phần nhiều nhất là ƯCLN(24, 36) = 12 phần; mỗi phần gồm 2 bút và 3 vở."},{"question":"Theo Bài 12 (tr. 51), hai bạn An và Bình lần lượt 6 ngày và 8 ngày trực nhật thư viện một lần. Cùng trực hôm nay thì sau ít nhất mấy ngày lại cùng trực?","options":["14 ngày","18 ngày","24 ngày","48 ngày"],"answer":2,"explanation":"Số ngày ít nhất là BCNN(6, 8) = 24 ngày."}]};let index=-1,score=0,answered=false;
 const el=id=>document.getElementById(id);el('title').textContent=data.title;el('progress').max=data.questions.length;el('progress').value=0;
 function show(){answered=false;el('options').replaceChildren();el('feedback').textContent='';el('progress').value=index;
-if(index>=data.questions.length){el('question').textContent='Hoàn thành: '+score+'/'+data.questions.length+' điểm';el('next').textContent='Chơi lại';el('next').disabled=false;return;}
-const q=data.questions[index];el('question').textContent=(index+1)+'. '+q.question;el('next').textContent='Câu tiếp theo';el('next').disabled=true;
+if(index>=data.questions.length){el('question').textContent='Hoàn thành: '+score+'/'+data.questions.length+' điểm';el('next').textContent='Chơi lại';el('next').disabled=false;try{if(typeof window!=='undefined'&&window.parent){window.parent.postMessage({type:'TIN_HOC_GAME_PRACTICE_COMPLETE',score:score,maxScore:data.questions.length,wrongTopics:[]},'*');}}catch(e){}return;}
+const q=data.questions[index];el('question').textContent='Câu '+(index+1)+'/'+data.questions.length+': '+q.question;el('next').textContent='Câu tiếp theo';el('next').disabled=true;
 q.options.forEach((option,i)=>{const b=document.createElement('button');b.textContent=String.fromCharCode(65+i)+'. '+option;b.onclick=()=>{if(answered)return;answered=true;if(i===q.answer)score++;el('feedback').textContent=(i===q.answer?'Đúng! ':'Chưa đúng. Đáp án: '+q.options[q.answer]+'. ')+q.explanation;Array.from(el('options').children).forEach(x=>x.disabled=true);el('next').disabled=false;};el('options').append(b);});}
 el('next').onclick=()=>{if(index>=data.questions.length){index=0;score=0;}else index++;show();};</script></html>

@@ -1186,6 +1186,272 @@ export async function provisionEducareDriveTree(
   };
 }
 
+export interface AttemptForSheetExport {
+  id: string;
+  studentId: string;
+  studentEmail?: string | null;
+  studentName: string;
+  attemptNumber: number;
+  status: string;
+  submittedAt: Date | null;
+  totalScore: number | null;
+  maxScore: number;
+  isDemoData?: boolean;
+  assessment: {
+    code: string;
+    subjectName?: string | null;
+    mode: string;
+  };
+}
+
+/**
+ * Pure builder for Tab 7 (Chi tiết lượt nộp: 1 row per valid submitted attempt)
+ * and Tab 8 (Tổng hợp HS - Bài - Chế độ: submitted_count, latest_score, best_score, practice_game_plays),
+ * preserving existing teacher notes and deduplicating by stable attempt.id.
+ */
+export function buildClassTrackingAttemptSheets(params: {
+  className: string;
+  academicYearName: string;
+  students: Array<{
+    id: string;
+    userId: string;
+    studentCode: string;
+    user: { fullName: string };
+  }>;
+  attempts: AttemptForSheetExport[];
+  gamePlayRecords: Array<{ studentId: string }>;
+  previousTabsJson?: string | null;
+}) {
+  const preservedDetailNoteByRecordId = new Map<string, string>();
+  const preservedSummaryNoteByKey = new Map<string, string>();
+  if (params.previousTabsJson) {
+    try {
+      const prevTabs = JSON.parse(params.previousTabsJson);
+      const prevDetailRows: string[][] =
+        prevTabs?.tab7_ChiTietLuotNop?.rows || [];
+      for (const r of prevDetailRows) {
+        if (r[0] && r[12] && r[12] !== "Chưa có dữ liệu" && r[12] !== "") {
+          preservedDetailNoteByRecordId.set(r[0], r[12]);
+        }
+      }
+      const prevSummaryRows: string[][] =
+        prevTabs?.tab8_TongHopKetQua?.rows || [];
+      for (const r of prevSummaryRows) {
+        const key = `${r[0]}::${r[4]}::${r[5]}`;
+        if (r[0] && r[12] && r[12] !== "Chưa có dữ liệu" && r[12] !== "") {
+          preservedSummaryNoteByKey.set(key, r[12]);
+        }
+      }
+    } catch {
+      // ignore malformed previous JSON
+    }
+  }
+
+  const userIdToStudentCode = new Map<string, string>(
+    params.students.map((s) => [s.userId, s.studentCode])
+  );
+  const userIdToProfileId = new Map<string, string>(
+    params.students.map((s) => [s.userId, s.id])
+  );
+  const userIdToFullName = new Map<string, string>(
+    params.students.map((s) => [s.userId, s.user.fullName])
+  );
+
+  const gamePlayCountByProfileId = new Map<string, number>();
+  for (const gp of params.gamePlayRecords) {
+    gamePlayCountByProfileId.set(
+      gp.studentId,
+      (gamePlayCountByProfileId.get(gp.studentId) || 0) + 1
+    );
+  }
+
+  const formatVietnamIso = (d: Date | null | undefined): string => {
+    if (!d) return "";
+    const vnMs = d.getTime() + 7 * 3600 * 1000;
+    const vnDate = new Date(vnMs);
+    return vnDate.toISOString().replace(/\.\d{3}Z$/, "+07:00");
+  };
+
+  // Only completed valid attempts (exclude IN_PROGRESS drafts and demo records), deduplicated by stable attempt.id
+  const seenAttemptIds = new Set<string>();
+  const uniqueCompletedAttempts = params.attempts
+    .filter(
+      (att) =>
+        (att.status === "SUBMITTED" ||
+          att.status === "EXPIRED_AUTO_SUBMITTED") &&
+        !att.isDemoData
+    )
+    .filter((att) => {
+      if (seenAttemptIds.has(att.id)) return false;
+      seenAttemptIds.add(att.id);
+      return true;
+    })
+    .sort((a, b) => {
+      const tA = a.submittedAt ? a.submittedAt.getTime() : 0;
+      const tB = b.submittedAt ? b.submittedAt.getTime() : 0;
+      if (tA !== tB) return tA - tB;
+      return a.id.localeCompare(b.id);
+    });
+
+  const detailRowsRaw = uniqueCompletedAttempts.map((att) => {
+    const studentCode =
+      userIdToStudentCode.get(att.studentId) ||
+      att.studentEmail ||
+      att.studentId;
+    const subjectName = att.assessment.subjectName || "Tin học";
+    const scoreStr =
+      att.totalScore !== null && att.totalScore !== undefined
+        ? String(att.totalScore)
+        : "";
+    const maxScoreStr = String(att.maxScore || 10);
+    const preservedNote = preservedDetailNoteByRecordId.get(att.id) || "";
+
+    return [
+      att.id,
+      studentCode,
+      params.className,
+      params.academicYearName,
+      subjectName,
+      att.assessment.code,
+      att.assessment.mode,
+      String(att.attemptNumber),
+      formatVietnamIso(att.submittedAt),
+      scoreStr,
+      maxScoreStr,
+      "LMS_NATIVE_ATTEMPT",
+      preservedNote,
+    ];
+  });
+
+  const summaryGroups = new Map<
+    string,
+    {
+      studentCode: string;
+      fullName: string;
+      studentUserId: string;
+      subjectName: string;
+      assessmentCode: string;
+      mode: string;
+      attempts: AttemptForSheetExport[];
+    }
+  >();
+
+  for (const att of uniqueCompletedAttempts) {
+    const studentCode =
+      userIdToStudentCode.get(att.studentId) ||
+      att.studentEmail ||
+      att.studentId;
+    const fullName = userIdToFullName.get(att.studentId) || att.studentName;
+    const subjectName = att.assessment.subjectName || "Tin học";
+    const key = `${studentCode}::${att.assessment.code}::${att.assessment.mode}`;
+    const existing = summaryGroups.get(key);
+    if (existing) {
+      existing.attempts.push(att);
+    } else {
+      summaryGroups.set(key, {
+        studentCode,
+        fullName,
+        studentUserId: att.studentId,
+        subjectName,
+        assessmentCode: att.assessment.code,
+        mode: att.assessment.mode,
+        attempts: [att],
+      });
+    }
+  }
+
+  const summaryRowsRaw = Array.from(summaryGroups.entries()).map(
+    ([key, grp]) => {
+      const submittedCount = grp.attempts.length;
+      const scoredList = grp.attempts
+        .filter((a) => a.totalScore !== null && a.totalScore !== undefined)
+        .map((a) => {
+          const max = a.maxScore && a.maxScore > 0 ? a.maxScore : 10;
+          const norm10 =
+            Math.round(((a.totalScore! / max) * 10 + Number.EPSILON) * 100) /
+            100;
+          return { raw: a.totalScore!, max, norm10 };
+        });
+
+      const latestScoreStr =
+        scoredList.length > 0
+          ? String(scoredList[scoredList.length - 1].norm10)
+          : "";
+      const bestScoreStr =
+        scoredList.length > 0
+          ? String(Math.max(...scoredList.map((s) => s.norm10)))
+          : "";
+      const hasCustomScale = scoredList.some((s) => s.max !== 10);
+      const scaleNote = hasCustomScale
+        ? "Đã quy đổi chuẩn hóa về thang 10 (10 * score / max_score)"
+        : "Thang 10 chuẩn";
+
+      const profileId = userIdToProfileId.get(grp.studentUserId);
+      const practiceGamePlays = profileId
+        ? gamePlayCountByProfileId.get(profileId) || 0
+        : 0;
+      const preservedNote = preservedSummaryNoteByKey.get(key) || "";
+
+      return [
+        grp.studentCode,
+        grp.fullName,
+        params.className,
+        grp.subjectName,
+        grp.assessmentCode,
+        grp.mode,
+        String(submittedCount),
+        latestScoreStr,
+        bestScoreStr,
+        "10",
+        scaleNote,
+        String(practiceGamePlays),
+        preservedNote,
+      ];
+    }
+  );
+
+  return {
+    tab7_ChiTietLuotNop: {
+      tabName: "Chi tiết lượt nộp",
+      headers: [
+        "record_id",
+        "student_code",
+        "class_name",
+        "academic_year",
+        "subject",
+        "assessment_code",
+        "mode",
+        "attempt_number",
+        "submitted_at",
+        "score",
+        "max_score",
+        "source",
+        "teacher_note",
+      ],
+      rows: sanitizeSheetRows(detailRowsRaw),
+    },
+    tab8_TongHopKetQua: {
+      tabName: "Tổng hợp HS - Bài - Chế độ",
+      headers: [
+        "student_code",
+        "full_name",
+        "class_name",
+        "subject",
+        "assessment_code",
+        "mode",
+        "submitted_count",
+        "latest_score",
+        "best_score",
+        "max_score",
+        "scale_note",
+        "practice_game_plays",
+        "teacher_note",
+      ],
+      rows: sanitizeSheetRows(summaryRowsRaw),
+    },
+  };
+}
+
 /**
  * Tự động tạo và đồng bộ Google Spreadsheet Tracking theo từng lớp & năm học:
  * - Giới hạn Attempt và AIUsageLog theo đúng lớp/năm học được cấp quyền.
@@ -1293,7 +1559,7 @@ export async function syncClassTrackingSheet(
     students.map((s) => [s.userId, s.studentCode])
   );
 
-  const [submissions, projects, attempts, aiLogs] = schoolClass
+  const [submissions, projects, attempts, aiLogs, gamePlayRecords, existingSheetRecord] = schoolClass
     ? await Promise.all([
         prisma.submission.findMany({
           where: {
@@ -1326,13 +1592,13 @@ export async function syncClassTrackingSheet(
               ? {
                   OR: [
                     { classId: schoolClass.id },
-                    { studentId: { in: studentUserIds }, classId: resolvedClassName },
+                    { studentId: { in: studentUserIds } },
                   ],
                 }
               : { classId: schoolClass.id }),
           },
           include: { assessment: true },
-          orderBy: { submittedAt: "desc" },
+          orderBy: [{ submittedAt: "asc" }, { id: "asc" }],
         }),
         prisma.aIUsageLog.findMany({
           where: {
@@ -1344,8 +1610,26 @@ export async function syncClassTrackingSheet(
           orderBy: { createdAt: "desc" },
           take: 50,
         }),
+        studentProfileIds.length > 0
+          ? prisma.learningRecord.findMany({
+              where: {
+                studentId: { in: studentProfileIds },
+                activityType: "HTML_GAME_PLAY",
+              },
+              orderBy: { recordedAt: "desc" },
+            })
+          : Promise.resolve([]),
+        prisma.classTrackingSheet.findUnique({
+          where: {
+            classId_academicYearId_purpose: {
+              classId: resolvedClassId,
+              academicYearId: resolvedAcademicYearId,
+              purpose,
+            },
+          },
+        }),
       ])
-    : [[], [], [], []];
+    : [[], [], [], [], [], null];
 
   const totalStudents = students.length;
   // Tính điểm trung bình thực tế: giữ 0 khác null, tuyệt đối không trả "8.45" khi thiếu dữ liệu
@@ -1372,7 +1656,15 @@ export async function syncClassTrackingSheet(
 
   const integrationMode = await resolveGoogleIntegrationMode(userId);
   const spreadsheetTitle = `EDUCARE_AI_Tracking_${resolvedClassName}_${schoolClass?.academicYear?.name || resolvedAcademicYearId}`;
-  // Không tự tạo ID GSHEET-TRACKING-... giả lập làm ID thật
+  const attemptSheets = buildClassTrackingAttemptSheets({
+    className: resolvedClassName,
+    academicYearName:
+      schoolClass?.academicYear?.name || String(resolvedAcademicYearId),
+    students,
+    attempts,
+    gamePlayRecords,
+    previousTabsJson: existingSheetRecord?.tabsJson,
+  });
   let spreadsheetId: string | null = null;
   let spreadsheetUrl: string | null = null;
 
@@ -1545,6 +1837,8 @@ export async function syncClassTrackingSheet(
         ])
       ),
     },
+    tab7_ChiTietLuotNop: attemptSheets.tab7_ChiTietLuotNop,
+    tab8_TongHopKetQua: attemptSheets.tab8_TongHopKetQua,
   };
 
   const totalRows =
@@ -1553,7 +1847,9 @@ export async function syncClassTrackingSheet(
     tabsData.tab3_TienDoHocTap.rows.length +
     tabsData.tab4_DiemVaRubric.rows.length +
     tabsData.tab5_SanPhamSangTao.rows.length +
-    tabsData.tab6_BaoCaoAI.rows.length;
+    tabsData.tab6_BaoCaoAI.rows.length +
+    tabsData.tab7_ChiTietLuotNop.rows.length +
+    tabsData.tab8_TongHopKetQua.rows.length;
 
   let effectiveSyncStatus: string = integrationMode.syncStatus;
   let effectiveLogStatus: string = integrationMode.logStatus;

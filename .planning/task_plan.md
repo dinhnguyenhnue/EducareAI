@@ -91,3 +91,34 @@
 - [x] **S1 (`complete`)**: Phân lớp 2 SGK KNTT Lớp 6 Tập 1 vào `SGK/Lop_6/{Toan,Ngu_van}/Tap_1/` và `D:\UNIGO\SGK\Lớp_6\{Toan,Ngu_van}\Tap_1\`, tạo `SGK/sgk-kntt-manifest.json`, bổ sung node `Lop_6/Tap_1` vào `EDUCARE_DRIVE_FOLDER_TREE` và action `SYNC_LOCAL_SGK_TO_DRIVE` (`src/lib/google-workspace.ts`, `src/app/api/google/workspace/route.ts`).
 - [x] **S2 (`complete`)**: Cập nhật học liệu, bài tập, đề cương ôn HK1, đề kiểm tra thử, đáp án và 2 trò chơi HTML × 8 câu/môn (`src/lib/grade6-demo.ts`, `src/lib/review-prompts.ts`) đối chiếu chính xác Mục lục KNTT Tập 1 (`trang PDF = trang in + 1`).
 - [x] **S3 (`complete`)**: Nâng cấp `ReviewStudio.tsx` (`/giao-vien/on-tap`, `/hoc-sinh/on-tap`), `/api/review/generate`, xuất lại `output/grade6-demo/` (`scripts/export-grade6-demo.ts`), cập nhật `tests/grade6-demo.test.ts` và hợp nhất sạch với `origin/main` (`8ba7f7c`).
+
+- [x] (complete) Soạn prompt triển khai luồng học sinh, trò chơi, Drive, Sheets và chatbot theo lớp/môn (18/11/2026). Tệp bàn giao: `docs/PROMPT_TRIEN_KHAI_LUONG_HOC_SINH.md`.
+
+
+---
+
+# Kế hoạch Thực thi Trải nghiệm Học sinh & Đồng bộ Giáo viên (`docs/PROMPT_TRIEN_KHAI_LUONG_HOC_SINH.md`) — 2026-11-18
+
+> **Bắt đầu**: `2026-11-18T16:28:00+07:00`
+> **Hoàn tất**: `2026-11-18T19:50:00+07:00`
+> **Trạng thái**: `complete`
+
+- [x] **SL-1 — Mục 1: Cho học sinh tìm được bài học và bài kiểm tra (`complete`)**:
+  - Từ `/hoc-sinh/tong-quan` có nút **Kiểm tra** dễ thấy trên mobile & desktop dẫn thẳng tới `/hoc-sinh/kiem-tra?mode=EXAM` (<= 2 thao tác), tách biệt rõ với **Luyện tập** (`PRACTICE`) và **Bài tập & Nộp bài** (`/hoc-sinh/bai-tap`).
+  - Từ `/hoc-sinh/tong-quan` có đường **Học tiếp** tới đúng môn/bài của học sinh; trong bài đặt tên bài + mục tiêu ngắn phía trên học liệu, tiếp theo là **Luyện bằng trò chơi**, **Hỏi gia sư môn này** và **Bài kiểm tra liên quan** (giữ ngữ cảnh lớp, môn, bài qua query/state).
+  - Trong `/hoc-sinh/kiem-tra`: trước khi làm hiện môn, thời lượng, số lượt được phép, trạng thái; sau khi nộp hiện số lần đã nộp, điểm/thang điểm, chính sách xem đáp án, hành động tiếp theo; khôi phục lượt đang làm (`IN_PROGRESS`) sau tải lại; khi chưa có đề hiện `"Lớp em chưa có bài kiểm tra được giao"` + nút quay lại học; lỗi tải có nút thử lại; ngừng gọi API lặp vô hạn.
+- [x] **SL-2 — Mục 2: Dán link Google Drive và xem ảnh ngay trong bài (`complete`)**:
+  - Đưa **Dán liên kết Drive** lên làm cách thêm học liệu chính trong `TeacherLessonsClient.tsx` (kèm tên tài liệu, mô tả ảnh, xem trước ngay trước khi lưu, báo lỗi cạnh ô link, fallback sang dán link ngay khi upload tệp gặp lỗi).
+  - Tạo bộ phân tích & chuẩn hóa URL Google Drive (`src/lib/drive-url.ts`): chỉ nhận HTTPS hostname Google hợp lệ, hỗ trợ `drive.google.com/file/d/<id>/view`, `drive.google.com/open?id=<id>`, giữ `resourcekey`, nhận diện `IMAGE`, `PDF`, `DOC_SLIDE_SHEET`, `FOLDER`, `OTHER_FILE`.
+  - Hiển thị nội dung ảnh Drive trực tiếp trong bài (`/hoc-sinh/mon-hoc/[id]` & `PilotLearningHub.tsx`) với khung giữ chỗ responsive, mô tả ảnh, fallback sang trình xem nhúng hoặc nút **Mở trong Drive** và lời giải thích có điều kiện khi trình duyệt chặn nhúng / thiếu quyền (không báo giả "tệp đã bị xóa").
+- [x] **SL-3 — Mục 3: Ghi điểm và số lần làm từ ứng dụng sang Sheets (`complete`)**:
+  - Chuẩn hóa quy tắc đếm lượt trong `/api/tin-hoc/assessments/route.ts` và `/api/tin-hoc/game-plays/route.ts` (và nối `PilotLearningHub.tsx` gọi `/api/tin-hoc/game-plays` khi hoàn tất lượt chơi với nhãn **Tự luyện**): lưu `attemptNumber` khi bắt đầu, `"Số lần đã nộp"` chỉ tính lượt hoàn tất hợp lệ cùng học sinh + bài + chế độ; mở lại/lưu nháp/nhấn nộp 2 lần/retry mạng vẫn giữ cùng 1 `Attempt.id`; điểm `0` là hợp lệ, chưa chấm để `null`.
+  - Mở rộng `syncClassTrackingSheet` (`src/lib/google-workspace.ts`) với `buildClassTrackingAttemptSheets`: xuất bảng chi tiết **mỗi lượt đã nộp một dòng** (`tab7_ChiTietLuotNop`) + bảng tổng hợp theo `HS/bài/chế độ` (`tab8_TongHopKetQua`), đối soát theo `record_id` khi retry, bảo toàn ghi chú giáo viên, chống Formula Injection, chỉ báo `SYNCED` khi Google API xác nhận.
+- [x] **SL-4 — Mục 4: Thiết kế lại trò chơi HTML và mở rộng ngân hàng câu hỏi (`complete`)**:
+  - Thiết kế lại bộ sinh HTML game (`src/lib/demo-game-html.ts` & `PilotLearningHub.tsx`) theo chuẩn Ocean Blue: màn vào có mục tiêu + nút **Bắt đầu**, trong lượt chơi nổi bật câu hỏi `"Câu 3/10"`, vùng chạm >= 44px, hỗ trợ cả bàn phím và chạm cho 3 dạng tương tác (Chọn đáp án `MCQ`, Ghép cặp `MATCH`, Sắp xếp thứ tự `ORDER`), màn cuối có điểm, câu cần ôn, **Chơi lại** và **Về bài học**.
+  - Mở rộng ngân hàng câu hỏi cho 3 bài Tin học thí điểm khối 6, 7, 8 trong `src/lib/pilot-curriculum.ts` & `src/lib/pilot-questions-bank.ts`: mỗi bài có **20 câu riêng biệt** đã đối chiếu SGK (tổng **60 câu**), mỗi lượt chơi rút 10 câu không lặp.
+- [x] **SL-5 — Mục 5: Tách gia sư Gemini theo lớp và môn (`complete`)**:
+  - Nâng cấp `/api/ai/chat/route.ts`, `src/lib/ai-tutor-config.ts` và `/hoc-sinh/ai-tutor/page.tsx`: lấy lớp thực, khối, môn, bài từ session + dữ liệu server; chọn cấu hình theo `lớp cụ thể + môn` -> fallback `khối + môn`; điền đúng mẫu System Prompt tiếng Việt chuẩn (kèm chế độ server xác định, khóa đáp án khi đang có bài kiểm tra, lọc PII); cô lập lịch sử hội thoại theo `studentId + className + subject + lessonTitle`, hủy/bỏ qua phản hồi mạng về muộn khi chuyển môn; hỗ trợ 3 nút gợi ý (**Giải thích khái niệm**, **Gợi ý bước tiếp theo**, **Cho em luyện một câu**) và câu mở đầu mẫu; xử lý IME-safe Enter khi gõ dấu tiếng Việt; hiển thị nút **Mở Gem** + **Sao chép câu hỏi** theo lớp/môn hoặc báo `"Lớp em chưa có Gem môn này"`.
+- [x] **SL-6 — Kiểm thử Tự động, Kiểm chứng CSDL Thực & Lưu vết Bàn giao (`complete`)**:
+  - Đã viết `tests/student-journey-e2e.test.ts` kiểm chứng cả 5 mục: `prisma validate` PASS, `tsc --noEmit` PASS (0 lỗi), `pnpm test` **67/67 PASS (10 suites)**, `pnpm build` **PASS (28/28 routes, shared JS 103 kB)**.
+  - Đã chạy kiểm chứng E2E trực tiếp trên CSDL với tài khoản học sinh thí điểm (`HS26-6A1-01`, `HS26-7A1-01`), xác nhận đối soát 2 lượt làm bài (`6/10` rồi `8/10`) + 1 lượt chơi game tự luyện sang `tab7_ChiTietLuotNop` và `tab8_TongHopKetQua`.

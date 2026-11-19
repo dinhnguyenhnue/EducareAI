@@ -1,52 +1,34 @@
-# BÀN GIAO PHIÊN LÀM VIỆC (SESSION HANDOFF) — EDUCARE AI
+# HANDOFF CHECKPOINT — EDUCARE AI (Cập nhật: 2026-11-18 19:50 +07:00)
 
-> **Cập nhật lần cuối**: `2026-11-15T14:32:00+07:00`
-> **Trạng thái**: **HOÀN TẤT KIỂM TRA TRÌNH DUYỆT (`LIVE-01` – `LIVE-05`) & ĐỒNG BỘ KỸ THUẬT 5 TÀI LIỆU (`SKILL.md`, `PRODUCT_SPEC.md`, `DESIGN.md`, `MOTION_SPEC.md`, `AUDIT_REPORT.md`)** — `prisma validate` PASS, `tsc --noEmit` PASS, `pnpm test` **47/47 PASS** (7 suites), `pnpm build` **PASS** (`First Load JS shared by all = 103 kB`), Playwright Headless Chromium **24/24 khung nhìn PASS** (`375px`, `768px`, `1440px`).
+## 1. Trạng thái tổng thể
+- **Toàn bộ 5 hạng mục trong `docs/PROMPT_TRIEN_KHAI_LUONG_HOC_SINH.md` (`SL-1` -> `SL-5`) và bộ kiểm thử tự động + đối soát CSDL (`SL-6`) ĐÃ HOÀN TẤT 100% (`67/67 tests PASS`, `tsc --noEmit PASS`, `prisma validate PASS`, `pnpm build PASS`)**.
+- **25 tài khoản học sinh thí điểm Khối 6, 7, 8** (`HS26-6A1-01..08`, `HS26-7A1-01..07`, `HS26-8A1-01..10`) đã sẵn sàng trong CSDL ở trạng thái `ACTIVE` (vào học trực tiếp, không bắt đổi mật khẩu lần đầu). File danh sách gửi phụ huynh đã xuất tại `C:\Users\bmngu\Downloads\Danh_sach_tai_khoan_hoc_sinh_Khoi6_7_8_2026_2027.xlsx`.
 
-## 0. Kết quả Kiểm tra Trình duyệt Đang chạy (Live Browser QA)
-1. **Khắc phục 5 lỗi thực tế phát hiện qua trình duyệt thật (`LIVE-01` – `LIVE-05`)**:
-   - **`LIVE-01` ([src/app/page.tsx](file:///d:/Educare_AI/src/app/page.tsx))**: Sửa lỗi tràn ngang `scrollWidth = 450px` ở màn hình `375x812` trên trang chủ do dòng phụ đề dài của `<BrandLogo>` đẩy nút `"Đăng nhập"` khuất khỏi mép phải; tách `<BrandLogo>` responsive (`hidden sm:flex` và `flex sm:hidden`) đạt `scrollWidth = 375px` (`overflowX = false`).
-   - **`LIVE-02` ([Modal.tsx](file:///d:/Educare_AI/src/components/ui/Modal.tsx) & [Drawer.tsx](file:///d:/Educare_AI/src/components/ui/Drawer.tsx))**: Bọc `<Modal>` và `<Drawer>` bằng `createPortal(..., document.body)` để thoát khỏi khối chứa CSS `transform` của `<PageTransition>`, giúp lớp phủ (backdrop) che kín 100% khung nhìn (chặn thao tác nền trên `AppSidebar`/`AppHeader`) và đóng được bằng thao tác click nền.
-   - **`LIVE-03` ([Modal.tsx](file:///d:/Educare_AI/src/components/ui/Modal.tsx), [Drawer.tsx](file:///d:/Educare_AI/src/components/ui/Drawer.tsx), [AppHeader.tsx](file:///d:/Educare_AI/src/components/layout/AppHeader.tsx))**: Lưu đồng bộ `previousFocusRef.current` ngay khi `open` chuyển từ `false -> true` trước khi `autoFocus` của phần tử con chạy, đảm bảo hộp thoại Tìm kiếm nhanh (`Ctrl+K`) luôn trả focus về nút kích hoạt khi nhấn `Escape`.
-   - **`LIVE-04` ([FloatingAIAssistant.tsx](file:///d:/Educare_AI/src/components/ai/FloatingAIAssistant.tsx))**: Gỡ bỏ `mode="wait"` trên `<AnimatePresence>` và dùng callback ref trên ô `<input>` và nút `<m.button>` FAB (kèm `aria-label="Mở Trợ lý AI Socratic UNIGO"`), đảm bảo chuyển focus ngay vào ô nhập khi mở và trả focus về nút FAB khi nhấn `Escape`.
-   - **`LIVE-05` ([AppHeader.tsx](file:///d:/Educare_AI/src/components/layout/AppHeader.tsx) & [RoleSwitcher.tsx](file:///d:/Educare_AI/src/components/layout/RoleSwitcher.tsx))**: Bỏ `role="menu"` / `role="menuitem"` và `role="dialog"` không đúng ngữ nghĩa trên dropdown thông thường, chuyển sang mẫu **WAI-ARIA Disclosure Pattern** (`aria-expanded`, `aria-controls`, `<nav aria-label="Liên kết tài khoản">`, `<section id="header-notifications-panel">`) và trả focus về nút mở khi nhấn `Escape`.
-2. **Bằng chứng Kiểm thử Tự động & Trình duyệt**:
-   - Đã cập nhật [AUDIT_REPORT.md](file:///d:/Educare_AI/AUDIT_REPORT.md) với số liệu đo trực tiếp trên Chromium (`TTFB`, `FCP`, `LCP`, `CLS`), bảng 24 khung nhìn (`375px`, `768px`, `1440px`) và ảnh chụp màn hình lưu tại thư mục artifacts.
+## 2. Tóm tắt những gì đã triển khai và đóng gói trong phiên này
+1. **Mục 1 (`SL-1` — Tìm bài học & Bài kiểm tra)**:
+   - Thêm nút **Kiểm tra** nổi bật trên `/hoc-sinh/tong-quan` và thanh `BottomNav` trên mobile (đi tới `/hoc-sinh/kiem-tra?mode=EXAM` trong **1 thao tác**).
+   - Sửa dứt điểm lỗi gọi API lặp vô hạn ở `/hoc-sinh/kiem-tra/page.tsx`; tách rõ 3 chế độ **Đề kiểm tra được giao (`EXAM`)**, **Bài tự luyện (`PRACTICE`)** và **Bài tập & Nộp bài (`/hoc-sinh/bai-tap`)**.
+   - Hiển thị `"Lớp em chưa có bài kiểm tra được giao"` khi trống, nút **Thử lại** khi lỗi mạng, thông tin trước khi làm (môn, thời lượng, số lượt cho phép, trạng thái) và sau khi nộp (số lần đã nộp, điểm/thang điểm, chính sách đáp án, hành động tiếp theo), tự động khôi phục lượt `IN_PROGRESS` sau khi tải lại trang.
+   - Trong `/hoc-sinh/mon-hoc/[id]/page.tsx`: kiểm tra phạm vi khối/lớp của học sinh, đặt Tên bài + Mục tiêu ngắn phía trên học liệu, và 3 nút hành động tiếp theo giữ nguyên ngữ cảnh (**1. Luyện bằng trò chơi**, **2. Hỏi gia sư môn này**, **3. Vào bài kiểm tra**).
+2. **Mục 2 (`SL-2` — Dán link Google Drive & Xem ảnh trực tiếp trong bài)**:
+   - Tạo `src/lib/drive-url.ts` chuẩn hóa URL HTTPS từ `drive.google.com` / `docs.google.com` (`file/d/<id>/view`, `open?id=<id>`, `folders/<id>`, Docs/Slides/Sheets, giữ `resourcekey`, chặn SSRF/non-HTTPS) và tương thích ngược với bài cũ (`/api/assets/<id>`).
+   - Tạo `src/components/materials/DriveMaterialViewer.tsx` hiển thị trực tiếp hình ảnh trong bài kèm mô tả và fallback sang khung `/preview` + lời giải thích có điều kiện trung thực (không báo giả "tệp đã bị xóa").
+   - Nâng cấp `src/app/giao-vien/bai-giang/TeacherLessonsClient.tsx` & `/api/teacher/lessons/route.ts`: đưa **Dán liên kết Google Drive** lên làm cách chính, có xem trước trực tiếp trước khi lưu.
+3. **Mục 3 (`SL-3` — Ghi điểm & Số lần làm từ ứng dụng sang Sheets)**:
+   - Chuẩn hóa quy tắc đếm lượt trong `/api/tin-hoc/assessments/route.ts` và `/api/tin-hoc/game-plays/route.ts` (gắn nhãn **Tự luyện**, nối `PilotLearningHub.tsx` lưu lượt chơi khi hoàn thành).
+   - Bổ sung `buildClassTrackingAttemptSheets` vào `syncClassTrackingSheet` (`src/lib/google-workspace.ts`): xuất `tab7_ChiTietLuotNop` (**mỗi lượt đã nộp 1 dòng** với `record_id` ổn định) và `tab8_TongHopKetQua` (tổng hợp theo `HS/bài/chế độ`: `submitted_count`, `latest_score`, `best_score`, tách riêng `practice_game_plays`, bảo toàn `teacher_note`).
+4. **Mục 4 (`SL-4` — Thiết kế lại trò chơi HTML & Ngân hàng 20 câu/bài x 3 khối)**:
+   - Nâng cấp `src/lib/demo-game-html.ts` chuẩn Ocean Blue + `postMessage`.
+   - Tạo `src/lib/pilot-questions-bank.ts` và cập nhật `src/lib/pilot-curriculum.ts`: mỗi bài Tin học Khối 6, 7, 8 có đủ **20 câu hỏi riêng biệt** đã đối chiếu SGK (tổng **60 câu**), hỗ trợ **3 dạng tương tác** (`MCQ` chọn đáp án, `MATCH` ghép cặp bằng chạm/phím, `ORDER` sắp xếp thứ tự bằng nút Lên/Xuống >= 44px).
+   - Nâng cấp `src/app/hoc-sinh/thi-diem/PilotLearningHub.tsx`: màn hình **Bắt đầu**, rút 10 câu không lặp mỗi lượt, hiển thị `"Câu 3/10"`, màn hình cuối hiển thị điểm, danh sách **Các câu cần ôn lại**, nút **Chơi lại** và **Về bài học**.
+5. **Mục 5 (`SL-5` — Tách gia sư Gemini theo Lớp & Môn)**:
+   - Tạo `src/lib/ai-tutor-config.ts`, nâng cấp `/api/ai/chat/route.ts` và `/hoc-sinh/ai-tutor/page.tsx`: lấy lớp/khối thực từ session, ưu tiên cấu hình `lớp + môn` -> `khối + môn`, điền đúng mẫu System Prompt tiếng Việt chuẩn (khóa đáp án khi đang làm đề `EXAM`, lọc PII cả lịch sử), cô lập lịch sử theo `HS + lớp + môn + bài`, hủy phản hồi mạng về muộn bằng `AbortController`, hỗ trợ IME-safe Enter khi gõ dấu tiếng Việt, 3 nút gợi ý nhanh, câu mở đầu mẫu và nút **Mở Gem** / **Sao chép câu hỏi** (hoặc báo `"Lớp em chưa có Gem môn này"`).
 
-## 1. Trạng thái Kiểm thử
-| Lệnh | Kết quả |
-|---|---|
-| `pnpm exec prisma validate` | **PASS** |
-| `pnpm exec tsc --noEmit` | **PASS (0 errors)** |
-| `pnpm test` | **47/47 PASS (7 suites)** |
-| `pnpm build` | **PASS (`First Load JS shared by all: 103 kB`)** |
-| Playwright Chromium (`375px`, `768px`, `1440px`) | **24/24 Viewports PASS (`overflowX = false`, `page_errors = 0`)** |
+## 3. Kết quả kiểm tra đã chạy
+- `pnpm exec prisma validate`: **PASS**
+- `pnpm exec tsc --noEmit`: **PASS (0 lỗi)**
+- `pnpm test`: **PASS (67/67 tests trên 10 suites, bao gồm `tests/student-journey-e2e.test.ts` và `tests/pilot-grade6-8.test.ts`)**
 
-## 2. Hướng dẫn cho phiên tiếp theo
-1. Đọc `.agents/skills/educare-session-handoff/SKILL.md` và `.agents/skills/educare-uiux-performance/SKILL.md`.
-2. Chạy `git status --short` và `pnpm test` để kiểm tra trạng thái.
-
-## Bổ sung 15/11/2026 — Hoàn tất Redesign Toàn diện EDUCARE AI (TR-1 -> TR-9)
-- **Đặc tả thực thi**: Hoàn tất theo đúng yêu cầu trong [docs/EDUCAREAI_REDESIGN_PROMPT.md](file:///d:/Educare_AI/docs/EDUCAREAI_REDESIGN_PROMPT.md) và quyết định trong [docs/EDUCAREAI_VISION_AND_DECISIONS.md](file:///d:/Educare_AI/docs/EDUCAREAI_VISION_AND_DECISIONS.md).
-- **Hệ thống Design System & Component Dùng chung**:
-  - `src/lib/theme.ts` & `globals.css`: Giữ chuẩn Ocean Blue (`#2563EB`, `#F8FAFC`, `#FFFFFF`, `#0F172A`), loại bỏ toàn bộ AI-slop (gradient text, một phía border, blur blob).
-  - `src/components/layout/AppSidebar.tsx`: Tái cấu trúc menu theo nhóm nghiệp vụ riêng biệt cho 4 vai trò, loại bỏ nhãn kỹ thuật cấm ("Sandbox", "3 Tab").
-  - `src/components/layout/BottomNav.tsx`: Bổ sung điều hướng di động (`md:hidden`, `h-16 pb-safe`) với các nút bấm đạt vùng chạm tối thiểu 44px, hỗ trợ thao tác ≤2 lần chạm tới tác vụ cốt lõi.
-  - `src/components/ui/PageHeader.tsx`: Chuyển từ hero banner gradient gây chói mắt sang thẻ sáng tương phản cao (AAA), tiêu đề 20-28px rõ ràng.
-  - `src/components/ui/OceanButton.tsx`, `DataTable.tsx`: Vùng chạm tương tác tối thiểu 44px (`min-h-[44px]`), font bảng tăng lên 14px (`text-sm`), ô tìm kiếm 14px.
-- **Không gian 4 Vai trò & Quy trình Nghiệp vụ**:
-  - **Học sinh (`/hoc-sinh/*`)**: Trang tổng quan chia rõ "Hôm nay em cần làm gì?" và tiến độ thực tế; bài giảng nâng font đọc lên 16px (`text-base`); bài tập loại bỏ tên cá nhân gán cứng, ô nhập liệu 16px chống tự phóng to trên iOS; xưởng trò chơi phân tách rõ ràng Thư viện trò chơi đã duyệt và Xưởng sáng tạo với Sandbox CSP cô lập.
-  - **Giáo viên (`/giao-vien/*`)**: Hàng đợi chấm bài theo Rubric 4 mức chuyển tiếp mượt mà, gợi ý nhận xét AI sư phạm giữ vai trò trợ lý; công cụ biên soạn bài giảng hỗ trợ tạo phiếu học tập Google Docs thật; ngân hàng câu hỏi hiển thị rõ mức độ nhận thức và nhãn dữ liệu trung thực.
-  - **Phụ huynh (`/phu-huynh/*`)**: Báo cáo tiến bộ, điểm mạnh và nội dung gia đình có thể hỗ trợ bằng ngôn ngữ sư phạm tích cực, không xếp loại thi đua; cam kết bảo mật quyền riêng tư của học sinh.
-  - **Quản trị (`/quan-tri/*` & `/admin/settings/integrations`)**: Cấp mã học sinh không email, nhập danh sách Excel/CSV, hiển thị mật khẩu tạm một lần an toàn; quản lý tích hợp Google Workspace, Gemini Server API và Gems phân tách rõ ràng, secret bảo vệ write-only.
-- **Kết quả Kiểm thử Baseline (`8ba7f7c`)**:
-  - `pnpm exec prisma validate`: **PASS**
-  - `pnpm exec tsc --noEmit`: **PASS (0 errors)**
-  - `pnpm test`: **53/53 PASS** trên 8 test suites (`tests/*.test.ts`)
-  - `pnpm build`: **PASS** — Toàn bộ 27 trang tĩnh/động biên dịch thành công, First Load JS chia sẻ giữ ở mức tối ưu 103 kB.
-
-## Bổ sung hợp nhất sau `git pull` (`8ba7f7c` + SGK KNTT Lớp 6 Tập 1, `2026-11-16`)
-- Đã kéo `origin/main` (`8ba7f7c`) và hợp nhất đầy đủ tính năng SGK **Kết nối tri thức với cuộc sống — Lớp 6 Tập 1** (Toán 6 `ISBN 978-604-0-25151-0`, Ngữ văn 6 `ISBN 978-604-0-25154-1`):
-  - Thư mục phân lớp cục bộ `SGK/Lop_6/{Toan,Ngu_van}/Tap_1/`, `SGK/sgk-kntt-manifest.json`, và bản sao `D:\UNIGO\SGK\Lớp_6\{Toan,Ngu_van}\Tap_1\`.
-  - Cây Drive `02_HOC_LIEU/{Toan,Ngu_van}/Lop_6/Tap_1` và action `SYNC_LOCAL_SGK_TO_DRIVE` trong `src/lib/google-workspace.ts` & `src/app/api/google/workspace/route.ts`.
-  - Studio `/giao-vien/on-tap`, `/hoc-sinh/on-tap`, `/api/review/generate`, `src/lib/grade6-demo.ts` (4 trò chơi HTML × 8 câu, học liệu, bài tập, ôn HK1, đề thử & đáp án), `src/lib/review-prompts.ts`, `output/grade6-demo/`, `tests/grade6-demo.test.ts`, và 2 liên kết điều hướng trong `src/components/layout/AppSidebar.tsx`.
+## 4. Việc có thể làm tiếp ở phiên sau (khi Thầy/Cô quay lại)
+- Nếu muốn xem trực tiếp trên trình duyệt: chạy `pnpm dev` và đăng nhập thử bằng tài khoản học sinh (`HS26-6A1-01` / `HS26-7A1-01` / `HS26-8A1-01`).
+- Nếu muốn đẩy toàn bộ thay đổi mới lên GitHub: chỉ cần nhắn `"push"` ở phiên làm việc tiếp theo.

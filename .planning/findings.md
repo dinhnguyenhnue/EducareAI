@@ -61,3 +61,5 @@
    - Giáo viên: Bàn làm việc sư phạm ưu tiên hàng đợi việc cần xử lý (bài nộp chờ chấm, trò chơi chờ duyệt, lịch dạy sắp tới).
    - Phụ huynh: Nhấn mạnh tiến bộ thật bằng ngôn ngữ ấm áp, dễ hiểu, không so sánh hay bịa xếp hạng.
    - Quản trị: Đơn giản hóa quy trình cấp tài khoản học sinh bằng mã và trung tâm tích hợp Google Workspace / Gemini có hướng dẫn rõ ràng.
+
+- 18/11/2026 — Đối chiếu tĩnh cho prompt luồng học sinh: sidebar đã trỏ /hoc-sinh/kiem-tra, trang ai-tutor dùng phản hồi định sẵn phía client, TeacherLessonsClient đã có driveFileUrl và syncClassTrackingSheet xuất dữ liệu theo lớp. Chưa kiểm thử dịch vụ thực trong tác vụ soạn tài liệu.

@@ -4,12 +4,13 @@ export interface ParsedStudentRow {
   rowNumber: number;
   sheetName: string;
   studentCode: string;
+  codeGenerated?: boolean;
   fullName: string;
   className: string;
   gradeLevel: number;
   dateOfBirth: string | null;
   gender: string | null;
-  emailFromFile: string | null; // null if file does not have email
+  emailFromFile: string | null; // null if file does not have student email
   isValid: boolean;
   errors: string[];
 }
@@ -17,6 +18,8 @@ export interface ParsedStudentRow {
 export interface ExcelParseResult {
   fileName: string;
   sheetsDetected: string[];
+  skippedNonTargetSheets?: string[];
+  skippedNonTargetCount?: number;
   columnsDetected: string[];
   totalRows: number;
   validRows: ParsedStudentRow[];
@@ -26,21 +29,78 @@ export interface ExcelParseResult {
     grade7: number;
     grade8: number;
   };
+  classBreakdown?: Record<string, number>;
 }
 
 /**
  * Extracts files from a standard ZIP buffer (such as an OpenXML .xlsx file)
  * using Node.js built-in zlib.inflateRawSync.
+ * Reads the Central Directory so entries using Data Descriptors (compressedSize=0 in local header)
+ * exported by Microsoft Excel or Google Sheets are extracted reliably.
  */
 export function unzipBuffer(zipBuffer: Buffer): Record<string, Buffer> {
   const files: Record<string, Buffer> = {};
-  let offset = 0;
 
+  // Locate End of Central Directory (0x06054b50) from the end of the buffer
+  let eocdOffset = -1;
+  const minOffset = Math.max(0, zipBuffer.length - 65557);
+  for (let pos = zipBuffer.length - 22; pos >= minOffset; pos--) {
+    if (zipBuffer.readUInt32LE(pos) === 0x06054b50) {
+      eocdOffset = pos;
+      break;
+    }
+  }
+
+  if (eocdOffset !== -1) {
+    const centralDirSize = zipBuffer.readUInt32LE(eocdOffset + 12);
+    const centralDirOffset = zipBuffer.readUInt32LE(eocdOffset + 16);
+    let cdPos = centralDirOffset;
+    const cdEnd = centralDirOffset + centralDirSize;
+
+    while (cdPos + 46 <= cdEnd && cdPos + 46 <= zipBuffer.length) {
+      if (zipBuffer.readUInt32LE(cdPos) !== 0x02014b50) break;
+
+      const compressionMethod = zipBuffer.readUInt16LE(cdPos + 10);
+      const compressedSize = zipBuffer.readUInt32LE(cdPos + 20);
+      const fileNameLength = zipBuffer.readUInt16LE(cdPos + 28);
+      const extraFieldLength = zipBuffer.readUInt16LE(cdPos + 30);
+      const commentLength = zipBuffer.readUInt16LE(cdPos + 32);
+      const localHeaderOffset = zipBuffer.readUInt32LE(cdPos + 42);
+
+      const fileName = zipBuffer
+        .subarray(cdPos + 46, cdPos + 46 + fileNameLength)
+        .toString("utf-8");
+
+      if (
+        localHeaderOffset + 30 <= zipBuffer.length &&
+        zipBuffer.readUInt32LE(localHeaderOffset) === 0x04034b50
+      ) {
+        const localNameLen = zipBuffer.readUInt16LE(localHeaderOffset + 26);
+        const localExtraLen = zipBuffer.readUInt16LE(localHeaderOffset + 28);
+        const dataStart = localHeaderOffset + 30 + localNameLen + localExtraLen;
+        const compressedData = zipBuffer.subarray(
+          dataStart,
+          dataStart + compressedSize
+        );
+
+        if (compressionMethod === 0) {
+          files[fileName] = Buffer.from(compressedData);
+        } else if (compressionMethod === 8) {
+          files[fileName] = zlib.inflateRawSync(compressedData);
+        }
+      }
+
+      cdPos += 46 + fileNameLength + extraFieldLength + commentLength;
+    }
+
+    return files;
+  }
+
+  // Fallback: sequential local file header scan
+  let offset = 0;
   while (offset + 30 <= zipBuffer.length) {
     const signature = zipBuffer.readUInt32LE(offset);
-    if (signature !== 0x04034b50) {
-      break; // Reached Central Directory or end of local file headers
-    }
+    if (signature !== 0x04034b50) break;
 
     const compressionMethod = zipBuffer.readUInt16LE(offset + 8);
     const compressedSize = zipBuffer.readUInt32LE(offset + 18);
@@ -192,31 +252,56 @@ export function parseXlsxRawSheets(
     }
   }
 
-  // 2. Parse workbook.xml for sheet names
-  const sheetNames: string[] = [];
-  const workbookXml = entries["xl/workbook.xml"]?.toString("utf-8") || "";
-  const sheetTagMatches = workbookXml.match(/<sheet\s+[^>]*\/?>/g) || [];
-  for (const tag of sheetTagMatches) {
-    const nameMatch = tag.match(/name="([^"]+)"/);
-    if (nameMatch) {
-      sheetNames.push(decodeXmlEntities(nameMatch[1]));
+  // 2. Parse workbook.xml & workbook.xml.rels for exact sheetName -> worksheet path mapping
+  const relsXml = entries["xl/_rels/workbook.xml.rels"]?.toString("utf-8") || "";
+  const relIdToTarget: Record<string, string> = {};
+  const relMatches = relsXml.match(/<Relationship\s+[^>]*\/?>/g) || [];
+  for (const relTag of relMatches) {
+    const idMatch = relTag.match(/Id="([^"]+)"/);
+    const targetMatch = relTag.match(/Target="([^"]+)"/);
+    if (idMatch && targetMatch) {
+      let target = targetMatch[1].replace(/^\/+/, "");
+      if (!target.startsWith("xl/")) {
+        target = `xl/${target}`;
+      }
+      relIdToTarget[idMatch[1]] = target;
     }
   }
 
-  // 3. Parse each worksheet xl/worksheets/sheet1.xml, sheet2.xml, ...
-  const worksheetKeys = Object.keys(entries)
-    .filter((k) => /^xl\/worksheets\/sheet\d+\.xml$/.test(k))
-    .sort((a, b) => {
-      const numA = parseInt(a.match(/sheet(\d+)\.xml/)?.[1] || "1", 10);
-      const numB = parseInt(b.match(/sheet(\d+)\.xml/)?.[1] || "1", 10);
-      return numA - numB;
+  const orderedSheets: Array<{ sheetName: string; entryKey: string }> = [];
+  const workbookXml = entries["xl/workbook.xml"]?.toString("utf-8") || "";
+  const sheetTagMatches = workbookXml.match(/<sheet\s+[^>]*\/?>/g) || [];
+  sheetTagMatches.forEach((tag, idx) => {
+    const nameMatch = tag.match(/name="([^"]+)"/);
+    const rIdMatch = tag.match(/r:id="([^"]+)"/);
+    const sheetName = nameMatch ? decodeXmlEntities(nameMatch[1]) : `Sheet${idx + 1}`;
+    const mappedKey = rIdMatch ? relIdToTarget[rIdMatch[1]] : undefined;
+    const fallbackKey = `xl/worksheets/sheet${idx + 1}.xml`;
+    orderedSheets.push({
+      sheetName,
+      entryKey: mappedKey && entries[mappedKey] ? mappedKey : fallbackKey,
     });
+  });
+
+  // Fallback if workbook.xml had no <sheet> tags
+  if (orderedSheets.length === 0) {
+    Object.keys(entries)
+      .filter((k) => /^xl\/worksheets\/sheet\d+\.xml$/.test(k))
+      .sort((a, b) => {
+        const numA = parseInt(a.match(/sheet(\d+)\.xml/)?.[1] || "1", 10);
+        const numB = parseInt(b.match(/sheet(\d+)\.xml/)?.[1] || "1", 10);
+        return numA - numB;
+      })
+      .forEach((key, idx) => {
+        orderedSheets.push({ sheetName: `Sheet${idx + 1}`, entryKey: key });
+      });
+  }
 
   const result: Array<{ sheetName: string; rows: string[][] }> = [];
 
-  worksheetKeys.forEach((key, sheetIdx) => {
-    const sheetName = sheetNames[sheetIdx] || `Sheet${sheetIdx + 1}`;
-    const xml = entries[key].toString("utf-8");
+  orderedSheets.forEach(({ sheetName, entryKey }) => {
+    if (!entries[entryKey]) return;
+    const xml = entries[entryKey].toString("utf-8");
     const rowMatches = xml.match(/<row[\s\S]*?<\/row>/g) || [];
     const rows: string[][] = [];
 
@@ -240,6 +325,8 @@ export function parseXlsxRawSheets(
           if (cellType === "s") {
             const sIdx = parseInt(rawV, 10);
             val = sharedStrings[sIdx] ?? rawV;
+          } else if (cellType === "str" || cellType === "e") {
+            val = decodeXmlEntities(rawV);
           } else {
             val = decodeXmlEntities(rawV);
           }
@@ -262,44 +349,96 @@ export function parseXlsxRawSheets(
   return result;
 }
 
+const TARGET_PILOT_GRADES = new Set([6, 7, 8]);
+
+/**
+ * Normalizes Excel date serial numbers or ISO timestamps into DD/MM/YYYY.
+ */
+function normalizeDateValue(rawVal: string | undefined | null): string | null {
+  if (!rawVal) return null;
+  const cleaned = rawVal.trim().replace(/^'+|'+$/g, "");
+  if (!cleaned) return null;
+
+  // ISO timestamp e.g. "2015-03-07 00:00:00"
+  const isoMatch = cleaned.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoMatch) {
+    const [, yyyy, mm, dd] = isoMatch;
+    return `${dd.padStart(2, "0")}/${mm.padStart(2, "0")}/${yyyy}`;
+  }
+
+  // Excel serial number (e.g. 42000 -> ~2015)
+  if (/^\d{5}(\.0+)?$/.test(cleaned)) {
+    const serial = parseInt(cleaned, 10);
+    if (serial > 30000 && serial < 60000) {
+      const utcDays = serial - 25569;
+      const d = new Date(utcDays * 86400 * 1000);
+      const dd = String(d.getUTCDate()).padStart(2, "0");
+      const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+      const yyyy = d.getUTCFullYear();
+      return `${dd}/${mm}/${yyyy}`;
+    }
+  }
+
+  return cleaned;
+}
+
 /**
  * Normalizes student code so re-imports are idempotent and clean.
  */
 export function normalizeStudentCode(
   rawCode: string,
   gradeLevel: number,
-  seqIndex: number
+  seqIndex: number,
+  className?: string
 ): string {
   const cleaned = rawCode.trim().toUpperCase().replace(/\s+/g, "");
-  if (cleaned.length >= 4) {
+  if (cleaned.length >= 3) {
     return cleaned;
   }
-  return `HS2026-0${gradeLevel}${String(seqIndex).padStart(2, "0")}`;
+  const cleanClass = (className || `${gradeLevel}A1`)
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+  return `HS26-${cleanClass}-${String(seqIndex).padStart(2, "0")}`;
 }
 
 export function detectGradeLevel(
   sheetName: string,
   className: string,
   explicitGrade: string
-): number {
+): number | null {
   const gNum = parseInt(explicitGrade, 10);
-  if ([6, 7, 8, 9].includes(gNum)) return gNum;
+  if (gNum >= 1 && gNum <= 12) return gNum;
 
-  const classMatch = className.match(/^([6789])/);
-  if (classMatch) return parseInt(classMatch[1], 10);
+  const classMatch = className.trim().match(/^(\d{1,2})/);
+  if (classMatch) {
+    const cGrade = parseInt(classMatch[1], 10);
+    if (cGrade >= 1 && cGrade <= 12) return cGrade;
+  }
 
-  const sheetMatch = sheetName.match(/([6789])/);
-  if (sheetMatch) return parseInt(sheetMatch[1], 10);
+  const sheetTrimmed = sheetName.trim();
+  const sheetClassMatch = sheetTrimmed.match(/(\d{1,2})\s*[A-Za-z]/);
+  if (sheetClassMatch) {
+    const sGrade = parseInt(sheetClassMatch[1], 10);
+    if (sGrade >= 1 && sGrade <= 12) return sGrade;
+  }
 
-  return 7;
+  const sheetKhoiMatch = sheetTrimmed.match(/(?:khối|khoi|lớp|lop)\s*(\d{1,2})/i);
+  if (sheetKhoiMatch) {
+    const kGrade = parseInt(sheetKhoiMatch[1], 10);
+    if (kGrade >= 1 && kGrade <= 12) return kGrade;
+  }
+
+  return null;
 }
 
 /**
  * Transforms raw sheet tables (from .xlsx or .csv) into validated UNIGO Student records.
- * Strictly follows Section IX:
+ * Strictly follows pilot rules:
+ * - Only imports Grade 6, 7, 8 students; skips Grade 1-5 sheets safely.
  * - Does NOT invent email, phone, parent, or grades if absent in the file.
- * - Separates Grade 6, 7, 8.
- * - Reports row-level errors clearly.
+ * - Does NOT treat parent GMAIL columns as student login emails.
+ * - Reports row-level errors and grade/class breakdowns clearly.
  */
 export function processRawSheetsToStudents(
   fileName: string,
@@ -309,19 +448,24 @@ export function processRawSheetsToStudents(
   const invalidRows: ParsedStudentRow[] = [];
   const columnsDetectedSet = new Set<string>();
   const seenCodesInFile = new Set<string>();
+  const skippedNonTargetSheets: string[] = [];
+  let skippedNonTargetCount = 0;
+  const classBreakdown: Record<string, number> = {};
 
   for (const sheet of sheets) {
     if (sheet.rows.length === 0) continue;
 
-    // Find header row (first row containing "họ" or "tên" or "mã" or "lớp")
+    // Find header row (first row containing "họ tên", "mã hs", "lớp", "stt"...)
     let headerRowIdx = 0;
-    for (let i = 0; i < Math.min(sheet.rows.length, 5); i++) {
+    for (let i = 0; i < Math.min(sheet.rows.length, 6); i++) {
       const joined = sheet.rows[i].join(" ").toLowerCase();
       if (
-        joined.includes("tên") ||
-        joined.includes("mã") ||
-        joined.includes("lớp") ||
-        joined.includes("name")
+        (joined.includes("tên") ||
+          joined.includes("mã hs") ||
+          joined.includes("lớp") ||
+          joined.includes("name") ||
+          joined.includes("stt")) &&
+        !joined.startsWith("danh sách")
       ) {
         headerRowIdx = i;
         break;
@@ -329,70 +473,151 @@ export function processRawSheetsToStudents(
     }
 
     const headers = sheet.rows[headerRowIdx].map((h) => h.trim());
+    const sheetGrade = detectGradeLevel(sheet.sheetName, "", "");
+
+    // Skip non-target grade sheets (e.g. primary school 1a1..5C1)
+    if (sheetGrade !== null && !TARGET_PILOT_GRADES.has(sheetGrade)) {
+      skippedNonTargetSheets.push(sheet.sheetName);
+      const dataRowCount = sheet.rows
+        .slice(headerRowIdx + 1)
+        .filter((r) => r.some((c) => c && c.trim())).length;
+      skippedNonTargetCount += dataRowCount;
+      continue;
+    }
+
     headers.forEach((h) => {
       if (h) columnsDetectedSet.add(h);
     });
 
-    const findCol = (keywords: string[]) =>
+    const findColExactOrIncludes = (exacts: string[], includes: string[]) =>
       headers.findIndex((h) => {
-        const lower = h.toLowerCase();
-        return keywords.some((kw) => lower.includes(kw));
+        const lower = h.toLowerCase().trim();
+        if (exacts.includes(lower)) return true;
+        return includes.some((kw) => lower.includes(kw));
       });
 
-    const codeIdx = findCol(["mã hs", "mã học sinh", "student_code", "mahs", "mã"]);
-    const fullNameIdx = findCol(["họ và tên", "họ tên", "full_name", "fullname"]);
-    const firstNameIdx = findCol(["họ đệm"]);
-    const lastNameIdx = findCol(["tên"]);
-    const classIdx = findCol(["lớp", "class"]);
-    const gradeIdx = findCol(["khối", "grade"]);
-    const dobIdx = findCol(["ngày sinh", "sinh ngày", "dob", "birth"]);
-    const genderIdx = findCol(["giới tính", "phái", "gender"]);
-    const emailIdx = findCol(["email", "thư điện tử"]);
+    const sttIdx = findColExactOrIncludes(["stt"], []);
+    const codeIdx = findColExactOrIncludes(
+      ["mã hs", "mã học sinh", "student_code", "mahs"],
+      ["mã hs", "mã học sinh", "student_code"]
+    );
+    const fullNameIdx = findColExactOrIncludes(
+      ["họ tên hs", "họ và tên", "họ tên", "full_name", "fullname"],
+      ["họ và tên", "họ tên"]
+    );
+    const firstNameIdx = findColExactOrIncludes(["họ đệm"], ["họ đệm"]);
+    const lastNameIdx = findColExactOrIncludes(["tên"], []);
+    const classIdx = findColExactOrIncludes(["lớp", "class"], ["lớp học"]);
+    const gradeIdx = findColExactOrIncludes(["khối", "grade"], ["khối lớp"]);
+    const dobIdx = findColExactOrIncludes(
+      ["ns", "dob", "ngày sinh"],
+      ["ngày sinh", "sinh ngày", "birth"]
+    );
+    const genderIdx = findColExactOrIncludes(
+      ["gt", "gender", "giới tính"],
+      ["giới tính", "phái"]
+    );
+    const hasParentCols =
+      findColExactOrIncludes(["tên ph", "đtlh"], ["phụ huynh", "điện thoại"]) >= 0;
+    const studentEmailIdx = hasParentCols
+      ? findColExactOrIncludes(["email hs", "email học sinh"], ["email học sinh"])
+      : findColExactOrIncludes(["email", "thư điện tử"], ["email học sinh"]);
+
+    // Derive default class name from sheetName if sheetName looks like "6A1", "7A1", "8A1"
+    const sheetClassMatch = sheet.sheetName.trim().match(/^(\d{1,2}[A-Za-z]\d*)$/);
+    const defaultClassFromSheet = sheetClassMatch
+      ? sheetClassMatch[1].toUpperCase()
+      : "";
+
+    let classSeq = 0;
 
     for (let r = headerRowIdx + 1; r < sheet.rows.length; r++) {
       const row = sheet.rows[r];
       if (!row || row.every((cell) => !cell || !cell.trim())) continue;
-
-      const errors: string[] = [];
 
       let fullName = "";
       if (fullNameIdx >= 0) {
         fullName = (row[fullNameIdx] || "").trim();
       } else if (firstNameIdx >= 0 && lastNameIdx >= 0) {
         fullName = `${row[firstNameIdx] || ""} ${row[lastNameIdx] || ""}`.trim();
-      } else if (row.length >= 2) {
+      } else if (row.length >= 2 && codeIdx >= 0) {
         fullName = (row[1] || "").trim();
       }
+
+      // Skip blank template rows that only have STT or empty name
+      if (!fullName && sttIdx >= 0) continue;
+
+      const errors: string[] = [];
 
       const rawClass =
         (classIdx >= 0 ? row[classIdx] : "")?.trim().toUpperCase() || "";
       const rawGrade = (gradeIdx >= 0 ? row[gradeIdx] : "")?.trim() || "";
-      const gradeLevel = detectGradeLevel(sheet.sheetName, rawClass, rawGrade);
-      const className = rawClass || `${gradeLevel}A1`;
+      const gradeLevel = detectGradeLevel(
+        sheet.sheetName,
+        rawClass || defaultClassFromSheet,
+        rawGrade
+      );
 
-      const rawCode = (codeIdx >= 0 ? row[codeIdx] || "" : row[0] || "").trim();
-      const studentCode = normalizeStudentCode(rawCode, gradeLevel, r);
+      if (gradeLevel !== null && !TARGET_PILOT_GRADES.has(gradeLevel)) {
+        skippedNonTargetCount++;
+        continue;
+      }
+
+      const resolvedGrade = gradeLevel ?? 6;
+      const className =
+        rawClass || defaultClassFromSheet || `${resolvedGrade}A1`;
+
+      classSeq++;
+      const rawStt = sttIdx >= 0 ? parseInt(row[sttIdx] || "", 10) : NaN;
+      const seqNum = Number.isFinite(rawStt) && rawStt > 0 ? rawStt : classSeq;
+
+      const rawCode = (codeIdx >= 0 ? row[codeIdx] || "" : "").trim();
+      let studentCode = "";
+      let codeGenerated = false;
+
+      if (codeIdx >= 0) {
+        // File explicitly has a "Mã HS" column: require valid code
+        studentCode = normalizeStudentCode(
+          rawCode,
+          resolvedGrade,
+          seqNum,
+          className
+        );
+        if (!rawCode || rawCode.replace(/\s+/g, "").length < 3) {
+          errors.push("Thiếu Mã học sinh hợp lệ (tối thiểu 3 ký tự)");
+        }
+      } else {
+        // File does not have "Mã HS" column (e.g., UNIGO Excel list): generate consistent username HS26-<CLASS>-<NN>
+        studentCode = normalizeStudentCode("", resolvedGrade, seqNum, className);
+        while (seenCodesInFile.has(studentCode)) {
+          classSeq++;
+          studentCode = normalizeStudentCode(
+            "",
+            resolvedGrade,
+            classSeq,
+            className
+          );
+        }
+        codeGenerated = true;
+      }
 
       const dateOfBirth =
-        dobIdx >= 0 && row[dobIdx]?.trim() ? row[dobIdx].trim() : null;
+        dobIdx >= 0 ? normalizeDateValue(row[dobIdx]) : null;
       const gender =
         genderIdx >= 0 && row[genderIdx]?.trim() ? row[genderIdx].trim() : null;
       const emailFromFile =
-        emailIdx >= 0 && row[emailIdx]?.trim()
-          ? row[emailIdx].trim().toLowerCase()
+        studentEmailIdx >= 0 && row[studentEmailIdx]?.trim()
+          ? row[studentEmailIdx].trim().toLowerCase()
           : null;
 
-      if (!rawCode || rawCode.replace(/\s+/g, "").length < 3) {
-        errors.push("Thiếu Mã học sinh hợp lệ (tối thiểu 3 ký tự)");
-      }
       if (!fullName || fullName.length < 2) {
         errors.push("Thiếu Họ và Tên học sinh hợp lệ");
       }
       if (classIdx >= 0 && !rawClass) {
         errors.push("Thiếu tên Lớp học");
       }
-      if (![6, 7, 8, 9].includes(gradeLevel)) {
-        errors.push(`Khối lớp không hợp lệ (${gradeLevel})`);
+      if (!TARGET_PILOT_GRADES.has(resolvedGrade)) {
+        errors.push(`Khối lớp không thuộc phạm vi thí điểm 6-8 (${resolvedGrade})`);
       }
       if (seenCodesInFile.has(studentCode)) {
         errors.push(`Trùng mã học sinh (${studentCode}) ngay trong file`);
@@ -404,9 +629,10 @@ export function processRawSheetsToStudents(
         rowNumber: r + 1,
         sheetName: sheet.sheetName,
         studentCode,
+        codeGenerated,
         fullName,
         className,
-        gradeLevel,
+        gradeLevel: resolvedGrade,
         dateOfBirth,
         gender,
         emailFromFile,
@@ -416,6 +642,7 @@ export function processRawSheetsToStudents(
 
       if (parsedRow.isValid) {
         validRows.push(parsedRow);
+        classBreakdown[className] = (classBreakdown[className] || 0) + 1;
       } else {
         invalidRows.push(parsedRow);
       }
@@ -425,6 +652,8 @@ export function processRawSheetsToStudents(
   return {
     fileName,
     sheetsDetected: sheets.map((s) => s.sheetName),
+    skippedNonTargetSheets,
+    skippedNonTargetCount,
     columnsDetected: Array.from(columnsDetectedSet),
     totalRows: validRows.length + invalidRows.length,
     validRows,
@@ -434,6 +663,7 @@ export function processRawSheetsToStudents(
       grade7: validRows.filter((r) => r.gradeLevel === 7).length,
       grade8: validRows.filter((r) => r.gradeLevel === 8).length,
     },
+    classBreakdown,
   };
 }
 

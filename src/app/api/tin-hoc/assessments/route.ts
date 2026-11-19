@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth";
 import { verifyTeacherClassScope, withKeyLock } from "@/lib/submission-guard";
+import { syncClassTrackingSheet } from "@/lib/google-workspace";
 import crypto from "crypto";
 
 function isTeacherOrAdmin(role: string): boolean {
@@ -129,10 +130,16 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    const submittedCount = safeAttempts.filter(
+      (a) =>
+        a.status === "SUBMITTED" || a.status === "EXPIRED_AUTO_SUBMITTED"
+    ).length;
+
     return {
       ...assessment,
       items: safeItems,
       attempts: safeAttempts,
+      submittedCount,
     };
   });
 
@@ -349,7 +356,7 @@ export async function POST(request: NextRequest) {
           studentName: session.user.fullName,
           classId:
             session.user.studentProfile?.classId || assessment.classId || "7A1",
-          attemptNumber: existingAttempts.length + 1,
+          attemptNumber: completedCount + 1,
           idempotencyKey: `INIT-${session.user.id}-${assessment.id}-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
           status: "IN_PROGRESS",
           startedAt: startNow,
@@ -484,10 +491,25 @@ export async function POST(request: NextRequest) {
         idempotencyKey
       );
 
+      // Non-blocking sync to ClassTrackingSheet: Google failure never blocks "Đã nộp" confirmation
+      let sheetSyncState: "SYNCED" | "PENDING_SYNC" = "PENDING_SYNC";
+      try {
+        const syncRes = await syncClassTrackingSheet(
+          session.user.id,
+          graded.attempt.classId || "7A1"
+        );
+        if (syncRes.trackingSheet?.syncStatus === "SYNCED") {
+          sheetSyncState = "SYNCED";
+        }
+      } catch {
+        sheetSyncState = "PENDING_SYNC";
+      }
+
       return NextResponse.json({
         attempt: sanitizeAttemptResult(graded.attempt, graded.assessment),
         idempotentReplay: graded.idempotentReplay,
         ignoredClientScoreSpoof: clientTriedToSpoofScore,
+        sheetSyncState,
         serverGradedAt: now.toISOString(),
       });
     });

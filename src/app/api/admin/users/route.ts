@@ -82,8 +82,8 @@ export async function POST(req: Request) {
             isActive === false
               ? "SUSPENDED"
               : isActive === true && targetUser.accountStatus === "SUSPENDED"
-              ? "ACTIVE"
-              : targetUser.accountStatus,
+                ? "ACTIVE"
+                : targetUser.accountStatus,
         },
         include: {
           studentProfile: { include: { schoolClass: true } },
@@ -143,7 +143,7 @@ export async function POST(req: Request) {
       // Nếu tài khoản học sinh cũ còn lưu đuôi giả @no-email.internal.unigo thì chuẩn hóa về đúng studentCode
       const cleanEmailIdentifier =
         targetUser.studentProfile?.studentCode &&
-        targetUser.email.endsWith("@no-email.internal.unigo")
+          targetUser.email.endsWith("@no-email.internal.unigo")
           ? targetUser.studentProfile.studentCode
           : targetUser.email;
 
@@ -249,11 +249,12 @@ export async function POST(req: Request) {
           );
         }
 
-        const resolvedGrade = detectGradeLevel(
-          normalizedClass,
-          normalizedClass,
-          String(gradeLevel || "")
-        );
+        const resolvedGrade =
+          detectGradeLevel(
+            normalizedClass,
+            normalizedClass,
+            String(gradeLevel || "")
+          ) ?? 7;
 
         const academicYear = await prisma.academicYear.upsert({
           where: { name: "2026-2027" },

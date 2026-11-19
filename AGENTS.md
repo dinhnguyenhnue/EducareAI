@@ -19,6 +19,18 @@
 - Khi cảm thấy ngữ cảnh dài (nhiều file lớn đã đọc, > ~60% context) hoặc trước khi dừng: chạy quy trình "Checkpoint" trong skill (cập nhật `HANDOFF.md`, commit WIP cục bộ nếu được phép).
 - Phát hiện kỹ thuật quan trọng (vị trí lỗi, quyết định thiết kế, lệnh chạy được/không được) → ghi `.planning/findings.md`.
 
+## 1A. RULE CỨNG: Nhịp kiểm tra tiến độ & Diệt vòng lặp vô hạn (BẮT BUỘC)
+
+- **Nhịp kiểm tra tiến độ để hoàn thành task**:
+  - **Task dài / đa bước** (nhiều file, build/migration/test dài, triển khai tính năng lớn, chạy subagent/background task): kiểm tra tiến độ **5 phút / lần** (đối chiếu mục tiêu, ghi 1 dòng trạng thái vào `.planning/progress.md`, xác nhận bước kế tiếp cho đến khi hoàn thành).
+  - **Task đơn giản / ngắn** (sửa lỗi cục bộ, cập nhật 1–2 file, chạy lệnh ngắn): kiểm tra tiến độ **1 phút / lần** để đảm bảo xong dứt điểm, không bị treo.
+- **Cơ chế phát hiện & diệt vòng lặp vô hạn (Circuit Breaker)**:
+  - Coi là **vòng lặp vô hạn / treo** khi: (a) một lệnh/tiến trình lặp log giống hệt nhau hoặc không có tiến triển sau 1 chu kỳ (1 phút với lệnh ngắn, 5 phút với lệnh dài); (b) lặp lại cùng một lỗi hoặc cùng một chuỗi gọi tool thất bại **>= 3 lần liên tiếp** mà không đổi nguyên nhân; (c) code/API/UI phát sinh polling/re-render/đệ quy vô hạn.
+  - **Hành động bắt buộc ngay lập tức**:
+    1. **Diệt lệnh/tiến trình đang chạy** (hủy background task bằng `manage_task(kill)` hoặc dừng tiến trình treo) — tuyệt đối không chờ thụ động hay chạy lại y hệt lệnh cũ.
+    2. **Khoanh vùng nguyên nhân gốc** và ghi ngắn gọn vào `.planning/findings.md`.
+    3. **Chạy phương án sửa lỗi gốc (fix)** trước, sau đó mới chạy lại kiểm chứng với điều kiện dừng rõ ràng.
+
 ## 2. Nguồn yêu cầu & Định hướng UI/UX
 
 - Đặc tả gốc: `docs/LMS_MASTER_PROMPT.md`, `docs/LMS_DATA_DESIGN.md`, `docs/LMS_QA_2026-11-12.md`.

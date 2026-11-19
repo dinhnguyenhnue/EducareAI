@@ -63,7 +63,16 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { action, fileName, fileBase64, csvText, rowsToCommit } = body;
+    const {
+      action,
+      fileName,
+      fileBase64,
+      csvText,
+      rowsToCommit,
+      passwordMode,
+      customInitialPassword,
+      requireFirstLoginPasswordChange,
+    } = body;
 
     // 1. Preview from workspace file (or auto-provision standard UNIGO 2026-2027 workbook if not yet on disk)
     if (action === "PREVIEW_WORKSPACE_FILE") {
@@ -153,7 +162,7 @@ export async function POST(req: Request) {
       });
 
       let createdCount = 0;
-      let updatedIdempotentCount = 0;
+      let skippedDuplicateCount = 0;
       let failedCount = 0;
       const rowErrors: Array<{ studentCode: string; reason: string }> = [];
       const classesCreatedOrUpdated = new Set<string>();
@@ -164,18 +173,56 @@ export async function POST(req: Request) {
         temporaryPassword: string;
       }> = [];
 
+      const useCustomInitial =
+        passwordMode === "CUSTOM_INITIAL" &&
+        typeof customInitialPassword === "string" &&
+        customInitialPassword.trim().length >= 8;
+
+      if (passwordMode === "CUSTOM_INITIAL" && !useCustomInitial) {
+        return NextResponse.json(
+          { error: "Mật khẩu khởi tạo phải có tối thiểu 8 ký tự." },
+          { status: 400 }
+        );
+      }
+
+      const preHashedCustomPassword = useCustomInitial
+        ? await hashPassword(customInitialPassword.trim())
+        : null;
+
       for (const row of rows) {
-        if (!row.isValid || !row.studentCode || !row.fullName) {
+        if (
+          !row.isValid ||
+          !row.studentCode ||
+          !row.fullName ||
+          ![6, 7, 8].includes(row.gradeLevel)
+        ) {
           failedCount++;
           rowErrors.push({
             studentCode: row.studentCode || `Row ${row.rowNumber}`,
-            reason: (row.errors || ["Dữ liệu không hợp lệ"]).join("; "),
+            reason: ![6, 7, 8].includes(row.gradeLevel)
+              ? `Khối ${row.gradeLevel} không thuộc phạm vi thí điểm (chỉ nhận 6, 7, 8)`
+              : (row.errors || ["Dữ liệu không hợp lệ"]).join("; "),
           });
           continue;
         }
 
         try {
-          // Upsert SchoolClass (6A1, 6A2, 7A1, 7A2, 8A1, 8A2...)
+          // Check if StudentProfile or User already exists (Strict non-overwrite rule)
+          const existingProfile = await prisma.studentProfile.findUnique({
+            where: { studentCode: row.studentCode },
+          });
+          const loginIdentifier = row.emailFromFile || row.studentCode;
+          const existingUser = await prisma.user.findUnique({
+            where: { email: loginIdentifier },
+          });
+
+          if (existingProfile || existingUser) {
+            // Do NOT delete or overwrite existing accounts
+            skippedDuplicateCount++;
+            continue;
+          }
+
+          // Upsert SchoolClass (6A1, 7A1, 8A1...)
           const schoolClass = await prisma.schoolClass.upsert({
             where: {
               name_academicYearId: {
@@ -192,148 +239,73 @@ export async function POST(req: Request) {
           });
           classesCreatedOrUpdated.add(schoolClass.name);
 
-          // Check if StudentProfile already exists by studentCode (Idempotent check)
-          const existingProfile = await prisma.studentProfile.findUnique({
-            where: { studentCode: row.studentCode },
-            include: { user: true },
+          const temporaryPassword = useCustomInitial
+            ? null
+            : generateTemporaryStudentPassword();
+          const passwordHash = preHashedCustomPassword
+            ? preHashedCustomPassword
+            : await hashPassword(temporaryPassword!);
+
+          const mustChange = Boolean(requireFirstLoginPasswordChange);
+          const newUser = await prisma.user.create({
+            data: {
+              email: loginIdentifier,
+              fullName: row.fullName,
+              role: "STUDENT",
+              passwordHash,
+              isActive: true,
+              emailVerified: Boolean(row.emailFromFile),
+              accountStatus: mustChange ? "MUST_CHANGE_PASSWORD" : "ACTIVE",
+              resetTokenHash: mustChange ? "FORCE_CHANGE_ON_FIRST_LOGIN" : null,
+            },
           });
 
-          if (existingProfile) {
-            // Nếu tài khoản cũ có đuôi giả @no-email.internal.unigo, chuẩn hóa sang mã học sinh trực tiếp
-            const cleanedIdentifier =
-              row.emailFromFile ||
-              (existingProfile.user.email.endsWith("@no-email.internal.unigo")
-                ? row.studentCode
-                : existingProfile.user.email);
-
-            // Nếu tài khoản cũ chưa có mật khẩu băm, cấp mật khẩu tạm một lần
-            let extraPasswordUpdate: Record<string, unknown> = {};
-            if (!existingProfile.user.passwordHash) {
-              const temporaryPassword = generateTemporaryStudentPassword();
-              const passwordHash = await hashPassword(temporaryPassword);
-              extraPasswordUpdate = {
-                passwordHash,
-                accountStatus: "MUST_CHANGE_PASSWORD",
-                resetTokenHash: "FORCE_CHANGE_ON_FIRST_LOGIN",
-              };
-              issuedCredentials.push({
-                studentCode: row.studentCode,
-                fullName: row.fullName,
-                className: row.className,
-                temporaryPassword,
-              });
-            }
-
-            await prisma.user.update({
-              where: { id: existingProfile.userId },
-              data: {
-                fullName: row.fullName,
-                email: cleanedIdentifier,
-                ...extraPasswordUpdate,
-              },
-            });
-
-            await prisma.studentProfile.update({
-              where: { id: existingProfile.id },
-              data: {
-                gradeLevel: row.gradeLevel,
-                classId: schoolClass.id,
-                dateOfBirth: row.dateOfBirth ?? existingProfile.dateOfBirth,
-                gender: row.gender ?? existingProfile.gender,
-              },
-            });
-
-            await prisma.enrollment.upsert({
+          if (studentRole) {
+            await prisma.userRoleAssignment.upsert({
               where: {
-                studentId_classId_academicYearId: {
-                  studentId: existingProfile.id,
-                  classId: schoolClass.id,
-                  academicYearId: academicYear.id,
-                },
-              },
-              update: { status: "ACTIVE" },
-              create: {
-                studentId: existingProfile.id,
-                classId: schoolClass.id,
-                academicYearId: academicYear.id,
-                status: "ACTIVE",
-              },
-            });
-
-            updatedIdempotentCount++;
-          } else {
-            // Không tạo email giả (@unigo.edu.vn hay @no-email.internal.unigo). Dùng trực tiếp mã học sinh làm định danh đăng nhập nếu không có email.
-            const loginIdentifier = row.emailFromFile || row.studentCode;
-            const temporaryPassword = generateTemporaryStudentPassword();
-            const passwordHash = await hashPassword(temporaryPassword);
-
-            const newUser = await prisma.user.upsert({
-              where: { email: loginIdentifier },
-              update: {
-                fullName: row.fullName,
-                role: "STUDENT",
-                passwordHash,
-                accountStatus: "MUST_CHANGE_PASSWORD",
-                resetTokenHash: "FORCE_CHANGE_ON_FIRST_LOGIN",
-                isActive: true,
-              },
-              create: {
-                email: loginIdentifier,
-                fullName: row.fullName,
-                role: "STUDENT",
-                passwordHash,
-                isActive: true,
-                emailVerified: Boolean(row.emailFromFile),
-                accountStatus: "MUST_CHANGE_PASSWORD",
-                resetTokenHash: "FORCE_CHANGE_ON_FIRST_LOGIN",
-              },
-            });
-
-            if (studentRole) {
-              await prisma.userRoleAssignment.upsert({
-                where: {
-                  userId_roleId: {
-                    userId: newUser.id,
-                    roleId: studentRole.id,
-                  },
-                },
-                update: {},
-                create: {
+                userId_roleId: {
                   userId: newUser.id,
                   roleId: studentRole.id,
-                  assignedBy: session.user.email,
                 },
-              });
-            }
-
-            const newProfile = await prisma.studentProfile.create({
-              data: {
+              },
+              update: {},
+              create: {
                 userId: newUser.id,
-                studentCode: row.studentCode,
-                gradeLevel: row.gradeLevel,
-                classId: schoolClass.id,
-                dateOfBirth: row.dateOfBirth,
-                gender: row.gender,
+                roleId: studentRole.id,
+                assignedBy: session.user.email,
               },
             });
-
-            await prisma.enrollment.create({
-              data: {
-                studentId: newProfile.id,
-                classId: schoolClass.id,
-                academicYearId: academicYear.id,
-                status: "ACTIVE",
-              },
-            });
-
-            issuedCredentials.push({
-              studentCode: row.studentCode,
-              fullName: row.fullName,
-              className: row.className,
-              temporaryPassword,
-            });
-            createdCount++;
           }
+
+          const newProfile = await prisma.studentProfile.create({
+            data: {
+              userId: newUser.id,
+              studentCode: row.studentCode,
+              gradeLevel: row.gradeLevel,
+              classId: schoolClass.id,
+              dateOfBirth: row.dateOfBirth,
+              gender: row.gender,
+            },
+          });
+
+          await prisma.enrollment.create({
+            data: {
+              studentId: newProfile.id,
+              classId: schoolClass.id,
+              academicYearId: academicYear.id,
+              status: "ACTIVE",
+            },
+          });
+
+          issuedCredentials.push({
+            studentCode: row.studentCode,
+            fullName: row.fullName,
+            className: row.className,
+            temporaryPassword: temporaryPassword
+              ? temporaryPassword
+              : "(Theo mật khẩu khởi tạo đợt thí điểm)",
+          });
+          createdCount++;
         } catch (rowErr: any) {
           failedCount++;
           rowErrors.push({
@@ -354,9 +326,9 @@ export async function POST(req: Request) {
           details: JSON.stringify({
             academicYear: "2026-2027",
             createdCount,
-            updatedIdempotentCount,
+            skippedDuplicateCount,
             failedCount,
-            issuedCredentialsCount: issuedCredentials.length,
+            passwordMode: useCustomInitial ? "CUSTOM_INITIAL" : "RANDOM_TEMP",
             classes: Array.from(classesCreatedOrUpdated),
           }),
         },
@@ -376,7 +348,8 @@ export async function POST(req: Request) {
         summary: {
           academicYear: "2026-2027",
           createdCount,
-          updatedIdempotentCount,
+          updatedIdempotentCount: skippedDuplicateCount,
+          skippedDuplicateCount,
           failedCount,
           classesAffected: Array.from(classesCreatedOrUpdated),
           rowErrors,

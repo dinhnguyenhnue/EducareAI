@@ -1,20 +1,26 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  BookOpen,
   PlusCircle,
-  FileText,
   ExternalLink,
   CheckCircle2,
   Network,
+  AlertCircle,
+  Link2,
 } from "lucide-react";
 import { Modal } from "@/components/ui";
 import {
   MultiFileAssetUploader,
   type UploadedAssetItem,
 } from "@/components/assets/MultiFileAssetUploader";
+import {
+  parseAndNormalizeDriveMaterial,
+  parseLessonDriveLinksJson,
+  type DriveKindHint,
+} from "@/lib/drive-url";
+import { DriveMaterialCard } from "@/components/materials/DriveMaterialViewer";
 
 export function TeacherLessonsClient({
   initialLessons,
@@ -27,44 +33,82 @@ export function TeacherLessonsClient({
   const [showModal, setShowModal] = useState(false);
   const [topicId, setTopicId] = useState(topics[0]?.id || "");
   const [title, setTitle] = useState("");
+  const [objectiveText, setObjectiveText] = useState("");
   const [summaryParagraph, setSummaryParagraph] = useState("");
   const [activityContent, setActivityContent] = useState("");
+
+  // Primary: Google Drive Link state
   const [driveFileUrl, setDriveFileUrl] = useState("");
+  const [driveMaterialTitle, setDriveMaterialTitle] = useState("");
+  const [driveMaterialDescription, setDriveMaterialDescription] = useState("");
+  const [driveKindHint, setDriveKindHint] = useState<DriveKindHint>("AUTO");
+
+  // Secondary: Direct file upload state
   const [uploadedAssets, setUploadedAssets] = useState<UploadedAssetItem[]>([]);
   const [createGoogleDoc, setCreateGoogleDoc] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const liveDrivePreview = useMemo(() => {
+    if (!driveFileUrl.trim()) return null;
+    return parseAndNormalizeDriveMaterial({
+      url: driveFileUrl,
+      title: driveMaterialTitle || title || "Tài liệu Google Drive đính kèm",
+      description: driveMaterialDescription,
+      kindHint: driveKindHint,
+    });
+  }, [driveFileUrl, driveMaterialTitle, driveMaterialDescription, driveKindHint, title]);
 
   const handleCreateLesson = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
+    if (driveFileUrl.trim() && liveDrivePreview && !liveDrivePreview.valid) {
+      setFormError(
+        liveDrivePreview.error ||
+          "Liên kết Google Drive không hợp lệ. Vui lòng kiểm tra lại trước khi lưu."
+      );
+      return;
+    }
+
     setIsSaving(true);
     setNotice(null);
     try {
-      const primaryAssetUrl =
-        uploadedAssets.length > 0
-          ? `/api/assets/${uploadedAssets[0].id}`
-          : driveFileUrl;
       const res = await fetch("/api/teacher/lessons", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topicId,
           title,
+          objectiveText,
           summaryParagraph,
           activityContent,
-          driveFileUrl: primaryAssetUrl,
+          driveFileUrl: driveFileUrl.trim() || undefined,
+          driveMaterialTitle: driveMaterialTitle.trim() || undefined,
+          driveMaterialDescription: driveMaterialDescription.trim() || undefined,
+          driveKindHint,
           assetIds: uploadedAssets.map((a) => a.id),
           createGoogleDoc,
         }),
       });
       const data = await res.json();
-      if (res.ok && data.lesson) {
+      if (!res.ok) {
+        setFormError(data.error || "Không thể lưu bài giảng.");
+        return;
+      }
+      if (data.lesson) {
         setLessons((prev) => [data.lesson, ...prev]);
         setShowModal(false);
         setTitle("");
+        setObjectiveText("");
         setSummaryParagraph("");
         setActivityContent("");
         setDriveFileUrl("");
+        setDriveMaterialTitle("");
+        setDriveMaterialDescription("");
+        setDriveKindHint("AUTO");
+        setUploadedAssets([]);
         setNotice(
           `Đã xuất bản bài giảng "${data.lesson.title}" ${
             data.lesson.googleDocId
@@ -87,17 +131,20 @@ export function TeacherLessonsClient({
               Biên soạn Bài giảng & Học liệu Số
             </h1>
             <span className="text-xs font-semibold bg-sky-100 text-sky-700 px-2.5 py-0.5 rounded-full">
-              Lesson Studio + Google Docs/Drive
+              Lesson Studio + Google Drive
             </span>
           </div>
           <p className="text-xs text-ink-muted mt-1">
-            Soạn kế hoạch bài dạy, đính kèm tài liệu Google Drive và tự động khởi tạo phiếu học tập Google Docs theo ngữ cảnh.
+            Soạn kế hoạch bài dạy, dán liên kết ảnh/tài liệu Google Drive hiển thị trực tiếp trong bài học của học sinh.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setFormError(null);
+            setShowModal(true);
+          }}
           className="min-h-[44px] px-5 py-2.5 rounded-xl bg-ocean-600 text-white text-sm font-semibold hover:bg-ocean-700 transition-colors shadow-sm flex items-center justify-center gap-2"
         >
           <PlusCircle className="w-4 h-4" />
@@ -113,96 +160,142 @@ export function TeacherLessonsClient({
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {lessons.map((l) => (
-          <div
-            key={l.id}
-            className="p-6 rounded-2xl bg-surface border border-border hover:border-sky-300 shadow-card transition-all flex flex-col justify-between space-y-4"
-          >
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-semibold bg-sky-100 text-sky-700 px-2.5 py-0.5 rounded-full">
-                  {l.topic?.subject?.name} • {l.topic?.name}
-                </span>
-                <span className="text-[11px] font-semibold bg-status-success-soft text-status-success px-2.5 py-0.5 rounded-full">
-                  {l.status}
-                </span>
+        {lessons.map((l) => {
+          const parsedDriveItems = parseLessonDriveLinksJson(l.driveFileLinks);
+          return (
+            <div
+              key={l.id}
+              className="p-6 rounded-2xl bg-surface border border-border hover:border-sky-300 shadow-card transition-all flex flex-col justify-between space-y-4"
+            >
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-semibold bg-sky-100 text-sky-700 px-2.5 py-0.5 rounded-full">
+                    {l.topic?.subject?.name} • {l.topic?.name}
+                  </span>
+                  <span className="text-[11px] font-semibold bg-status-success-soft text-status-success px-2.5 py-0.5 rounded-full">
+                    {l.status}
+                  </span>
+                  {parsedDriveItems.length > 0 && (
+                    <span className="text-[11px] font-semibold bg-ocean-50 text-ocean-700 border border-ocean-200 px-2.5 py-0.5 rounded-full">
+                      {parsedDriveItems.length} học liệu Drive
+                    </span>
+                  )}
+                </div>
+
+                <h3 className="text-base font-bold text-ink">{l.title}</h3>
+                <p className="text-xs text-ink-muted">
+                  Giáo viên biên soạn: {l.teacher?.user?.fullName || "Chưa có dữ liệu"}
+                </p>
+
+                {l.googleDocId && (
+                  <div className="p-2.5 rounded-xl bg-canvas border border-border text-xs flex items-center justify-between">
+                    <span className="font-mono text-[11px] text-ink">
+                      Google Docs ID: <strong>{l.googleDocId}</strong>
+                    </span>
+                    <span className="text-[10px] font-semibold text-cyan-700">
+                      Đã liên kết Docs
+                    </span>
+                  </div>
+                )}
               </div>
 
-              <h3 className="text-base font-bold text-ink">{l.title}</h3>
-              <p className="text-xs text-ink-muted">
-                Giáo viên biên soạn: {l.teacher?.user?.fullName || "Chưa có dữ liệu"}
-              </p>
-
-              {l.googleDocId && (
-                <div className="p-2.5 rounded-xl bg-canvas border border-border text-xs flex items-center justify-between">
-                  <span className="font-mono text-[11px] text-ink">
-                    Google Docs ID: <strong>{l.googleDocId}</strong>
-                  </span>
-                  <span className="text-[10px] font-semibold text-cyan-700">
-                    Đã liên kết Docs
-                  </span>
-                </div>
-              )}
+              <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs">
+                <Link
+                  href={`/hoc-sinh/mon-hoc/${l.id}`}
+                  className="font-semibold text-sky-700 hover:text-ocean-600 hover:underline flex items-center gap-1"
+                >
+                  <span>Xem giao diện bài học của Học sinh</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+                <span className="text-ink-muted text-[11px]">
+                  {new Date(l.createdAt).toLocaleDateString("vi-VN")}
+                </span>
+              </div>
             </div>
-
-            <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs">
-              <Link
-                href={`/hoc-sinh/mon-hoc/${l.id}`}
-                className="font-semibold text-sky-700 hover:text-ocean-600 hover:underline flex items-center gap-1"
-              >
-                <span>Xem giao diện bài học của Học sinh</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </Link>
-              <span className="text-ink-muted text-[11px]">
-                {new Date(l.createdAt).toLocaleDateString("vi-VN")}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <Modal
         open={showModal}
         onClose={() => setShowModal(false)}
-        title="Soạn Bài giảng & Đính kèm Google Docs / Drive"
-        maxWidth="max-w-lg"
+        title="Soạn Bài giảng & Đính kèm Học liệu Google Drive"
+        maxWidth="max-w-2xl"
       >
         <form onSubmit={handleCreateLesson} className="space-y-4 text-xs">
-          <div>
-            <label htmlFor="lesson-topic-select" className="font-semibold text-ink block mb-1">
-              Thuộc Chủ đề Môn học:
-            </label>
-            <select
-              id="lesson-topic-select"
-              value={topicId}
-              onChange={(e) => setTopicId(e.target.value)}
-              className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+          {formError && (
+            <div
+              role="alert"
+              className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-2"
             >
-              {topics.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.subject?.name} — {t.name}
-                </option>
-              ))}
-            </select>
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{formError}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="lesson-topic-select"
+                className="font-semibold text-ink block mb-1"
+              >
+                Thuộc Chủ đề Môn học:
+              </label>
+              <select
+                id="lesson-topic-select"
+                value={topicId}
+                onChange={(e) => setTopicId(e.target.value)}
+                className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+              >
+                {topics.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.subject?.name} — {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="lesson-title-input"
+                className="font-semibold text-ink block mb-1"
+              >
+                Tiêu đề bài giảng:
+              </label>
+              <input
+                id="lesson-title-input"
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="VD: Bài 1: Thông tin và dữ liệu"
+                className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+              />
+            </div>
           </div>
 
           <div>
-            <label htmlFor="lesson-title-input" className="font-semibold text-ink block mb-1">
-              Tiêu đề bài giảng:
+            <label
+              htmlFor="lesson-objective-input"
+              className="font-semibold text-ink block mb-1"
+            >
+              Mục tiêu ngắn của bài học (Hiển thị ngay đầu bài cho học sinh):
             </label>
             <input
-              id="lesson-title-input"
+              id="lesson-objective-input"
               type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="VD: Bài 5: Sử dụng hàm tính toán cơ bản trên Google Sheets"
+              value={objectiveText}
+              onChange={(e) => setObjectiveText(e.target.value)}
+              placeholder="VD: Phân biệt được thông tin, dữ liệu và vật mang tin qua ví dụ thực tế."
               className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
             />
           </div>
 
           <div>
-            <label htmlFor="lesson-summary-textarea" className="font-semibold text-ink block mb-1">
+            <label
+              htmlFor="lesson-summary-textarea"
+              className="font-semibold text-ink block mb-1"
+            >
               Tóm tắt kiến thức & Câu hỏi khởi động:
             </label>
             <textarea
@@ -216,28 +309,126 @@ export function TeacherLessonsClient({
             />
           </div>
 
-          <MultiFileAssetUploader
-            onAssetsChange={setUploadedAssets}
-            label="Tải học liệu trực tiếp lên Kho Bài giảng (PDF, DOCX, PPTX, XLSX, Ảnh, Video, HTML, ZIP):"
-          />
+          {/* PRIMARY METHOD: Google Drive Link + Instant Preview */}
+          <div className="p-4 rounded-2xl bg-sky-50/70 border border-sky-200 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-bold text-ocean-800 flex items-center gap-1.5 text-xs">
+                <Link2 className="w-4 h-4 text-ocean-600" />
+                <span>Cách chính: Dán liên kết Google Drive (Ảnh, PDF, Docs, Slides, Thư mục)</span>
+              </span>
+              <span className="text-[11px] font-semibold text-ocean-700 bg-white px-2 py-0.5 rounded-full border border-sky-200">
+                Khuyên dùng
+              </span>
+            </div>
 
-          <div>
-            <label htmlFor="lesson-drive-url" className="font-semibold text-ink block mb-1">
-              Hoặc dán Link tài liệu Google Drive đính kèm (Tùy chọn):
-            </label>
-            <input
-              id="lesson-drive-url"
-              type="url"
-              value={driveFileUrl}
-              onChange={(e) => setDriveFileUrl(e.target.value)}
-              placeholder="https://drive.google.com/file/d/..."
-              className="w-full px-3 py-2 rounded-button bg-canvas border border-border text-ink"
+            <div>
+              <label
+                htmlFor="lesson-drive-url"
+                className="font-semibold text-ink block mb-1"
+              >
+                Đường dẫn Google Drive (HTTPS):
+              </label>
+              <input
+                id="lesson-drive-url"
+                type="url"
+                value={driveFileUrl}
+                onChange={(e) => setDriveFileUrl(e.target.value)}
+                placeholder="https://drive.google.com/file/d/<ID>/view hoặc https://drive.google.com/open?id=<ID>"
+                className="w-full px-3 py-2 rounded-button bg-white border border-border text-ink"
+              />
+              {liveDrivePreview && !liveDrivePreview.valid && (
+                <p
+                  role="alert"
+                  className="mt-1.5 text-[11px] font-semibold text-rose-700 flex items-center gap-1"
+                >
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{liveDrivePreview.error}</span>
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label
+                  htmlFor="lesson-drive-title"
+                  className="font-semibold text-ink block mb-1"
+                >
+                  Tên tài liệu / hình ảnh hiển thị:
+                </label>
+                <input
+                  id="lesson-drive-title"
+                  type="text"
+                  value={driveMaterialTitle}
+                  onChange={(e) => setDriveMaterialTitle(e.target.value)}
+                  placeholder="VD: Sơ đồ đèn giao thông ngã tư.png"
+                  className="w-full px-3 py-2 rounded-button bg-white border border-border text-ink"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="lesson-drive-kind"
+                  className="font-semibold text-ink block mb-1"
+                >
+                  Loại học liệu:
+                </label>
+                <select
+                  id="lesson-drive-kind"
+                  value={driveKindHint}
+                  onChange={(e) =>
+                    setDriveKindHint(e.target.value as DriveKindHint)
+                  }
+                  className="w-full px-3 py-2 rounded-button bg-white border border-border text-ink"
+                >
+                  <option value="AUTO">Tự động nhận diện theo link/tên</option>
+                  <option value="IMAGE">Hình ảnh (Hiển thị trực tiếp trong bài)</option>
+                  <option value="PDF">Tài liệu PDF (Khung đọc trong bài)</option>
+                  <option value="DOCUMENT">Google Docs / Slides / Sheets</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="lesson-drive-desc"
+                className="font-semibold text-ink block mb-1"
+              >
+                Mô tả ảnh / Chú thích cho học sinh (Tùy chọn):
+              </label>
+              <input
+                id="lesson-drive-desc"
+                type="text"
+                value={driveMaterialDescription}
+                onChange={(e) => setDriveMaterialDescription(e.target.value)}
+                placeholder="VD: Hình 1.1 - Bạn Minh quan sát tín hiệu đèn giao thông trước khi qua đường"
+                className="w-full px-3 py-2 rounded-button bg-white border border-border text-ink"
+              />
+            </div>
+
+            {liveDrivePreview && liveDrivePreview.valid && (
+              <div className="pt-2 space-y-1.5">
+                <span className="text-[11px] font-bold text-ocean-800 block">
+                  Xem trước hiển thị bên trang Học sinh:
+                </span>
+                <DriveMaterialCard
+                  item={liveDrivePreview}
+                  defaultExpandPreview={false}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* SECONDARY METHOD: File Upload with fallback hint */}
+          <div className="space-y-1.5">
+            <MultiFileAssetUploader
+              onAssetsChange={setUploadedAssets}
+              label="Hoặc tải tệp nhỏ trực tiếp lên Kho Bài giảng (Nếu tệp lớn hoặc lỗi tải lên, hãy dùng ô Dán liên kết Google Drive ở trên):"
             />
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-200 space-y-2">
-            <div className="font-bold text-sky-700 flex items-center gap-1.5">
-              <Network className="w-3.5 h-3.5" />
+          <div className="p-3.5 rounded-2xl bg-canvas border border-border space-y-2">
+            <div className="font-bold text-ink flex items-center gap-1.5">
+              <Network className="w-3.5 h-3.5 text-ocean-600" />
               <span>Tích hợp Google Docs theo ngữ cảnh:</span>
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -248,7 +439,8 @@ export function TeacherLessonsClient({
                 className="accent-ocean-600"
               />
               <span>
-                Tự động khởi tạo <strong>Giáo án / Phiếu học tập Google Docs</strong> từ mẫu chuẩn UNIGO
+                Tự động khởi tạo{" "}
+                <strong>Giáo án / Phiếu học tập Google Docs</strong> từ mẫu chuẩn UNIGO
               </span>
             </label>
           </div>
@@ -274,4 +466,3 @@ export function TeacherLessonsClient({
     </div>
   );
 }
-

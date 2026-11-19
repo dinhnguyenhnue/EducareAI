@@ -1,10 +1,37 @@
-<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Trò chơi ôn tập</title>
-<style>body{font:18px system-ui;background:#eff6ff;color:#172554;margin:0;padding:24px}main{max-width:700px;margin:auto}button{font:inherit;padding:14px;margin:6px 0;border:2px solid #2563eb;border-radius:12px;background:white;color:#172554;cursor:pointer;display:block;width:100%;text-align:left}button:focus-visible{outline:4px solid #f59e0b}button:disabled{opacity:.6;cursor:default}#feedback{min-height:60px;line-height:1.6}#next{background:#2563eb;color:white}h1{font-size:28px}progress{width:100%}</style>
-<main><h1 id="title"></h1><p>Chọn một đáp án mỗi câu. Mỗi câu đúng được 1 điểm. Đọc giải thích rồi sang câu tiếp theo.</p><p>Demo luyện tập — không ghi vào điểm chính thức.</p><progress id="progress"></progress><h2 id="question"></h2><div id="options"></div><p id="feedback" role="status" aria-live="polite"></p><button id="next">Bắt đầu</button></main>
+<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Trò chơi ôn tập EDUCARE AI</title>
+<style>
+  :root{--ocean-50:#f0f9ff;--ocean-100:#e0f2fe;--ocean-600:#0284c7;--ocean-700:#0369a1;--ink:#0f172a;--muted:#475569;--surface:#ffffff;--border:#cbd5e1}
+  *{box-sizing:border-box}
+  body{font:16px/1.6 system-ui,-apple-system,sans-serif;background:var(--ocean-50);color:var(--ink);margin:0;padding:16px}
+  main{max-width:760px;margin:0 auto;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:20px 24px;box-shadow:0 10px 25px -5px rgba(15,23,42,.06)}
+  .badge{display:inline-block;font-size:12px;font-weight:700;background:var(--ocean-100);color:var(--ocean-700);padding:4px 12px;border-radius:999px;margin-bottom:8px}
+  h1{font-size:clamp(20px,3vw,26px);margin:4px 0 8px;color:var(--ink)}
+  h2{font-size:clamp(17px,2.4vw,21px);margin:14px 0;color:var(--ink);line-height:1.45}
+  .meta{font-size:14px;color:var(--muted);margin:0 0 12px}
+  progress{width:100%;height:10px;border-radius:999px;margin:8px 0}
+  button{font:inherit;min-height:48px;padding:12px 16px;margin:8px 0;border:2px solid var(--border);border-radius:14px;background:var(--surface);color:var(--ink);cursor:pointer;display:block;width:100%;text-align:left;font-weight:600;transition:background-color .15s,border-color .15s}
+  button:hover:not(:disabled){border-color:var(--ocean-600);background:var(--ocean-50)}
+  button:focus-visible{outline:3px solid #f59e0b;outline-offset:2px}
+  button:disabled{opacity:.75;cursor:default}
+  #feedback{min-height:56px;padding:12px 14px;border-radius:12px;background:#f8fafc;border:1px solid var(--border);font-size:15px;margin:12px 0}
+  #next{background:var(--ocean-600);border-color:var(--ocean-600);color:#fff;text-align:center;font-weight:700}
+  #next:hover:not(:disabled){background:var(--ocean-700)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<main>
+  <span class="badge">Tự luyện tương tác • Chuẩn Ocean Blue</span>
+  <h1 id="title"></h1>
+  <p class="meta">Mục tiêu: Chọn đáp án đúng cho từng câu hỏi và đọc giải thích kiến thức SGK. Điểm tự luyện không thay thế điểm kiểm tra chính thức.</p>
+  <progress id="progress"></progress>
+  <h2 id="question">Nhấn "Bắt đầu" bên dưới để mở câu hỏi đầu tiên.</h2>
+  <div id="options"></div>
+  <p id="feedback" role="status" aria-live="polite"></p>
+  <button id="next">Bắt đầu</button>
+</main>
 <script>const data={"title":"Chinh phục Tiếng Việt & Lục bát — Bài 1–5 (SGK Ngữ văn 6 KNTT Tập 1)","questions":[{"question":"Theo Phụ lục 2 (tr. 135) và Bài 1, cặp từ nào dưới đây thuộc loại TỪ LÁY?","options":["bàn ghế, sách vở","xinh xắn, rì rào","quê hương, đất nước","nhà cửa, vườn tược"],"answer":1,"explanation":"Từ láy được cấu tạo bởi các tiếng chỉ có quan hệ với nhau về âm (xinh xắn láy âm x, rì rào láy âm r)."},{"question":"Theo Bài 3 (tr. 66), trong cụm danh từ 'ba chú mèo mướp nhỏ nhắn ấy', từ trung tâm là:","options":["ba chú","mèo mướp","nhỏ nhắn","ấy"],"answer":1,"explanation":"'ba chú' là phần phụ trước chỉ số lượng/đơn vị, 'mèo mướp' là danh từ trung tâm, 'nhỏ nhắn ấy' là phần phụ sau."},{"question":"Theo Phụ lục 2 (tr. 135) và Bài 4, thế nào là TỪ ĐỒNG ÂM?","options":["Các từ có nhiều nghĩa liên quan với một nghĩa gốc","Các từ có hình thức âm thanh giống nhau nhưng nghĩa hoàn toàn khác nhau","Hai tiếng lặp lại giống nhau hoàn toàn","Các từ có nghĩa trái ngược nhau"],"answer":1,"explanation":"Ví dụ 'đá' (hòn đá) và 'đá' (đá bóng) đọc giống nhau nhưng nghĩa hoàn toàn khác nhau, gọi là từ đồng âm."},{"question":"Trong Bài 4 (tr. 99), từ 'quả' trong câu 'Quả tim nhân hậu' so với 'quả cam chín mọng' thể hiện hiện tượng nào?","options":["Từ láy toàn bộ","Từ đồng âm ngẫu nhiên","Từ đa nghĩa (chuyển nghĩa)","Không phải danh từ"],"answer":2,"explanation":"'Quả' vốn chỉ bộ phận thực vật, được dùng mở rộng theo nét tương đồng hình dạng nên có nhiều nghĩa liên quan (từ đa nghĩa)."},{"question":"Theo Bài 4 (tr. 92 & tr. 135), quy tắc gieo vần chuẩn của cặp câu thơ LỤC BÁT (6/8) là:","options":["Tiếng cuối câu 6 vần với tiếng cuối câu 8","Tiếng thứ 6 câu lục vần với tiếng thứ 6 câu bát","Tiếng thứ 2 câu lục vần với tiếng thứ 4 câu bát","Thơ lục bát không cần gieo vần"],"answer":1,"explanation":"Trong thể thơ lục bát chuẩn, tiếng thứ 6 của câu 6 tiếng vần với tiếng thứ 6 của câu 8 tiếng; tiếng thứ 8 câu 8 lại vần với tiếng thứ 6 câu 6 tiếp theo."},{"question":"Câu thơ 'Áo chàm đưa buổi phân li / Cầm tay nhau biết nói gì hôm nay' (Bài 4) dùng biện pháp nào qua cụm 'Áo chàm'?","options":["So sánh","Hoán dụ","Điệp ngữ","Nói quá"],"answer":1,"explanation":"Lấy trang phục quen thuộc ('áo chàm') để chỉ người dân Việt Bắc — dựa vào quan hệ gắn bó gần gũi nên là phép hoán dụ."},{"question":"Trong câu 'Thuyền ta lướt nhẹ trên dòng sông trắng lòa ánh nắng, mặt trời tròn xoe như chiếc mâm đồng rực rỡ', biện pháp nào được dùng rõ nhất?","options":["Ẩn dụ và điệp ngữ","So sánh (mặt trời ... như chiếc mâm đồng)","Chỉ có hoán dụ","Chơi chữ"],"answer":1,"explanation":"Đối chiếu hai sự vật tương đồng ('mặt trời' với 'chiếc mâm đồng') qua từ so sánh 'như' giúp câu văn giàu hình ảnh."},{"question":"Theo Bài 5 (tr. 118), dấu ngoặc kép trong đoạn văn bản thường KHÔNG dùng để làm gì?","options":["Đánh dấu lời dẫn trực tiếp","Đánh dấu từ ngữ được hiểu theo nghĩa đặc biệt hoặc mỉa mai","Đánh dấu tên tác phẩm, tờ báo được trích dẫn","Thay thế hoàn toàn dấu chấm kết thúc mọi câu trần thuật"],"answer":3,"explanation":"Dấu ngoặc kép dùng để đánh dấu dẫn trực tiếp, tên tác phẩm hoặc nghĩa đặc biệt, không thay dấu chấm hết câu."}]};let index=-1,score=0,answered=false;
 const el=id=>document.getElementById(id);el('title').textContent=data.title;el('progress').max=data.questions.length;el('progress').value=0;
 function show(){answered=false;el('options').replaceChildren();el('feedback').textContent='';el('progress').value=index;
-if(index>=data.questions.length){el('question').textContent='Hoàn thành: '+score+'/'+data.questions.length+' điểm';el('next').textContent='Chơi lại';el('next').disabled=false;return;}
-const q=data.questions[index];el('question').textContent=(index+1)+'. '+q.question;el('next').textContent='Câu tiếp theo';el('next').disabled=true;
+if(index>=data.questions.length){el('question').textContent='Hoàn thành: '+score+'/'+data.questions.length+' điểm';el('next').textContent='Chơi lại';el('next').disabled=false;try{if(typeof window!=='undefined'&&window.parent){window.parent.postMessage({type:'TIN_HOC_GAME_PRACTICE_COMPLETE',score:score,maxScore:data.questions.length,wrongTopics:[]},'*');}}catch(e){}return;}
+const q=data.questions[index];el('question').textContent='Câu '+(index+1)+'/'+data.questions.length+': '+q.question;el('next').textContent='Câu tiếp theo';el('next').disabled=true;
 q.options.forEach((option,i)=>{const b=document.createElement('button');b.textContent=String.fromCharCode(65+i)+'. '+option;b.onclick=()=>{if(answered)return;answered=true;if(i===q.answer)score++;el('feedback').textContent=(i===q.answer?'Đúng! ':'Chưa đúng. Đáp án: '+q.options[q.answer]+'. ')+q.explanation;Array.from(el('options').children).forEach(x=>x.disabled=true);el('next').disabled=false;};el('options').append(b);});}
 el('next').onclick=()=>{if(index>=data.questions.length){index=0;score=0;}else index++;show();};</script></html>

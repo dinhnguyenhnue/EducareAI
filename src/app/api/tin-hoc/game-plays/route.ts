@@ -30,12 +30,19 @@ export async function POST(req: Request) {
       select: { id: true, slug: true, title: true, gradeLevel: true },
     });
 
-    if (!project) {
-      return NextResponse.json(
-        { error: "Không tìm thấy trò chơi HTML cần ghi nhận lượt chơi." },
-        { status: 404 }
-      );
-    }
+    const fallbackGrade =
+      typeof body.gradeLevel === "number" && [6, 7, 8, 9].includes(body.gradeLevel)
+        ? body.gradeLevel
+        : 6;
+    const resolvedGame = project || {
+      id: projectIdInput || slugInput,
+      slug: slugInput || projectIdInput,
+      title:
+        typeof body.title === "string" && body.title.trim()
+          ? body.title.trim()
+          : `Trò chơi ôn tập tự luyện (${slugInput || projectIdInput})`,
+      gradeLevel: fallbackGrade,
+    };
 
     const studentProfile = await prisma.studentProfile.findUnique({
       where: { userId: session.user.id },
@@ -58,7 +65,7 @@ export async function POST(req: Request) {
       (await prisma.subject.findFirst({
         where: {
           OR: [
-            { code: `TIN${project.gradeLevel}` },
+            { code: `TIN${resolvedGame.gradeLevel}` },
             { code: "TIN7" },
             { name: { contains: "Tin học" } },
           ],
@@ -113,7 +120,10 @@ export async function POST(req: Request) {
       if (!rec.detailData) return false;
       try {
         const parsed = JSON.parse(rec.detailData);
-        return parsed?.projectId === project.id || parsed?.projectSlug === project.slug;
+        return (
+          parsed?.projectId === resolvedGame.id ||
+          parsed?.projectSlug === resolvedGame.slug
+        );
       } catch {
         return false;
       }
@@ -130,10 +140,10 @@ export async function POST(req: Request) {
         accuracyRate: normalized.accuracyRate,
         timeSpentSeconds: normalized.timeSpentSeconds,
         detailData: JSON.stringify({
-          projectId: project.id,
-          projectSlug: project.slug,
-          projectTitle: project.title,
-          gradeLevel: project.gradeLevel,
+          projectId: resolvedGame.id,
+          projectSlug: resolvedGame.slug,
+          projectTitle: resolvedGame.title,
+          gradeLevel: resolvedGame.gradeLevel,
           attemptNumber,
           rawScore: normalized.rawScore,
           maxScore: normalized.maxScore,
@@ -142,6 +152,7 @@ export async function POST(req: Request) {
           idempotencyKey: normalized.idempotencyKey,
           studentCode: studentProfile.studentCode,
           className: studentProfile.schoolClass?.name || null,
+          sourceLabel: "Tự luyện (Trò chơi HTML)",
         }),
       },
     });
@@ -154,6 +165,7 @@ export async function POST(req: Request) {
       score10: created.score,
       accuracyRate: created.accuracyRate,
       timeSpentSeconds: created.timeSpentSeconds,
+      sourceLabel: "Tự luyện",
     });
   } catch (err: any) {
     console.error("[GAME_PLAY_RECORD_ERROR]", err?.message || err);

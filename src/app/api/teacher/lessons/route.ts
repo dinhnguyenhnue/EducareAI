@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/auth";
 import { createGoogleDocFromTemplate } from "@/lib/google-workspace";
+import {
+  parseAndNormalizeDriveMaterial,
+  type DriveKindHint,
+} from "@/lib/drive-url";
 
 export async function POST(req: Request) {
   try {
@@ -24,9 +28,14 @@ export async function POST(req: Request) {
     const {
       topicId,
       title,
+      objectiveText,
       summaryParagraph,
       activityContent,
       driveFileUrl,
+      driveMaterialTitle,
+      driveMaterialDescription,
+      driveKindHint,
+      assetIds,
       createGoogleDoc,
     } = body;
 
@@ -35,6 +44,57 @@ export async function POST(req: Request) {
         { error: "Vui lòng chọn Chủ đề và nhập Tiêu đề bài giảng." },
         { status: 400 }
       );
+    }
+
+    const normalizedMaterials: Array<{
+      title: string;
+      url: string;
+      description: string;
+      kind: string;
+      resourceKey: string | null;
+    }> = [];
+
+    if (typeof driveFileUrl === "string" && driveFileUrl.trim().length > 0) {
+      const parsedDrive = parseAndNormalizeDriveMaterial({
+        url: driveFileUrl.trim(),
+        title:
+          (typeof driveMaterialTitle === "string" && driveMaterialTitle.trim()) ||
+          `Tài liệu: ${title.trim()}`,
+        description:
+          typeof driveMaterialDescription === "string"
+            ? driveMaterialDescription.trim()
+            : "",
+        kindHint: (driveKindHint as DriveKindHint) || "AUTO",
+      });
+
+      if (!parsedDrive.valid) {
+        return NextResponse.json(
+          { error: parsedDrive.error || "Liên kết Google Drive không hợp lệ." },
+          { status: 400 }
+        );
+      }
+
+      normalizedMaterials.push({
+        title: parsedDrive.title,
+        url: parsedDrive.rawUrl,
+        description: parsedDrive.description,
+        kind: parsedDrive.kind,
+        resourceKey: parsedDrive.resourceKey,
+      });
+    }
+
+    if (Array.isArray(assetIds) && assetIds.length > 0) {
+      for (const aId of assetIds) {
+        if (typeof aId === "string" && aId.trim()) {
+          normalizedMaterials.push({
+            title: `Tệp học liệu tải lên (${title.trim()})`,
+            url: `/api/assets/${aId.trim()}`,
+            description: "",
+            kind: "INTERNAL_ASSET",
+            resourceKey: null,
+          });
+        }
+      }
     }
 
     const teacherProfileId =
@@ -66,6 +126,14 @@ export async function POST(req: Request) {
     }
 
     const contentBlocks = [
+      ...(objectiveText
+        ? [
+            {
+              type: "objective",
+              content: String(objectiveText).trim(),
+            },
+          ]
+        : []),
       { type: "heading", content: "1. Nội dung trọng tâm" },
       {
         type: "paragraph",
@@ -84,9 +152,10 @@ export async function POST(req: Request) {
         : []),
     ];
 
-    const driveLinks = driveFileUrl
-      ? JSON.stringify([{ title: "Tài liệu Google Drive đính kèm", url: driveFileUrl }])
-      : null;
+    const driveLinks =
+      normalizedMaterials.length > 0
+        ? JSON.stringify(normalizedMaterials)
+        : null;
 
     const lesson = await prisma.lesson.create({
       data: {
