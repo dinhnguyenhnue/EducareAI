@@ -119,11 +119,13 @@ export default function TeacherGoogleWorkspacePage() {
   const handleRevokeOAuth = async () => {
     setActionLoading("REVOKE");
     try {
-      const res = await fetch("/api/auth/google?email=thay.tuan@unigo.edu.vn", {
-        method: "DELETE",
+      const res = await fetch("/api/auth/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "DISCONNECT" }),
       });
       const data = await res.json();
-      setFeedbackMsg(data.message);
+      setFeedbackMsg(data.message || data.error || "Đã ngắt kết nối Google OAuth.");
       await fetchWorkspaceState();
     } finally {
       setActionLoading(null);
@@ -133,16 +135,17 @@ export default function TeacherGoogleWorkspacePage() {
   const handleReconnectOAuth = async () => {
     setActionLoading("RECONNECT");
     try {
-      await fetch("/api/auth/google", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: "thay.tuan@unigo.edu.vn",
-          googleEmail: "trantuan.unigo@gmail.com",
-        }),
-      });
-      setFeedbackMsg("Đã kết nối lại OAuth 2.0 và cấp quyền thành công.");
-      await fetchWorkspaceState();
+      const res = await fetch(
+        "/api/auth/google?purpose=workspace&services=DRIVE,SHEETS&callbackUrl=/quan-tri/google-integrations"
+      );
+      const data = await res.json();
+      if (!data.isConfigured || !data.oauthUrl) {
+        setFeedbackMsg(
+          "Chưa cấu hình đầy đủ Google OAuth Client ID/Secret để mở màn hình cấp quyền."
+        );
+        return;
+      }
+      window.location.href = data.oauthUrl;
     } finally {
       setActionLoading(null);
     }

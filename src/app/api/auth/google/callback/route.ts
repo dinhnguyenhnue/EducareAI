@@ -106,30 +106,52 @@ export async function GET(req: Request) {
           canEncrypt && tokenData.refresh_token
             ? encryptSecret(tokenData.refresh_token)
             : undefined;
-        await prisma.googleConnection.upsert({
+
+        const existingConn = await prisma.googleConnection.findUnique({
           where: { userId: user.id },
-          update: {
-            googleEmail: validation.normalized.email,
-            googleSub: validation.normalized.sub,
-            scopesGranted: JSON.stringify(grantedScopes),
-            accessTokenHash: encryptedAccessToken,
-            ...(encryptedRefreshToken !== undefined
-              ? { refreshTokenHash: encryptedRefreshToken }
-              : {}),
-            status: "CONNECTED",
-            lastSyncAt: new Date(),
-          },
-          create: {
-            userId: user.id,
-            googleEmail: validation.normalized.email,
-            googleSub: validation.normalized.sub,
-            scopesGranted: JSON.stringify(grantedScopes),
-            accessTokenHash: encryptedAccessToken,
-            refreshTokenHash: encryptedRefreshToken ?? null,
-            status: "CONNECTED",
-            lastSyncAt: new Date(),
-          },
+          select: { scopesGranted: true, status: true },
         });
+        const existingHasWorkspaceScopes = Boolean(
+          existingConn?.status === "CONNECTED" &&
+            existingConn.scopesGranted &&
+            (existingConn.scopesGranted.includes("drive.file") ||
+              existingConn.scopesGranted.includes("spreadsheets"))
+        );
+        const incomingHasWorkspaceScopes = grantedScopes.some(
+          (s) => s.includes("drive.file") || s.includes("spreadsheets")
+        );
+
+        // Không ghi đè token/scope Google Drive & Sheets đã cấp quyền khi người dùng chỉ đăng nhập thường (purpose=signin)
+        if (
+          stateData.purpose === "workspace" ||
+          incomingHasWorkspaceScopes ||
+          !existingHasWorkspaceScopes
+        ) {
+          await prisma.googleConnection.upsert({
+            where: { userId: user.id },
+            update: {
+              googleEmail: validation.normalized.email,
+              googleSub: validation.normalized.sub,
+              scopesGranted: JSON.stringify(grantedScopes),
+              accessTokenHash: encryptedAccessToken,
+              ...(encryptedRefreshToken !== undefined
+                ? { refreshTokenHash: encryptedRefreshToken }
+                : {}),
+              status: "CONNECTED",
+              lastSyncAt: new Date(),
+            },
+            create: {
+              userId: user.id,
+              googleEmail: validation.normalized.email,
+              googleSub: validation.normalized.sub,
+              scopesGranted: JSON.stringify(grantedScopes),
+              accessTokenHash: encryptedAccessToken,
+              refreshTokenHash: encryptedRefreshToken ?? null,
+              status: "CONNECTED",
+              lastSyncAt: new Date(),
+            },
+          });
+        }
       } catch (connErr) {
         console.warn("[GOOGLE_CONNECTION_UPSERT_WARN]", connErr);
       }

@@ -444,6 +444,7 @@ export function buildGoogleOAuthUrl(
     response_type: "code",
     scope: Array.from(scopes).join(" "),
     access_type: "offline",
+    include_granted_scopes: "true",
     prompt: "consent",
     state,
   });

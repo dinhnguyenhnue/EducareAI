@@ -232,7 +232,7 @@ export function IntegrationsDiagnosticsClient({
     setActionBanner(null);
     try {
       const res = await fetch(
-        "/api/auth/google?purpose=workspace&services=DRIVE,DOCS,SHEETS,CLASSROOM,CALENDAR&callbackUrl=/admin/settings/integrations"
+        "/api/auth/google?purpose=workspace&services=DRIVE,SHEETS&callbackUrl=/admin/settings/integrations"
       );
       const data = await res.json();
       if (!data.isConfigured || !data.oauthUrl) {
